@@ -1,6 +1,14 @@
-# 📱 TaskApp - Aplikasi Manajemen Tugas Kuliah & To-Do List
+# 📱 TaskApp — Modern Editorial Productivity & Academic Planner
 
-Aplikasi mobile berbasis **Flutter** dengan arsitektur **Offline-First (LocalStorage)** menggunakan **Hive** untuk membantu mahasiswa dan pelajar mengelola tugas kuliah, jadwal mata kuliah, tenggat waktu (deadline), serta aktivitas harian tanpa prokrastinasi.
+[![Release](https://img.shields.io/github/v/release/NXRts/TaskApp?color=emerald&style=flat-square)](https://github.com/NXRts/TaskApp/releases/latest)
+[![Build Status](https://img.shields.io/github/actions/workflow/status/NXRts/TaskApp/build-release.yml?branch=main&style=flat-square)](https://github.com/NXRts/TaskApp/actions)
+[![License](https://img.shields.io/badge/license-MIT-blue?style=flat-square)](LICENSE)
+[![Platform](https://img.shields.io/badge/platform-Android-success?style=flat-square&logo=android)](https://github.com/NXRts/TaskApp/releases/latest)
+[![Offline-First](https://img.shields.io/badge/storage-Hive%20Offline--First-orange?style=flat-square)](https://pub.dev/packages/hive)
+
+> **TaskApp** adalah aplikasi manajemen tugas kuliah dan aktivitas harian dengan pendekatan **Modern Editorial Productivity × Premium Minimalism**. Dibangun khusus untuk mahasiswa aktif yang membutuhkan aplikasi perencana studi yang berfokus tinggi, bebas distraksi (*Anti-AI Slop*), memahami beban SKS perkuliahan, dan bekerja **100% offline-first**.
+
+[📥 **Unduh APK Rilis Terbaru (v2.0.0)**](https://github.com/NXRts/TaskApp/releases/download/v2.0.0/TaskApp-v2.0.0.apk) · [✨ Catatan Rilis](RELEASE_NOTES_v2.0.0.md) · [📖 Dokumentasi Desain (PRD)](PRD_TaskApp_Redesign.md)
 
 ---
 
