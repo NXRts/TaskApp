@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../providers/task_provider.dart';
 import '../utils/app_theme.dart';
 
+/// Zen Minimalist Focus (Pomodoro) Screen
 class PomodoroScreen extends StatefulWidget {
   const PomodoroScreen({super.key});
 
@@ -12,8 +13,8 @@ class PomodoroScreen extends StatefulWidget {
 }
 
 class _PomodoroScreenState extends State<PomodoroScreen> {
-  static const int focusDuration = 25 * 60; // 25 minutes
-  static const int breakDuration = 5 * 60;  // 5 minutes
+  static const int focusDuration = 25 * 60; // 25 min
+  static const int breakDuration = 5 * 60;  // 5 min
 
   int _remainingSeconds = focusDuration;
   bool _isRunning = false;
@@ -44,13 +45,9 @@ class _PomodoroScreenState extends State<PomodoroScreen> {
             _completedSessions++;
             _isBreak = true;
             _remainingSeconds = breakDuration;
-            _showSessionCompleteDialog('Sesi Belajar Selesai! 🎉',
-                'Kerja bagus! Istirahatlah selama 5 menit untuk menyegarkan pikiran.');
           } else {
             _isBreak = false;
             _remainingSeconds = focusDuration;
-            _showSessionCompleteDialog('Istirahat Selesai! ⚡',
-                'Waktu istirahat habis. Siap untuk sesi fokus berikutnya?');
           }
         });
       }
@@ -79,22 +76,6 @@ class _PomodoroScreenState extends State<PomodoroScreen> {
     });
   }
 
-  void _showSessionCompleteDialog(String title, String message) {
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text(title, style: const TextStyle(fontWeight: FontWeight.bold)),
-        content: Text(message),
-        actions: [
-          ElevatedButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('OK'),
-          ),
-        ],
-      ),
-    );
-  }
-
   String _formatTime(int totalSeconds) {
     final minutes = totalSeconds ~/ 60;
     final seconds = totalSeconds % 60;
@@ -111,67 +92,39 @@ class _PomodoroScreenState extends State<PomodoroScreen> {
     final taskProvider = Provider.of<TaskProvider>(context);
     final pendingTasks = taskProvider.allTasks.where((t) => !t.isCompleted).toList();
 
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final textPrimary = isDark ? AppTheme.darkTextPrimary : AppTheme.lightTextPrimary;
+    final textSecondary = isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary;
+    final borderCol = isDark ? AppTheme.darkBorder : AppTheme.lightBorder;
+
     return Scaffold(
       appBar: AppBar(
-        title: const Text(
-          'Fokus Belajar (Pomodoro)',
-          style: TextStyle(fontWeight: FontWeight.bold),
-        ),
+        title: const Text('Fokus Belajar'),
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
         child: Column(
           children: [
-            // Mode selector (Fokus vs Istirahat)
+            // Mode Selector (Fokus 25m vs Rehat 5m)
             Container(
-              padding: const EdgeInsets.all(4),
+              height: 34,
+              padding: const EdgeInsets.all(2.5),
               decoration: BoxDecoration(
-                color: Colors.grey.withOpacity(0.12),
-                borderRadius: BorderRadius.circular(14),
+                color: isDark ? AppTheme.darkSurface : AppTheme.lightBorderSubtle,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: borderCol, width: 0.8),
               ),
               child: Row(
                 children: [
-                  Expanded(
-                    child: GestureDetector(
-                      onTap: () => _switchMode(false),
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(vertical: 10),
-                        decoration: BoxDecoration(
-                          color: !_isBreak ? AppTheme.primaryColor : Colors.transparent,
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        child: Center(
-                          child: Text(
-                            '🎯 Fokus (25m)',
-                            style: TextStyle(
-                              fontWeight: FontWeight.bold,
-                              color: !_isBreak ? Colors.white : null,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
+                  _buildModeSegment(
+                    title: 'Fokus (25m)',
+                    isSelected: !_isBreak,
+                    onTap: () => _switchMode(false),
                   ),
-                  Expanded(
-                    child: GestureDetector(
-                      onTap: () => _switchMode(true),
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(vertical: 10),
-                        decoration: BoxDecoration(
-                          color: _isBreak ? AppTheme.successGreen : Colors.transparent,
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        child: Center(
-                          child: Text(
-                            '☕ Istirahat (5m)',
-                            style: TextStyle(
-                              fontWeight: FontWeight.bold,
-                              color: _isBreak ? Colors.white : null,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
+                  _buildModeSegment(
+                    title: 'Rehat (5m)',
+                    isSelected: _isBreak,
+                    onTap: () => _switchMode(true),
                   ),
                 ],
               ),
@@ -179,19 +132,23 @@ class _PomodoroScreenState extends State<PomodoroScreen> {
 
             const SizedBox(height: 24),
 
-            // Task selector dropdown
+            // Target Task Selector Dropdown
             if (pendingTasks.isNotEmpty) ...[
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+                height: 40,
+                padding: const EdgeInsets.symmetric(horizontal: 12),
                 decoration: BoxDecoration(
                   color: Theme.of(context).cardTheme.color,
-                  borderRadius: BorderRadius.circular(14),
-                  border: Border.all(color: Colors.grey.withOpacity(0.2)),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: borderCol, width: 0.8),
                 ),
                 child: DropdownButtonHideUnderline(
                   child: DropdownButton<String>(
                     isExpanded: true,
-                    hint: const Text('Pilih tugas yang ingin difokuskan...'),
+                    hint: Text(
+                      'Pilih tugas yang ingin difokuskan...',
+                      style: TextStyle(fontSize: 12.5, color: textSecondary),
+                    ),
                     value: _selectedTaskId,
                     items: pendingTasks.map((t) {
                       return DropdownMenuItem(
@@ -200,6 +157,7 @@ class _PomodoroScreenState extends State<PomodoroScreen> {
                           t.title,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
+                          style: TextStyle(fontSize: 13, color: textPrimary),
                         ),
                       );
                     }).toList(),
@@ -209,22 +167,22 @@ class _PomodoroScreenState extends State<PomodoroScreen> {
                   ),
                 ),
               ),
-              const SizedBox(height: 20),
+              const SizedBox(height: 28),
             ],
 
-            // Circular Timer
+            // Minimalist Circular Timer
             Stack(
               alignment: Alignment.center,
               children: [
                 SizedBox(
-                  width: 240,
-                  height: 240,
+                  width: 220,
+                  height: 220,
                   child: CircularProgressIndicator(
                     value: _progress,
-                    strokeWidth: 12,
-                    backgroundColor: Colors.grey.withOpacity(0.15),
+                    strokeWidth: 4,
+                    backgroundColor: isDark ? const Color(0xFF242731) : const Color(0xFFEAEAEC),
                     valueColor: AlwaysStoppedAnimation<Color>(
-                      _isBreak ? AppTheme.successGreen : AppTheme.primaryColor,
+                      _isBreak ? AppTheme.successSage : (isDark ? AppTheme.darkAccent : AppTheme.lightAccent),
                     ),
                   ),
                 ),
@@ -233,19 +191,21 @@ class _PomodoroScreenState extends State<PomodoroScreen> {
                   children: [
                     Text(
                       _formatTime(_remainingSeconds),
-                      style: const TextStyle(
-                        fontSize: 48,
-                        fontWeight: FontWeight.bold,
-                        letterSpacing: 2,
+                      style: TextStyle(
+                        fontSize: 52,
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: -1.5,
+                        color: textPrimary,
                       ),
                     ),
-                    const SizedBox(height: 6),
+                    const SizedBox(height: 4),
                     Text(
-                      _isBreak ? 'Waktu Rehat ☕' : 'Sesi Fokus 🧠',
+                      _isBreak ? 'WAKTU REHAT' : 'SESI FOKUS',
                       style: TextStyle(
-                        fontSize: 14,
-                        color: Colors.grey[600],
-                        fontWeight: FontWeight.w600,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: 1.2,
+                        color: textSecondary,
                       ),
                     ),
                   ],
@@ -253,88 +213,99 @@ class _PomodoroScreenState extends State<PomodoroScreen> {
               ],
             ),
 
-            const SizedBox(height: 32),
+            const SizedBox(height: 36),
 
-            // Controls (Start, Pause, Reset)
+            // Controls (Start / Pause / Reset)
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                OutlinedButton.icon(
+                OutlinedButton(
                   style: OutlinedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                    side: BorderSide(color: borderCol),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                    padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 11),
                   ),
-                  icon: const Icon(Icons.refresh),
-                  label: const Text('Reset'),
                   onPressed: _resetTimer,
+                  child: Text('Reset', style: TextStyle(fontSize: 13, color: textSecondary)),
                 ),
-                const SizedBox(width: 16),
-                ElevatedButton.icon(
+                const SizedBox(width: 14),
+                ElevatedButton(
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: _isRunning
-                        ? AppTheme.warningOrange
-                        : (_isBreak ? AppTheme.successGreen : AppTheme.primaryColor),
+                    backgroundColor: isDark ? AppTheme.darkAccent : AppTheme.lightAccent,
                     foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 14),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                  ),
-                  icon: Icon(_isRunning ? Icons.pause : Icons.play_arrow),
-                  label: Text(
-                    _isRunning ? 'Jeda' : 'Mulai',
-                    style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                    elevation: 0,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                    padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
                   ),
                   onPressed: _isRunning ? _pauseTimer : _startTimer,
+                  child: Text(
+                    _isRunning ? 'Jeda' : 'Mulai',
+                    style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+                  ),
                 ),
               ],
             ),
 
-            const SizedBox(height: 28),
+            const SizedBox(height: 32),
 
-            // Completed Sessions stats
+            // Completed Sessions tracker
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
               decoration: BoxDecoration(
                 color: Theme.of(context).cardTheme.color,
-                borderRadius: BorderRadius.circular(14),
-                border: Border.all(color: Colors.grey.withOpacity(0.2)),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: borderCol, width: 0.8),
               ),
               child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
+                mainAxisSize: MainAxisSize.min,
                 children: [
-                  const Icon(Icons.local_fire_department, color: Colors.orange),
+                  Container(
+                    width: 7,
+                    height: 7,
+                    decoration: const BoxDecoration(color: AppTheme.successSage, shape: BoxShape.circle),
+                  ),
                   const SizedBox(width: 8),
                   Text(
-                    'Sesi Selesai Hari Ini: $_completedSessions',
-                    style: const TextStyle(fontWeight: FontWeight.bold),
-                  ),
-                ],
-              ),
-            ),
-
-            const SizedBox(height: 20),
-
-            // Productivity Tip
-            Container(
-              padding: const EdgeInsets.all(14),
-              decoration: BoxDecoration(
-                color: AppTheme.primaryColor.withOpacity(0.08),
-                borderRadius: BorderRadius.circular(14),
-                border: Border.all(color: AppTheme.primaryColor.withOpacity(0.2)),
-              ),
-              child: Row(
-                children: [
-                  const Icon(Icons.tips_and_updates, color: AppTheme.primaryColor),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Text(
-                      'Tips: Singkirkan notifikasi media sosial selama 25 menit sesi fokus untuk hasil belajar optimal.',
-                      style: TextStyle(fontSize: 12.5, color: Colors.grey[700]),
-                    ),
+                    '$_completedSessions sesi fokus terselesaikan hari ini',
+                    style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w500, color: textPrimary),
                   ),
                 ],
               ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildModeSegment({
+    required String title,
+    required bool isSelected,
+    required VoidCallback onTap,
+  }) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final activeBg = isDark ? AppTheme.darkSurfaceElevated : Colors.white;
+    final activeText = isDark ? AppTheme.darkTextPrimary : AppTheme.lightTextPrimary;
+    final inactiveText = isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary;
+
+    return Expanded(
+      child: GestureDetector(
+        onTap: onTap,
+        child: Container(
+          decoration: BoxDecoration(
+            color: isSelected ? activeBg : Colors.transparent,
+            borderRadius: BorderRadius.circular(6),
+          ),
+          child: Center(
+            child: Text(
+              title,
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
+                color: isSelected ? activeText : inactiveText,
+              ),
+            ),
+          ),
         ),
       ),
     );

@@ -6,11 +6,14 @@ import '../services/storage_service.dart';
 
 enum TaskFilterStatus { all, today, upcoming, overdue, completed }
 
+enum TaskSortOption { deadlineAsc, priorityDesc, titleAsc, newest }
+
 class TaskProvider with ChangeNotifier {
   final StorageService _storageService;
   List<TaskItem> _tasks = [];
   
   TaskFilterStatus _filterStatus = TaskFilterStatus.all;
+  TaskSortOption _sortOption = TaskSortOption.deadlineAsc;
   TaskCategory? _filterCategory; // null = all
   String? _selectedSubjectId;
   String _searchQuery = '';
@@ -21,6 +24,7 @@ class TaskProvider with ChangeNotifier {
 
   List<TaskItem> get allTasks => _tasks;
   TaskFilterStatus get filterStatus => _filterStatus;
+  TaskSortOption get sortOption => _sortOption;
   TaskCategory? get filterCategory => _filterCategory;
   String? get selectedSubjectId => _selectedSubjectId;
   String get searchQuery => _searchQuery;
@@ -33,6 +37,11 @@ class TaskProvider with ChangeNotifier {
   // --- FILTERS & SEARCH ---
   void setFilterStatus(TaskFilterStatus status) {
     _filterStatus = status;
+    notifyListeners();
+  }
+
+  void setSortOption(TaskSortOption sort) {
+    _sortOption = sort;
     notifyListeners();
   }
 
@@ -56,7 +65,7 @@ class TaskProvider with ChangeNotifier {
     final todayStart = DateTime(now.year, now.month, now.day);
     final todayEnd = DateTime(now.year, now.month, now.day, 23, 59, 59);
 
-    return _tasks.where((task) {
+    final filtered = _tasks.where((task) {
       // Category filter
       if (_filterCategory != null && task.category != _filterCategory) {
         return false;
@@ -90,6 +99,25 @@ class TaskProvider with ChangeNotifier {
           return task.isCompleted;
       }
     }).toList();
+
+    // Apply sorting
+    filtered.sort((a, b) {
+      if (a.isCompleted != b.isCompleted) {
+        return a.isCompleted ? 1 : -1;
+      }
+      switch (_sortOption) {
+        case TaskSortOption.deadlineAsc:
+          return a.dueDate.compareTo(b.dueDate);
+        case TaskSortOption.priorityDesc:
+          return b.priority.index.compareTo(a.priority.index);
+        case TaskSortOption.titleAsc:
+          return a.title.toLowerCase().compareTo(b.title.toLowerCase());
+        case TaskSortOption.newest:
+          return b.createdAt.compareTo(a.createdAt);
+      }
+    });
+
+    return filtered;
   }
 
   // --- METRICS / STATS ---

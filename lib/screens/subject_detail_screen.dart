@@ -6,7 +6,9 @@ import '../providers/task_provider.dart';
 import '../widgets/task_card.dart';
 import '../widgets/add_task_modal.dart';
 import '../widgets/add_subject_dialog.dart';
+import '../utils/app_theme.dart';
 
+/// Modern Editorial Subject Detail Screen
 class SubjectDetailScreen extends StatelessWidget {
   final Subject subject;
 
@@ -17,17 +19,23 @@ class SubjectDetailScreen extends StatelessWidget {
     final taskProvider = Provider.of<TaskProvider>(context);
     final subjectProvider = Provider.of<SubjectProvider>(context);
 
-    // Refresh subject if edited
     final currentSubject = subjectProvider.getSubjectById(subject.id) ?? subject;
     final subjectTasks = taskProvider.getTasksForSubject(currentSubject.id);
     final pendingCount = subjectTasks.where((t) => !t.isCompleted).length;
+
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final textPrimary = isDark ? AppTheme.darkTextPrimary : AppTheme.lightTextPrimary;
+    final textSecondary = isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary;
+    final borderCol = isDark ? AppTheme.darkBorder : AppTheme.lightBorder;
 
     return Scaffold(
       appBar: AppBar(
         title: Text(currentSubject.name),
         actions: [
           IconButton(
-            icon: const Icon(Icons.edit_outlined),
+            visualDensity: VisualDensity.compact,
+            icon: Icon(Icons.edit_outlined, size: 20, color: textSecondary),
+            tooltip: 'Edit Matkul',
             onPressed: () {
               showDialog(
                 context: context,
@@ -36,7 +44,9 @@ class SubjectDetailScreen extends StatelessWidget {
             },
           ),
           IconButton(
-            icon: const Icon(Icons.delete_outline, color: Colors.red),
+            visualDensity: VisualDensity.compact,
+            icon: const Icon(Icons.delete_outline, size: 20, color: AppTheme.urgentRose),
+            tooltip: 'Hapus Matkul',
             onPressed: () {
               showDialog(
                 context: context,
@@ -49,7 +59,7 @@ class SubjectDetailScreen extends StatelessWidget {
                       child: const Text('Batal'),
                     ),
                     ElevatedButton(
-                      style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+                      style: ElevatedButton.styleFrom(backgroundColor: AppTheme.urgentRose),
                       onPressed: () {
                         subjectProvider.deleteSubject(currentSubject.id);
                         Navigator.pop(ctx);
@@ -62,20 +72,21 @@ class SubjectDetailScreen extends StatelessWidget {
               );
             },
           ),
+          const SizedBox(width: 8),
         ],
       ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(18),
+        padding: const EdgeInsets.fromLTRB(20, 10, 20, 90),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Course Info Header Card
+            // Course Info Block
             Container(
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.all(14),
               decoration: BoxDecoration(
-                color: currentSubject.color.withOpacity(0.12),
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: currentSubject.color.withOpacity(0.3)),
+                color: Theme.of(context).cardTheme.color,
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: borderCol, width: 0.8),
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -83,68 +94,43 @@ class SubjectDetailScreen extends StatelessWidget {
                   Row(
                     children: [
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: currentSubject.color,
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Text(
-                          currentSubject.code.isNotEmpty ? currentSubject.code : 'MATKUL',
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.bold,
-                            fontSize: 12,
-                          ),
-                        ),
+                        width: 8,
+                        height: 8,
+                        decoration: BoxDecoration(color: currentSubject.color, shape: BoxShape.circle),
                       ),
                       const SizedBox(width: 8),
                       Text(
-                        '${currentSubject.creditHours} SKS',
-                        style: TextStyle(
-                          color: currentSubject.color,
-                          fontWeight: FontWeight.w600,
-                          fontSize: 13,
-                        ),
+                        currentSubject.code.isNotEmpty ? currentSubject.code : 'MATKUL',
+                        style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: textPrimary),
                       ),
+                      const SizedBox(width: 6),
+                      Text('• ${currentSubject.creditHours} SKS', style: TextStyle(fontSize: 12, color: textSecondary)),
                       const Spacer(),
                       Text(
-                        '$pendingCount Tugas Aktif',
-                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                        '$pendingCount tugas aktif',
+                        style: TextStyle(
+                          fontSize: 11.5,
+                          fontWeight: FontWeight.w600,
+                          color: pendingCount > 0 ? AppTheme.warningOchre : AppTheme.successSage,
+                        ),
                       ),
                     ],
                   ),
-                  const SizedBox(height: 12),
+                  const SizedBox(height: 10),
                   if (currentSubject.lecturer.isNotEmpty)
                     Padding(
-                      padding: const EdgeInsets.only(bottom: 6),
-                      child: Row(
-                        children: [
-                          const Icon(Icons.person_outline, size: 16),
-                          const SizedBox(width: 6),
-                          Text('Dosen: ${currentSubject.lecturer}'),
-                        ],
-                      ),
+                      padding: const EdgeInsets.only(bottom: 3),
+                      child: Text('Dosen: ${currentSubject.lecturer}', style: TextStyle(fontSize: 12.5, color: textSecondary)),
                     ),
                   if (currentSubject.room.isNotEmpty)
                     Padding(
-                      padding: const EdgeInsets.only(bottom: 6),
-                      child: Row(
-                        children: [
-                          const Icon(Icons.room_outlined, size: 16),
-                          const SizedBox(width: 6),
-                          Text('Ruang: ${currentSubject.room}'),
-                        ],
-                      ),
+                      padding: const EdgeInsets.only(bottom: 3),
+                      child: Text('Ruangan: ${currentSubject.room}', style: TextStyle(fontSize: 12.5, color: textSecondary)),
                     ),
                   if (currentSubject.dayOfWeek != null)
-                    Row(
-                      children: [
-                        const Icon(Icons.access_time, size: 16),
-                        const SizedBox(width: 6),
-                        Text(
-                          'Jadwal: ${currentSubject.dayName} ${currentSubject.timeRange ?? ''}',
-                        ),
-                      ],
+                    Text(
+                      'Jadwal: ${currentSubject.dayName} ${currentSubject.timeRange ?? ''}',
+                      style: TextStyle(fontSize: 12.5, color: textSecondary),
                     ),
                 ],
               ),
@@ -152,18 +138,16 @@ class SubjectDetailScreen extends StatelessWidget {
 
             const SizedBox(height: 20),
 
-            // Tasks list for this course
+            // Associated Tasks Section
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const Text(
-                  'Daftar Tugas Mata Kuliah Ini:',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                Text(
+                  'DAFTAR TUGAS MATKUL INI',
+                  style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, letterSpacing: 1.1, color: textSecondary),
                 ),
-                TextButton.icon(
-                  icon: const Icon(Icons.add, size: 18),
-                  label: const Text('Tambah Tugas'),
-                  onPressed: () {
+                InkWell(
+                  onTap: () {
                     showModalBottomSheet(
                       context: context,
                       isScrollControlled: true,
@@ -171,6 +155,14 @@ class SubjectDetailScreen extends StatelessWidget {
                       builder: (_) => const AddTaskModal(),
                     );
                   },
+                  child: Text(
+                    '+ Tugas Baru',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: isDark ? AppTheme.darkAccent : AppTheme.brandCobalt,
+                    ),
+                  ),
                 ),
               ],
             ),
@@ -183,11 +175,11 @@ class SubjectDetailScreen extends StatelessWidget {
                   padding: const EdgeInsets.symmetric(vertical: 40),
                   child: Column(
                     children: [
-                      Icon(Icons.check_circle_outline, size: 50, color: Colors.grey[400]),
-                      const SizedBox(height: 12),
-                      const Text(
-                        'Belum ada tugas untuk mata kuliah ini.',
-                        style: TextStyle(fontWeight: FontWeight.w600),
+                      Icon(Icons.check_circle_outline, size: 36, color: textSecondary.withValues(alpha: 0.5)),
+                      const SizedBox(height: 10),
+                      Text(
+                        'Tidak ada tugas untuk mata kuliah ini',
+                        style: TextStyle(fontSize: 13.5, color: textSecondary),
                       ),
                     ],
                   ),

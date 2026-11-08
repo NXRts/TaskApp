@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import '../models/task.dart';
 import '../providers/task_provider.dart';
@@ -9,8 +10,21 @@ import '../widgets/add_task_modal.dart';
 import 'profile_settings_screen.dart';
 import '../utils/app_theme.dart';
 
-class HomeScreen extends StatelessWidget {
+class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
+
+  @override
+  State<HomeScreen> createState() => _HomeScreenState();
+}
+
+class _HomeScreenState extends State<HomeScreen> {
+  final TextEditingController _searchController = TextEditingController();
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -18,60 +32,58 @@ class HomeScreen extends StatelessWidget {
     final settingsProvider = Provider.of<SettingsProvider>(context);
     final profile = settingsProvider.profile;
 
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final textPrimary = isDark ? AppTheme.darkTextPrimary : AppTheme.lightTextPrimary;
+    final textSecondary = isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary;
+    final borderCol = isDark ? AppTheme.darkBorder : AppTheme.lightBorder;
+
     final filteredTasks = taskProvider.filteredTasks;
+    final now = DateTime.now();
+    final formattedDate = DateFormat('EEEE, d MMMM yyyy').format(now);
 
     return Scaffold(
       body: SafeArea(
         child: CustomScrollView(
           slivers: [
-            // Top App Bar
+            // Editorial Header
             SliverToBoxAdapter(
               child: Padding(
-                padding: const EdgeInsets.fromLTRB(18, 16, 18, 12),
+                padding: const EdgeInsets.fromLTRB(20, 16, 20, 12),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // User Greeting Row
+                    // Top: Date & Action Icons
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      crossAxisAlignment: CrossAxisAlignment.center,
                       children: [
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'Halo, ${profile.name}! 👋',
-                              style: const TextStyle(
-                                fontSize: 20,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                            const SizedBox(height: 2),
-                            Text(
-                              'Semester ${profile.semester} • ${profile.studyProgram}',
-                              style: TextStyle(
-                                fontSize: 13,
-                                color: Colors.grey[600],
-                              ),
-                            ),
-                          ],
+                        Text(
+                          formattedDate.toUpperCase(),
+                          style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w700,
+                            letterSpacing: 1.2,
+                            color: textSecondary,
+                          ),
                         ),
-                        // Action buttons: Dark mode & Profile
                         Row(
                           children: [
-                            IconButton.filledTonal(
+                            IconButton(
+                              visualDensity: VisualDensity.compact,
                               icon: Icon(
                                 settingsProvider.isDarkMode
-                                    ? Icons.light_mode
-                                    : Icons.dark_mode,
-                                size: 20,
+                                    ? Icons.light_mode_outlined
+                                    : Icons.dark_mode_outlined,
+                                size: 19,
+                                color: textSecondary,
                               ),
+                              tooltip: 'Ganti Tema',
                               onPressed: () => settingsProvider.toggleTheme(),
                             ),
-                            const SizedBox(width: 6),
-                            IconButton.filledTonal(
-                              icon: const Icon(Icons.person, size: 20),
-                              tooltip: 'Profil & Pengaturan',
-                              onPressed: () {
+                            const SizedBox(width: 4),
+                            InkWell(
+                              borderRadius: BorderRadius.circular(20),
+                              onTap: () {
                                 Navigator.push(
                                   context,
                                   MaterialPageRoute(
@@ -79,101 +91,175 @@ class HomeScreen extends StatelessWidget {
                                   ),
                                 );
                               },
+                              child: Container(
+                                width: 30,
+                                height: 30,
+                                decoration: BoxDecoration(
+                                  color: isDark ? AppTheme.darkSurfaceElevated : AppTheme.lightBorder,
+                                  shape: BoxShape.circle,
+                                ),
+                                child: Center(
+                                  child: Text(
+                                    profile.name.isNotEmpty ? profile.name[0].toUpperCase() : 'M',
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w700,
+                                      color: textPrimary,
+                                    ),
+                                  ),
+                                ),
+                              ),
                             ),
                           ],
                         ),
                       ],
                     ),
 
+                    const SizedBox(height: 2),
+
+                    // Greeting
+                    Text(
+                      profile.name,
+                      style: TextStyle(
+                        fontSize: 22,
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: -0.5,
+                        color: textPrimary,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      'Semester ${profile.semester} • ${profile.studyProgram}',
+                      style: TextStyle(fontSize: 12.5, color: textSecondary),
+                    ),
+
                     const SizedBox(height: 16),
 
-                    // Summary Card
+                    // Daily Overview
                     const SummaryCard(),
 
-                    const SizedBox(height: 18),
+                    const SizedBox(height: 16),
 
-                    // Search Input
-                    TextField(
-                      decoration: InputDecoration(
-                        hintText: 'Cari tugas, praktikum, materi...',
-                        prefixIcon: const Icon(Icons.search, size: 20),
-                        contentPadding: const EdgeInsets.symmetric(vertical: 10),
-                        filled: true,
-                        fillColor: Theme.of(context).cardTheme.color,
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(14),
-                          borderSide: BorderSide(
-                            color: Colors.grey.withOpacity(0.2),
-                          ),
-                        ),
+                    // Sleek Minimalist Search Bar
+                    Container(
+                      height: 40,
+                      decoration: BoxDecoration(
+                        color: Theme.of(context).cardTheme.color,
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(color: borderCol, width: 0.8),
                       ),
-                      onChanged: (val) => taskProvider.setSearchQuery(val),
+                      child: TextField(
+                        controller: _searchController,
+                        style: TextStyle(fontSize: 13, color: textPrimary),
+                        decoration: InputDecoration(
+                          hintText: 'Cari tugas, praktikum, matkul...',
+                          hintStyle: TextStyle(fontSize: 13, color: textSecondary),
+                          prefixIcon: Icon(Icons.search, size: 18, color: textSecondary),
+                          suffixIcon: _searchController.text.isNotEmpty
+                              ? IconButton(
+                                  icon: const Icon(Icons.close, size: 16),
+                                  onPressed: () {
+                                    _searchController.clear();
+                                    taskProvider.setSearchQuery('');
+                                    setState(() {});
+                                  },
+                                )
+                              : null,
+                          border: InputBorder.none,
+                          contentPadding: const EdgeInsets.symmetric(vertical: 10),
+                        ),
+                        onChanged: (val) {
+                          taskProvider.setSearchQuery(val);
+                          setState(() {});
+                        },
+                      ),
                     ),
 
                     const SizedBox(height: 14),
 
-                    // Category Filter Tabs (Semua | Kuliah | Pribadi)
+                    // Segmented Category Tabs & Sort Button
                     Row(
                       children: [
-                        _buildCategoryChip(
-                          context,
-                          label: 'Semua',
-                          isSelected: taskProvider.filterCategory == null,
-                          onTap: () => taskProvider.setFilterCategory(null),
+                        Expanded(
+                          child: Container(
+                            height: 34,
+                            padding: const EdgeInsets.all(2.5),
+                            decoration: BoxDecoration(
+                              color: isDark ? AppTheme.darkSurface : AppTheme.lightBorderSubtle,
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(color: borderCol, width: 0.8),
+                            ),
+                            child: Row(
+                              children: [
+                                _buildSegmentItem(
+                                  label: 'Semua',
+                                  isSelected: taskProvider.filterCategory == null,
+                                  onTap: () => taskProvider.setFilterCategory(null),
+                                ),
+                                _buildSegmentItem(
+                                  label: 'Kuliah',
+                                  isSelected: taskProvider.filterCategory == TaskCategory.academic,
+                                  onTap: () => taskProvider.setFilterCategory(TaskCategory.academic),
+                                ),
+                                _buildSegmentItem(
+                                  label: 'Pribadi',
+                                  isSelected: taskProvider.filterCategory == TaskCategory.personal,
+                                  onTap: () => taskProvider.setFilterCategory(TaskCategory.personal),
+                                ),
+                              ],
+                            ),
+                          ),
                         ),
                         const SizedBox(width: 8),
-                        _buildCategoryChip(
-                          context,
-                          label: '🎓 Kuliah',
-                          isSelected: taskProvider.filterCategory == TaskCategory.academic,
-                          onTap: () => taskProvider.setFilterCategory(TaskCategory.academic),
-                        ),
-                        const SizedBox(width: 8),
-                        _buildCategoryChip(
-                          context,
-                          label: '👤 Pribadi',
-                          isSelected: taskProvider.filterCategory == TaskCategory.personal,
-                          onTap: () => taskProvider.setFilterCategory(TaskCategory.personal),
+
+                        // Sort Menu
+                        PopupMenuButton<TaskSortOption>(
+                          tooltip: 'Urutkan',
+                          icon: Icon(Icons.swap_vert, size: 20, color: textSecondary),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                          onSelected: (sort) => taskProvider.setSortOption(sort),
+                          itemBuilder: (ctx) => [
+                            _buildSortMenuItem(
+                              TaskSortOption.deadlineAsc,
+                              'Tenggat Terdekat',
+                              taskProvider.sortOption == TaskSortOption.deadlineAsc,
+                            ),
+                            _buildSortMenuItem(
+                              TaskSortOption.priorityDesc,
+                              'Prioritas Tertinggi',
+                              taskProvider.sortOption == TaskSortOption.priorityDesc,
+                            ),
+                            _buildSortMenuItem(
+                              TaskSortOption.newest,
+                              'Terbaru Dibuat',
+                              taskProvider.sortOption == TaskSortOption.newest,
+                            ),
+                            _buildSortMenuItem(
+                              TaskSortOption.titleAsc,
+                              'Nama (A - Z)',
+                              taskProvider.sortOption == TaskSortOption.titleAsc,
+                            ),
+                          ],
                         ),
                       ],
                     ),
 
                     const SizedBox(height: 10),
 
-                    // Status Filter Chips (All | Today | Upcoming | Overdue | Completed)
+                    // Horizontal Status Filters
                     SingleChildScrollView(
                       scrollDirection: Axis.horizontal,
                       child: Row(
                         children: [
-                          _buildStatusChip(
-                            context,
-                            label: 'Semua Status',
-                            status: TaskFilterStatus.all,
-                          ),
+                          _buildFilterChip('Semua', TaskFilterStatus.all),
                           const SizedBox(width: 6),
-                          _buildStatusChip(
-                            context,
-                            label: '🔴 Hari Ini',
-                            status: TaskFilterStatus.today,
-                          ),
+                          _buildFilterChip('Hari Ini', TaskFilterStatus.today),
                           const SizedBox(width: 6),
-                          _buildStatusChip(
-                            context,
-                            label: '🟡 Mendatang',
-                            status: TaskFilterStatus.upcoming,
-                          ),
+                          _buildFilterChip('Mendatang', TaskFilterStatus.upcoming),
                           const SizedBox(width: 6),
-                          _buildStatusChip(
-                            context,
-                            label: '⏰ Terlewat',
-                            status: TaskFilterStatus.overdue,
-                          ),
+                          _buildFilterChip('Terlewat', TaskFilterStatus.overdue),
                           const SizedBox(width: 6),
-                          _buildStatusChip(
-                            context,
-                            label: '✅ Selesai',
-                            status: TaskFilterStatus.completed,
-                          ),
+                          _buildFilterChip('Selesai', TaskFilterStatus.completed),
                         ],
                       ),
                     ),
@@ -182,7 +268,7 @@ class HomeScreen extends StatelessWidget {
               ),
             ),
 
-            // Tasks List
+            // Task List Feed
             if (filteredTasks.isEmpty)
               SliverFillRemaining(
                 hasScrollBody: false,
@@ -193,28 +279,31 @@ class HomeScreen extends StatelessWidget {
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         Icon(
-                          Icons.task_alt,
-                          size: 64,
-                          color: Colors.grey.withOpacity(0.5),
+                          Icons.inbox_outlined,
+                          size: 40,
+                          color: textSecondary.withValues(alpha: 0.5),
                         ),
-                        const SizedBox(height: 16),
-                        const Text(
-                          'Tidak ada tugas yang sesuai',
+                        const SizedBox(height: 12),
+                        Text(
+                          'Tidak ada tugas',
                           style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
+                            fontSize: 15,
+                            fontWeight: FontWeight.w600,
+                            color: textPrimary,
                           ),
                         ),
-                        const SizedBox(height: 6),
+                        const SizedBox(height: 4),
                         Text(
-                          'Semua tugas telah diselesaikan atau gunakan filter lain.',
+                          'Semua tugas telah diselesaikan atau sesuaikan filter Anda.',
                           textAlign: TextAlign.center,
-                          style: TextStyle(fontSize: 13, color: Colors.grey[600]),
+                          style: TextStyle(fontSize: 12.5, color: textSecondary),
                         ),
                         const SizedBox(height: 16),
-                        ElevatedButton.icon(
-                          icon: const Icon(Icons.add),
-                          label: const Text('Buat Tugas Baru'),
+                        OutlinedButton(
+                          style: OutlinedButton.styleFrom(
+                            side: BorderSide(color: borderCol),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                          ),
                           onPressed: () {
                             showModalBottomSheet(
                               context: context,
@@ -223,6 +312,7 @@ class HomeScreen extends StatelessWidget {
                               builder: (_) => const AddTaskModal(),
                             );
                           },
+                          child: const Text('Buat Tugas Baru', style: TextStyle(fontSize: 13)),
                         ),
                       ],
                     ),
@@ -231,7 +321,7 @@ class HomeScreen extends StatelessWidget {
               )
             else
               SliverPadding(
-                padding: const EdgeInsets.fromLTRB(18, 0, 18, 80),
+                padding: const EdgeInsets.fromLTRB(20, 0, 20, 90),
                 sliver: SliverList(
                   delegate: SliverChildBuilderDelegate(
                     (context, index) {
@@ -248,46 +338,97 @@ class HomeScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildCategoryChip(
-    BuildContext context, {
+  Widget _buildSegmentItem({
     required String label,
     required bool isSelected,
     required VoidCallback onTap,
   }) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-        decoration: BoxDecoration(
-          color: isSelected ? AppTheme.primaryColor : Colors.grey.withOpacity(0.12),
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: Text(
-          label,
-          style: TextStyle(
-            fontSize: 12.5,
-            fontWeight: FontWeight.w600,
-            color: isSelected ? Colors.white : null,
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final activeBg = isDark ? AppTheme.darkSurfaceElevated : Colors.white;
+    final activeText = isDark ? AppTheme.darkTextPrimary : AppTheme.lightTextPrimary;
+    final inactiveText = isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary;
+
+    return Expanded(
+      child: GestureDetector(
+        onTap: onTap,
+        child: Container(
+          decoration: BoxDecoration(
+            color: isSelected ? activeBg : Colors.transparent,
+            borderRadius: BorderRadius.circular(6),
+            boxShadow: isSelected
+                ? [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.04),
+                      blurRadius: 2,
+                      offset: const Offset(0, 1),
+                    ),
+                  ]
+                : null,
+          ),
+          child: Center(
+            child: Text(
+              label,
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
+                color: isSelected ? activeText : inactiveText,
+              ),
+            ),
           ),
         ),
       ),
     );
   }
 
-  Widget _buildStatusChip(
-    BuildContext context, {
-    required String label,
-    required TaskFilterStatus status,
-  }) {
+  Widget _buildFilterChip(String label, TaskFilterStatus status) {
     final taskProvider = Provider.of<TaskProvider>(context);
     final isSelected = taskProvider.filterStatus == status;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    return FilterChip(
-      selected: isSelected,
-      label: Text(label, style: const TextStyle(fontSize: 12)),
-      onSelected: (_) {
-        taskProvider.setFilterStatus(status);
-      },
+    return GestureDetector(
+      onTap: () => taskProvider.setFilterStatus(status),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+        decoration: BoxDecoration(
+          color: isSelected
+              ? (isDark ? AppTheme.darkAccent.withValues(alpha: 0.15) : AppTheme.lightAccent)
+              : Colors.transparent,
+          borderRadius: BorderRadius.circular(6),
+          border: Border.all(
+            color: isSelected
+                ? (isDark ? AppTheme.darkAccent : AppTheme.lightAccent)
+                : (isDark ? AppTheme.darkBorder : AppTheme.lightBorder),
+            width: 0.8,
+          ),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            fontSize: 11.5,
+            fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
+            color: isSelected
+                ? (isDark ? AppTheme.darkAccent : Colors.white)
+                : (isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary),
+          ),
+        ),
+      ),
+    );
+  }
+
+  PopupMenuItem<TaskSortOption> _buildSortMenuItem(
+    TaskSortOption value,
+    String title,
+    bool isSelected,
+  ) {
+    return PopupMenuItem(
+      value: value,
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(title, style: const TextStyle(fontSize: 13)),
+          if (isSelected) const Icon(Icons.check, size: 16, color: AppTheme.brandCobalt),
+        ],
+      ),
     );
   }
 }

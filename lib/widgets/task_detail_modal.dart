@@ -1,12 +1,15 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../models/task.dart';
+import '../models/subject.dart';
 import '../providers/task_provider.dart';
 import '../providers/subject_provider.dart';
 import '../utils/app_theme.dart';
 import '../utils/date_formatter.dart';
 import 'add_task_modal.dart';
 
+/// Modern Editorial Task Detail Bottom Sheet
 class TaskDetailModal extends StatefulWidget {
   final TaskItem task;
 
@@ -25,12 +28,48 @@ class _TaskDetailModalState extends State<TaskDetailModal> {
     super.dispose();
   }
 
+  void _shareTaskToClipboard(BuildContext context, TaskItem task, Subject? subject) {
+    final buffer = StringBuffer();
+    buffer.writeln('📋 *${task.title.toUpperCase()}*');
+    if (subject != null) {
+      buffer.writeln('📚 Mata Kuliah: ${subject.name}');
+    }
+    buffer.writeln(
+        '⏰ Tenggat: ${DateFormatter.formatFullDate(task.dueDate)} (${DateFormatter.formatTime(task.dueDate)})');
+    buffer.writeln('📌 Tipe: ${task.typeLabel}');
+
+    if (task.subtasks.isNotEmpty) {
+      buffer.writeln('\n*Checklist Pengerjaan:*');
+      for (var sub in task.subtasks) {
+        buffer.writeln('${sub.isCompleted ? "[x]" : "[ ]"} ${sub.title}');
+      }
+    }
+
+    if (task.attachments.isNotEmpty) {
+      buffer.writeln('\n*Tautan Lampiran:*');
+      for (var att in task.attachments) {
+        buffer.writeln('• $att');
+      }
+    }
+
+    if (task.notes != null && task.notes!.isNotEmpty) {
+      buffer.writeln('\n📝 *Catatan:* ${task.notes}');
+    }
+
+    Clipboard.setData(ClipboardData(text: buffer.toString()));
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('✅ Checklist tugas disalin! Siap dikirim ke WhatsApp/grup.'),
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final taskProvider = Provider.of<TaskProvider>(context);
     final subjectProvider = Provider.of<SubjectProvider>(context);
 
-    // Refresh current task from provider if it changed
     final currentTask = taskProvider.allTasks.firstWhere(
       (t) => t.id == widget.task.id,
       orElse: () => widget.task,
@@ -38,13 +77,19 @@ class _TaskDetailModalState extends State<TaskDetailModal> {
 
     final subject = subjectProvider.getSubjectById(currentTask.subjectId);
 
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final textPrimary = isDark ? AppTheme.darkTextPrimary : AppTheme.lightTextPrimary;
+    final textSecondary = isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary;
+    final borderCol = isDark ? AppTheme.darkBorder : AppTheme.lightBorder;
+
     return Container(
       decoration: BoxDecoration(
-        color: Theme.of(context).cardTheme.color ?? Theme.of(context).scaffoldBackgroundColor,
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+        color: Theme.of(context).cardTheme.color,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+        border: Border.all(color: borderCol, width: 0.8),
       ),
       padding: EdgeInsets.only(
-        top: 16,
+        top: 12,
         left: 20,
         right: 20,
         bottom: MediaQuery.of(context).viewInsets.bottom + 24,
@@ -54,66 +99,49 @@ class _TaskDetailModalState extends State<TaskDetailModal> {
           crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisSize: MainAxisSize.min,
           children: [
-            // Handle bar
+            // Drag Handle
             Center(
               child: Container(
-                width: 40,
+                width: 36,
                 height: 4,
                 decoration: BoxDecoration(
-                  color: Colors.grey.withOpacity(0.4),
-                  borderRadius: BorderRadius.circular(4),
+                  color: textSecondary.withValues(alpha: 0.3),
+                  borderRadius: BorderRadius.circular(2),
                 ),
               ),
             ),
             const SizedBox(height: 12),
 
-            // Top Badges & Actions
+            // Top Metadata Row & Action Icons
             Row(
               children: [
-                if (currentTask.category == TaskCategory.academic && subject != null)
+                if (currentTask.category == TaskCategory.academic && subject != null) ...[
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                    decoration: BoxDecoration(
-                      color: subject.color.withOpacity(0.12),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Text(
-                      subject.name,
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.bold,
-                        color: subject.color,
-                      ),
-                    ),
-                  )
-                else
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                    decoration: BoxDecoration(
-                      color: Colors.blueGrey.withOpacity(0.12),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: const Text('👤 Pribadi', style: TextStyle(fontWeight: FontWeight.w600)),
+                    width: 7,
+                    height: 7,
+                    decoration: BoxDecoration(color: subject.color, shape: BoxShape.circle),
                   ),
-                const SizedBox(width: 8),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                  decoration: BoxDecoration(
-                    color: Colors.purple.withOpacity(0.12),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Text(
-                    currentTask.typeLabel,
-                    style: const TextStyle(
+                  const SizedBox(width: 5),
+                  Text(
+                    subject.name,
+                    style: TextStyle(
                       fontSize: 12,
-                      fontWeight: FontWeight.w500,
-                      color: Colors.purple,
+                      fontWeight: FontWeight.w600,
+                      color: textPrimary,
                     ),
                   ),
-                ),
+                  const SizedBox(width: 6),
+                  Text('• ${currentTask.typeLabel}', style: TextStyle(fontSize: 11, color: textSecondary)),
+                ] else ...[
+                  Text('Pribadi', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: textSecondary)),
+                ],
+
                 const Spacer(),
+
                 IconButton(
-                  icon: const Icon(Icons.edit_outlined, size: 20),
+                  visualDensity: VisualDensity.compact,
+                  icon: Icon(Icons.edit_outlined, size: 18, color: textSecondary),
+                  tooltip: 'Edit',
                   onPressed: () {
                     Navigator.pop(context);
                     showModalBottomSheet(
@@ -125,7 +153,9 @@ class _TaskDetailModalState extends State<TaskDetailModal> {
                   },
                 ),
                 IconButton(
-                  icon: const Icon(Icons.delete_outline, color: Colors.red, size: 20),
+                  visualDensity: VisualDensity.compact,
+                  icon: const Icon(Icons.delete_outline, size: 18, color: AppTheme.urgentRose),
+                  tooltip: 'Hapus',
                   onPressed: () {
                     taskProvider.deleteTask(currentTask.id);
                     Navigator.pop(context);
@@ -134,116 +164,161 @@ class _TaskDetailModalState extends State<TaskDetailModal> {
               ],
             ),
 
-            const SizedBox(height: 14),
+            const SizedBox(height: 8),
 
             // Title
             Text(
               currentTask.title,
               style: TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-                decoration: currentTask.isCompleted
-                    ? TextDecoration.lineThrough
-                    : TextDecoration.none,
+                fontSize: 18,
+                fontWeight: FontWeight.w700,
+                color: textPrimary,
+                decoration: currentTask.isCompleted ? TextDecoration.lineThrough : null,
               ),
             ),
 
-            const SizedBox(height: 8),
+            const SizedBox(height: 6),
 
             // Deadline info
             Row(
               children: [
-                const Icon(Icons.alarm, size: 16, color: AppTheme.primaryColor),
-                const SizedBox(width: 6),
+                Icon(
+                  Icons.schedule,
+                  size: 14,
+                  color: currentTask.isOverdue && !currentTask.isCompleted
+                      ? AppTheme.urgentRose
+                      : textSecondary,
+                ),
+                const SizedBox(width: 5),
                 Text(
                   'Tenggat: ${DateFormatter.formatFullDate(currentTask.dueDate)} (${DateFormatter.formatTime(currentTask.dueDate)})',
-                  style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500),
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: currentTask.isOverdue && !currentTask.isCompleted
+                        ? FontWeight.w600
+                        : FontWeight.w400,
+                    color: currentTask.isOverdue && !currentTask.isCompleted
+                        ? AppTheme.urgentRose
+                        : textSecondary,
+                  ),
                 ),
               ],
             ),
 
             if (currentTask.description.isNotEmpty) ...[
-              const SizedBox(height: 14),
-              const Text('Deskripsi:', style: TextStyle(fontWeight: FontWeight.bold)),
-              const SizedBox(height: 4),
+              const SizedBox(height: 12),
               Text(
                 currentTask.description,
-                style: TextStyle(color: Colors.grey[700], height: 1.4),
+                style: TextStyle(fontSize: 13, height: 1.35, color: textSecondary),
               ),
             ],
 
             const SizedBox(height: 16),
-            const Divider(),
-            const SizedBox(height: 8),
+            Divider(color: borderCol),
+            const SizedBox(height: 12),
 
-            // Subtasks Section
+            // Sub-tugas Section
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const Text(
-                  'Daftar Langkah (Sub-tugas):',
-                  style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+                Text(
+                  'SUB-TUGAS',
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: 1.1,
+                    color: textSecondary,
+                  ),
                 ),
                 Text(
-                  '${currentTask.completedSubtasksCount}/${currentTask.subtasks.length} Selesai',
-                  style: const TextStyle(fontSize: 12, color: Colors.grey),
+                  '${currentTask.completedSubtasksCount} dari ${currentTask.subtasks.length} Selesai',
+                  style: TextStyle(fontSize: 11, color: textSecondary),
                 ),
               ],
             ),
             const SizedBox(height: 8),
 
             if (currentTask.subtasks.isEmpty)
-              const Padding(
-                padding: EdgeInsets.symmetric(vertical: 8),
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 6),
                 child: Text(
-                  'Belum ada sub-tugas. Tambahkan langkah kecil di bawah agar tidak menunda!',
-                  style: TextStyle(fontSize: 12, color: Colors.grey),
+                  'Belum ada sub-tugas. Tambahkan langkah kecil di bawah:',
+                  style: TextStyle(fontSize: 12, color: textSecondary),
                 ),
               )
             else
               Column(
                 children: currentTask.subtasks.map((sub) {
                   return Container(
-                    margin: const EdgeInsets.only(bottom: 4),
-                    child: CheckboxListTile(
-                      dense: true,
-                      contentPadding: EdgeInsets.zero,
-                      value: sub.isCompleted,
-                      title: Text(
-                        sub.title,
-                        style: TextStyle(
-                          fontSize: 13.5,
-                          decoration: sub.isCompleted
-                              ? TextDecoration.lineThrough
-                              : TextDecoration.none,
-                          color: sub.isCompleted ? Colors.grey : null,
+                    margin: const EdgeInsets.only(bottom: 3),
+                    child: Row(
+                      children: [
+                        GestureDetector(
+                          behavior: HitTestBehavior.opaque,
+                          onTap: () => taskProvider.toggleSubTask(currentTask.id, sub.id),
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 4),
+                            child: AnimatedContainer(
+                              duration: const Duration(milliseconds: 160),
+                              width: 18,
+                              height: 18,
+                              decoration: BoxDecoration(
+                                color: sub.isCompleted ? AppTheme.successSage : Colors.transparent,
+                                borderRadius: BorderRadius.circular(4),
+                                border: Border.all(
+                                  color: sub.isCompleted
+                                      ? AppTheme.successSage
+                                      : (isDark ? const Color(0xFF3F424E) : const Color(0xFFD4D4D8)),
+                                  width: 1.3,
+                                ),
+                              ),
+                              child: sub.isCompleted
+                                  ? const Icon(Icons.check, size: 12, color: Colors.white)
+                                  : null,
+                            ),
+                          ),
                         ),
-                      ),
-                      activeColor: AppTheme.successGreen,
-                      onChanged: (_) {
-                        taskProvider.toggleSubTask(currentTask.id, sub.id);
-                      },
-                      secondary: IconButton(
-                        icon: const Icon(Icons.close, size: 16, color: Colors.grey),
-                        onPressed: () {
-                          taskProvider.deleteSubTask(currentTask.id, sub.id);
-                        },
-                      ),
+                        const SizedBox(width: 6),
+                        Expanded(
+                          child: Text(
+                            sub.title,
+                            style: TextStyle(
+                              fontSize: 13,
+                              color: sub.isCompleted ? textSecondary : textPrimary,
+                              decoration: sub.isCompleted ? TextDecoration.lineThrough : null,
+                            ),
+                          ),
+                        ),
+                        IconButton(
+                          visualDensity: VisualDensity.compact,
+                          icon: Icon(Icons.close, size: 15, color: textSecondary),
+                          onPressed: () => taskProvider.deleteSubTask(currentTask.id, sub.id),
+                        ),
+                      ],
                     ),
                   );
                 }).toList(),
               ),
 
-            // Add Subtask input field
+            // Add subtask input
             Row(
               children: [
                 Expanded(
                   child: TextField(
                     controller: _newSubtaskController,
+                    style: TextStyle(fontSize: 12.5, color: textPrimary),
                     decoration: InputDecoration(
-                      hintText: '+ Tambah sub-tugas baru...',
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      hintText: '+ Tambah langkah baru...',
+                      hintStyle: TextStyle(fontSize: 12.5, color: textSecondary),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(7),
+                        borderSide: BorderSide(color: borderCol, width: 0.8),
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(7),
+                        borderSide: BorderSide(color: borderCol, width: 0.8),
+                      ),
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
                     ),
                     onSubmitted: (val) {
                       taskProvider.addSubTask(currentTask.id, val);
@@ -251,16 +326,18 @@ class _TaskDetailModalState extends State<TaskDetailModal> {
                     },
                   ),
                 ),
-                const SizedBox(width: 8),
-                ElevatedButton(
+                const SizedBox(width: 6),
+                OutlinedButton(
+                  style: OutlinedButton.styleFrom(
+                    visualDensity: VisualDensity.compact,
+                    side: BorderSide(color: borderCol),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(7)),
+                  ),
                   onPressed: () {
-                    taskProvider.addSubTask(
-                      currentTask.id,
-                      _newSubtaskController.text,
-                    );
+                    taskProvider.addSubTask(currentTask.id, _newSubtaskController.text);
                     _newSubtaskController.clear();
                   },
-                  child: const Text('Tambah'),
+                  child: const Text('Tambah', style: TextStyle(fontSize: 12)),
                 ),
               ],
             ),
@@ -268,7 +345,10 @@ class _TaskDetailModalState extends State<TaskDetailModal> {
             // Attachments
             if (currentTask.attachments.isNotEmpty) ...[
               const SizedBox(height: 16),
-              const Text('Tautan / Lampiran:', style: TextStyle(fontWeight: FontWeight.bold)),
+              Text(
+                'TAUTAN LAMPIRAN',
+                style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, letterSpacing: 1.1, color: textSecondary),
+              ),
               const SizedBox(height: 6),
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -277,13 +357,14 @@ class _TaskDetailModalState extends State<TaskDetailModal> {
                     padding: const EdgeInsets.only(bottom: 4),
                     child: InkWell(
                       onTap: () {
+                        Clipboard.setData(ClipboardData(text: url));
                         ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(content: Text('Tautan: $url')),
+                          const SnackBar(content: Text('Tautan disalin ke clipboard!')),
                         );
                       },
                       child: Row(
                         children: [
-                          const Icon(Icons.link, size: 16, color: AppTheme.primaryColor),
+                          Icon(Icons.link, size: 14, color: AppTheme.brandCobalt),
                           const SizedBox(width: 6),
                           Expanded(
                             child: Text(
@@ -291,9 +372,9 @@ class _TaskDetailModalState extends State<TaskDetailModal> {
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                               style: const TextStyle(
-                                color: AppTheme.primaryColor,
+                                fontSize: 12.5,
+                                color: AppTheme.brandCobalt,
                                 decoration: TextDecoration.underline,
-                                fontSize: 13,
                               ),
                             ),
                           ),
@@ -308,48 +389,66 @@ class _TaskDetailModalState extends State<TaskDetailModal> {
             // Notes
             if (currentTask.notes != null && currentTask.notes!.isNotEmpty) ...[
               const SizedBox(height: 14),
-              const Text('Catatan Tambahan:', style: TextStyle(fontWeight: FontWeight.bold)),
-              const SizedBox(height: 4),
+              Text(
+                'CATATAN DOSEN / TIPS',
+                style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, letterSpacing: 1.1, color: textSecondary),
+              ),
+              const SizedBox(height: 5),
               Container(
                 width: double.infinity,
                 padding: const EdgeInsets.all(10),
                 decoration: BoxDecoration(
-                  color: Colors.amber.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(10),
-                  border: Border.all(color: Colors.amber.withOpacity(0.3)),
+                  color: isDark ? AppTheme.darkSurfaceElevated : AppTheme.lightBorderSubtle,
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: borderCol, width: 0.8),
                 ),
                 child: Text(
                   currentTask.notes!,
-                  style: const TextStyle(fontSize: 13),
+                  style: TextStyle(fontSize: 12.5, color: textPrimary, height: 1.3),
                 ),
               ),
             ],
 
-            const SizedBox(height: 24),
+            const SizedBox(height: 18),
+
+            // 1-Click WhatsApp Export Button
+            SizedBox(
+              width: double.infinity,
+              height: 40,
+              child: OutlinedButton.icon(
+                style: OutlinedButton.styleFrom(
+                  side: BorderSide(color: borderCol),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                ),
+                icon: const Icon(Icons.share_outlined, size: 16),
+                label: const Text('Salin Checklist untuk WhatsApp', style: TextStyle(fontSize: 12.5)),
+                onPressed: () => _shareTaskToClipboard(context, currentTask, subject),
+              ),
+            ),
+
+            const SizedBox(height: 8),
 
             // Toggle Completion Action
             SizedBox(
               width: double.infinity,
-              height: 48,
-              child: ElevatedButton.icon(
+              height: 42,
+              child: ElevatedButton(
                 style: ElevatedButton.styleFrom(
                   backgroundColor: currentTask.isCompleted
-                      ? Colors.grey
-                      : AppTheme.successGreen,
-                  foregroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                ),
-                icon: Icon(currentTask.isCompleted ? Icons.undo : Icons.check_circle),
-                label: Text(
-                  currentTask.isCompleted
-                      ? 'Tandai Belum Selesai'
-                      : 'Tandai Selesai (Selesai Dikerjakan)',
-                  style: const TextStyle(fontWeight: FontWeight.bold),
+                      ? (isDark ? AppTheme.darkSurfaceElevated : AppTheme.lightBorder)
+                      : AppTheme.successSage,
+                  foregroundColor: currentTask.isCompleted ? textPrimary : Colors.white,
+                  elevation: 0,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                 ),
                 onPressed: () {
                   taskProvider.toggleTaskStatus(currentTask.id);
                   Navigator.pop(context);
                 },
+                child: Text(
+                  currentTask.isCompleted ? 'Buka Kembali Tugas' : 'Tandai Selesai',
+                  style: const TextStyle(fontSize: 13.5, fontWeight: FontWeight.w600),
+                ),
               ),
             ),
           ],
@@ -358,4 +457,3 @@ class _TaskDetailModalState extends State<TaskDetailModal> {
     );
   }
 }
-
