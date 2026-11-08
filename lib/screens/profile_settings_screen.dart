@@ -1,8 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../providers/settings_provider.dart';
+import '../providers/task_provider.dart';
+import '../providers/subject_provider.dart';
+import '../services/storage_service.dart';
 import '../utils/app_theme.dart';
 
+/// Modern Editorial Profile & Settings Screen
 class ProfileSettingsScreen extends StatefulWidget {
   const ProfileSettingsScreen({super.key});
 
@@ -50,32 +55,48 @@ class _ProfileSettingsScreenState extends State<ProfileSettingsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final textPrimary = isDark ? AppTheme.darkTextPrimary : AppTheme.lightTextPrimary;
+    final textSecondary = isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary;
+    final borderCol = isDark ? AppTheme.darkBorder : AppTheme.lightBorder;
+
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Profil & Pengaturan', style: TextStyle(fontWeight: FontWeight.bold)),
+        title: const Text('Profil & Pengaturan'),
       ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(20),
+        padding: const EdgeInsets.fromLTRB(20, 16, 20, 40),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // Minimal Avatar Block
             Center(
               child: Column(
                 children: [
-                  CircleAvatar(
-                    radius: 40,
-                    backgroundColor: AppTheme.primaryColor.withOpacity(0.15),
-                    child: const Icon(Icons.school, size: 44, color: AppTheme.primaryColor),
+                  Container(
+                    width: 56,
+                    height: 56,
+                    decoration: BoxDecoration(
+                      color: isDark ? AppTheme.darkSurfaceElevated : AppTheme.lightBorderSubtle,
+                      shape: BoxShape.circle,
+                      border: Border.all(color: borderCol, width: 1),
+                    ),
+                    child: Center(
+                      child: Text(
+                        _nameController.text.isNotEmpty ? _nameController.text[0].toUpperCase() : 'M',
+                        style: TextStyle(fontSize: 22, fontWeight: FontWeight.w700, color: textPrimary),
+                      ),
+                    ),
                   ),
-                  const SizedBox(height: 12),
-                  const Text(
+                  const SizedBox(height: 10),
+                  Text(
                     'Identitas Akademik',
-                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                    style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: textPrimary),
                   ),
-                  const SizedBox(height: 4),
-                  const Text(
-                    'Data ini disimpan aman secara offline di perangkat Anda.',
-                    style: TextStyle(fontSize: 12, color: Colors.grey),
+                  const SizedBox(height: 2),
+                  Text(
+                    'Tersimpan secara lokal (offline-first) di perangkat Anda.',
+                    style: TextStyle(fontSize: 11.5, color: textSecondary),
                   ),
                 ],
               ),
@@ -83,47 +104,43 @@ class _ProfileSettingsScreenState extends State<ProfileSettingsScreen> {
 
             const SizedBox(height: 24),
 
-            // Nama
+            // Form Fields
+            _buildFieldLabel('Nama Lengkap', textSecondary),
+            const SizedBox(height: 5),
             TextFormField(
               controller: _nameController,
-              decoration: InputDecoration(
-                labelText: 'Nama Lengkap',
-                prefixIcon: const Icon(Icons.person_outline),
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-              ),
+              style: TextStyle(fontSize: 13.5, color: textPrimary),
+              decoration: _inputDecoration(borderCol, textSecondary, 'Nama Anda'),
             ),
+
             const SizedBox(height: 14),
 
-            // Kampus
+            _buildFieldLabel('Kampus / Universitas / Sekolah', textSecondary),
+            const SizedBox(height: 5),
             TextFormField(
               controller: _campusController,
-              decoration: InputDecoration(
-                labelText: 'Kampus / Universitas / Sekolah',
-                prefixIcon: const Icon(Icons.account_balance_outlined),
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-              ),
+              style: TextStyle(fontSize: 13.5, color: textPrimary),
+              decoration: _inputDecoration(borderCol, textSecondary, 'Nama Universitas/Kampus'),
             ),
+
             const SizedBox(height: 14),
 
-            // Prodi
+            _buildFieldLabel('Program Studi / Jurusan', textSecondary),
+            const SizedBox(height: 5),
             TextFormField(
               controller: _prodiController,
-              decoration: InputDecoration(
-                labelText: 'Program Studi / Jurusan',
-                prefixIcon: const Icon(Icons.menu_book_outlined),
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-              ),
+              style: TextStyle(fontSize: 13.5, color: textPrimary),
+              decoration: _inputDecoration(borderCol, textSecondary, 'Teknik Informatika / dsb.'),
             ),
+
             const SizedBox(height: 14),
 
-            // Semester
+            _buildFieldLabel('Semester Saat Ini', textSecondary),
+            const SizedBox(height: 5),
             DropdownButtonFormField<int>(
-              value: _semester,
-              decoration: InputDecoration(
-                labelText: 'Semester Saat Ini',
-                prefixIcon: const Icon(Icons.layers_outlined),
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-              ),
+              initialValue: _semester,
+              style: TextStyle(fontSize: 13.5, color: textPrimary),
+              decoration: _inputDecoration(borderCol, textSecondary, ''),
               items: List.generate(14, (i) => i + 1).map((s) {
                 return DropdownMenuItem(value: s, child: Text('Semester $s'));
               }).toList(),
@@ -132,45 +149,170 @@ class _ProfileSettingsScreenState extends State<ProfileSettingsScreen> {
               },
             ),
 
-            const SizedBox(height: 28),
+            const SizedBox(height: 20),
 
+            // Save Action
             SizedBox(
               width: double.infinity,
-              height: 48,
+              height: 42,
               child: ElevatedButton(
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: AppTheme.primaryColor,
+                  backgroundColor: isDark ? AppTheme.darkAccent : AppTheme.lightAccent,
                   foregroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  elevation: 0,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                 ),
                 onPressed: _save,
-                child: const Text('Simpan Perubahan', style: TextStyle(fontWeight: FontWeight.bold)),
+                child: const Text('Simpan Perubahan', style: TextStyle(fontWeight: FontWeight.w600)),
               ),
             ),
 
-            const SizedBox(height: 32),
-            const Divider(),
+            const SizedBox(height: 28),
+            Divider(color: borderCol),
             const SizedBox(height: 16),
 
+            // Backup & Restore
+            Text(
+              'CADANGAN & KEDAULATAN DATA',
+              style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, letterSpacing: 1.1, color: textSecondary),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              'Simpan salinan data tugas dan mata kuliah Anda ke teks JSON agar tidak hilang saat beralih perangkat.',
+              style: TextStyle(fontSize: 12, color: textSecondary, height: 1.3),
+            ),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton(
+                    style: OutlinedButton.styleFrom(
+                      visualDensity: VisualDensity.compact,
+                      side: BorderSide(color: borderCol),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                    ),
+                    onPressed: () {
+                      final storage = StorageService();
+                      final jsonStr = storage.exportBackupJson();
+                      Clipboard.setData(ClipboardData(text: jsonStr));
+                      showDialog(
+                        context: context,
+                        builder: (ctx) => AlertDialog(
+                          title: const Text('Cadangan Disalin! 🎉'),
+                          content: const Text(
+                            'Teks data JSON cadangan Anda telah disalin ke clipboard. Anda bisa menyimpannya di aplikasi catatan.',
+                          ),
+                          actions: [
+                            ElevatedButton(
+                              onPressed: () => Navigator.pop(ctx),
+                              child: const Text('OK'),
+                            ),
+                          ],
+                        ),
+                      );
+                    },
+                    child: const Text('Ekspor JSON', style: TextStyle(fontSize: 12)),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: OutlinedButton(
+                    style: OutlinedButton.styleFrom(
+                      visualDensity: VisualDensity.compact,
+                      side: BorderSide(color: borderCol),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                    ),
+                    onPressed: () {
+                      final controller = TextEditingController();
+                      showDialog(
+                        context: context,
+                        builder: (ctx) => AlertDialog(
+                          title: const Text('Pulihkan Data Cadangan'),
+                          content: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Text(
+                                'Tempelkan (paste) teks JSON cadangan di bawah:',
+                                style: TextStyle(fontSize: 12.5),
+                              ),
+                              const SizedBox(height: 10),
+                              TextField(
+                                controller: controller,
+                                maxLines: 4,
+                                style: const TextStyle(fontSize: 12),
+                                decoration: InputDecoration(
+                                  hintText: '{"version": 1, ...}',
+                                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                                ),
+                              ),
+                            ],
+                          ),
+                          actions: [
+                            TextButton(
+                              onPressed: () => Navigator.pop(ctx),
+                              child: const Text('Batal'),
+                            ),
+                            ElevatedButton(
+                              onPressed: () async {
+                                final text = controller.text.trim();
+                                if (text.isNotEmpty) {
+                                  final storage = StorageService();
+                                  final success = await storage.importBackupJson(text);
+                                  if (ctx.mounted) Navigator.pop(ctx);
+                                  if (success) {
+                                    if (context.mounted) {
+                                      Provider.of<TaskProvider>(context, listen: false).loadTasks();
+                                      Provider.of<SubjectProvider>(context, listen: false).loadSubjects();
+                                      ScaffoldMessenger.of(context).showSnackBar(
+                                        const SnackBar(content: Text('✅ Data berhasil dipulihkan!')),
+                                      );
+                                    }
+                                  } else {
+                                    if (context.mounted) {
+                                      ScaffoldMessenger.of(context).showSnackBar(
+                                        const SnackBar(content: Text('❌ Format JSON cadangan tidak valid.')),
+                                      );
+                                    }
+                                  }
+                                }
+                              },
+                              child: const Text('Pulihkan'),
+                            ),
+                          ],
+                        ),
+                      );
+                    },
+                    child: const Text('Impor JSON', style: TextStyle(fontSize: 12)),
+                  ),
+                ),
+              ],
+            ),
+
+            const SizedBox(height: 24),
+            Divider(color: borderCol),
+            const SizedBox(height: 14),
+
             // About App
-            const Text('Tentang TaskApp', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-            const SizedBox(height: 8),
+            Text(
+              'TENTANG TASKAPP',
+              style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, letterSpacing: 1.1, color: textSecondary),
+            ),
+            const SizedBox(height: 6),
             Container(
-              padding: const EdgeInsets.all(14),
+              padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
                 color: Theme.of(context).cardTheme.color,
-                borderRadius: BorderRadius.circular(14),
-                border: Border.all(color: Colors.grey.withOpacity(0.2)),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: borderCol, width: 0.8),
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text('TaskApp v1.0.0 (Offline-First Edition)',
-                      style: TextStyle(fontWeight: FontWeight.bold)),
-                  const SizedBox(height: 4),
+                  Text('TaskApp v2.0 • Modern Editorial Edition', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: textPrimary)),
+                  const SizedBox(height: 3),
                   Text(
-                    'Aplikasi manajemen tugas kuliah dan to-do list harian dengan arsitektur penyimpanan lokal cepat, fitur anti-prokrastinasi, dan manajemen mata kuliah.',
-                    style: TextStyle(fontSize: 12.5, color: Colors.grey[600]),
+                    'Dibangun dengan arsitektur offline-first, desain minimalis intensional tanpa slop, dan fitur terfokus untuk mahasiswa.',
+                    style: TextStyle(fontSize: 12, color: textSecondary, height: 1.3),
                   ),
                 ],
               ),
@@ -180,5 +322,27 @@ class _ProfileSettingsScreenState extends State<ProfileSettingsScreen> {
       ),
     );
   }
-}
 
+  Widget _buildFieldLabel(String label, Color color) {
+    return Text(
+      label,
+      style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: color),
+    );
+  }
+
+  InputDecoration _inputDecoration(Color borderCol, Color hintCol, String hint) {
+    return InputDecoration(
+      hintText: hint,
+      hintStyle: TextStyle(fontSize: 13, color: hintCol),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(8),
+        borderSide: BorderSide(color: borderCol, width: 0.8),
+      ),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(8),
+        borderSide: BorderSide(color: borderCol, width: 0.8),
+      ),
+    );
+  }
+}

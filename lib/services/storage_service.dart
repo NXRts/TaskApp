@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import '../models/task.dart';
@@ -102,6 +103,61 @@ class StorageService {
 
   Future<void> setDarkMode(bool isDark) async {
     await _settingsBox.put('is_dark_mode', isDark);
+  }
+
+  // --- BACKUP & RESTORE ---
+  String exportBackupJson() {
+    final subjectsList = <dynamic>[];
+    for (var key in _subjectsBox.keys) {
+      subjectsList.add(_subjectsBox.get(key));
+    }
+
+    final tasksList = <dynamic>[];
+    for (var key in _tasksBox.keys) {
+      tasksList.add(_tasksBox.get(key));
+    }
+
+    final data = {
+      'version': 1,
+      'exportedAt': DateTime.now().toIso8601String(),
+      'subjects': subjectsList,
+      'tasks': tasksList,
+      'user_profile': _settingsBox.get('user_profile'),
+    };
+    return jsonEncode(data);
+  }
+
+  Future<bool> importBackupJson(String jsonStr) async {
+    try {
+      final decoded = jsonDecode(jsonStr);
+      if (decoded is! Map) return false;
+
+      if (decoded.containsKey('subjects') && decoded['subjects'] is List) {
+        await _subjectsBox.clear();
+        for (var sub in decoded['subjects']) {
+          if (sub is Map && sub.containsKey('id')) {
+            await _subjectsBox.put(sub['id'], sub);
+          }
+        }
+      }
+
+      if (decoded.containsKey('tasks') && decoded['tasks'] is List) {
+        await _tasksBox.clear();
+        for (var task in decoded['tasks']) {
+          if (task is Map && task.containsKey('id')) {
+            await _tasksBox.put(task['id'], task);
+          }
+        }
+      }
+
+      if (decoded.containsKey('user_profile') && decoded['user_profile'] is Map) {
+        await _settingsBox.put('user_profile', decoded['user_profile']);
+      }
+      return true;
+    } catch (e) {
+      debugPrint('Error importing backup: $e');
+      return false;
+    }
   }
 
   // --- SEED SAMPLE DATA ---

@@ -259,9 +259,9 @@ class _AddSubjectDialogState extends State<AddSubjectDialog> {
                           boxShadow: [
                             if (isSelected)
                               BoxShadow(
-                                color: Color(colorInt).withOpacity(0.5),
-                                blurRadius: 6,
-                                spreadRadius: 2,
+                                color: Color(colorInt).withValues(alpha: 0.3),
+                                blurRadius: 4,
+                                spreadRadius: 1,
                               ),
                           ],
                         ),
@@ -284,8 +284,12 @@ class _AddSubjectDialogState extends State<AddSubjectDialog> {
         ),
         ElevatedButton(
           style: ElevatedButton.styleFrom(
-            backgroundColor: AppTheme.primaryColor,
+            backgroundColor: Theme.of(context).brightness == Brightness.dark
+                ? AppTheme.darkAccent
+                : AppTheme.lightAccent,
             foregroundColor: Colors.white,
+            elevation: 0,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
           ),
           onPressed: _submit,
           child: const Text('Simpan'),
