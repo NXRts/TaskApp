@@ -39,24 +39,31 @@ jobs:
       - name: Build APK (Release)
         run: flutter build apk --release
 
-      - name: Rename APK with Version Tag
+      - name: Rename APK
         run: |
-          TAG_NAME=${GITHUB_REF#refs/tags/}
-          if [ -z "$TAG_NAME" ] || [ "$TAG_NAME" = "refs/heads/main" ]; then
-            TAG_NAME="latest"
+          VERSION="${{ github.ref_name }}"
+          if [ -z "$VERSION" ] || [ "$VERSION" = "main" ]; then
+            VERSION="v2.0.0"
           fi
-          cp build/app/outputs/flutter-apk/app-release.apk "TaskApp-${TAG_NAME}.apk"
+          cp build/app/outputs/flutter-apk/app-release.apk "TaskApp-${VERSION}.apk"
 
-      - name: Upload Release Asset
-        uses: softprops/action-gh-release@v2
-        if: startsWith(github.ref, 'refs/tags/')
+      - name: Upload APK Artifact (Actions)
+        uses: actions/upload-artifact@v4
         with:
-          name: "TaskApp ${{ github.ref_name }} — Modern Editorial Productivity"
+          name: TaskApp-Release-APK
+          path: build/app/outputs/flutter-apk/app-release.apk
+          if-no-files-found: error
+
+      - name: Upload Release Asset (GitHub Releases)
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v2.0.0
+          name: "TaskApp v2.0.0 — Modern Editorial Productivity & Academic Planner"
           body_path: RELEASE_NOTES_v2.0.0.md
           draft: false
           prerelease: false
           files: |
-            TaskApp-${{ github.ref_name }}.apk
+            TaskApp-*.apk
             build/app/outputs/flutter-apk/app-release.apk
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
