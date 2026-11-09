@@ -12,6 +12,12 @@ class SettingsProvider with ChangeNotifier {
     _profile = _storageService.getUserProfile();
   }
 
+  void reloadSettings() {
+    _isDarkMode = _storageService.isDarkMode();
+    _profile = _storageService.getUserProfile();
+    notifyListeners();
+  }
+
   bool get isDarkMode => _isDarkMode;
   UserProfile get profile => _profile;
   int get completedPomodoroSessions => _storageService.getCompletedPomodoroSessions();

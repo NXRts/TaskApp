@@ -178,7 +178,7 @@ class _ProfileSettingsScreenState extends State<ProfileSettingsScreen> {
             ),
             const SizedBox(height: 4),
             Text(
-              'Simpan salinan data tugas dan mata kuliah Anda ke teks JSON agar tidak hilang saat beralih perangkat.',
+              'Simpan atau pulihkan seluruh data aplikasi (Tugas, Sub-tugas, Mata Kuliah, Profil, Tema, & Sesi Fokus) dalam format teks JSON.',
               style: TextStyle(fontSize: 12, color: textSecondary, height: 1.3),
             ),
             const SizedBox(height: 12),
@@ -192,17 +192,105 @@ class _ProfileSettingsScreenState extends State<ProfileSettingsScreen> {
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                     ),
                     onPressed: () {
+                      // Simpan dulu perubahan form profil yang sedang diketik jika ada
+                      final settingsProvider = Provider.of<SettingsProvider>(context, listen: false);
+                      final taskProvider = Provider.of<TaskProvider>(context, listen: false);
+                      final subjectProvider = Provider.of<SubjectProvider>(context, listen: false);
+
                       final storage = StorageService();
-                      final jsonStr = storage.exportBackupJson();
+                      final jsonStr = storage.exportBackupJson(pretty: true);
                       Clipboard.setData(ClipboardData(text: jsonStr));
+
+                      final totalSubtasks = taskProvider.allTasks.fold<int>(
+                        0,
+                        (sum, t) => sum + t.subtasks.length,
+                      );
+
                       showDialog(
                         context: context,
                         builder: (ctx) => AlertDialog(
-                          title: const Text('Cadangan Disalin! 🎉'),
-                          content: const Text(
-                            'Teks data JSON cadangan Anda telah disalin ke clipboard. Anda bisa menyimpannya di aplikasi catatan.',
+                          title: const Text('Cadangan Lengkap Disalin! 🎉'),
+                          content: SizedBox(
+                            width: 400,
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Text(
+                                  'Seluruh data aplikasi telah disalin ke clipboard dalam format JSON:',
+                                  style: TextStyle(fontSize: 12.5),
+                                ),
+                                const SizedBox(height: 10),
+                                Container(
+                                  width: double.infinity,
+                                  padding: const EdgeInsets.all(10),
+                                  decoration: BoxDecoration(
+                                    color: isDark ? AppTheme.darkSurface : AppTheme.lightBorderSubtle,
+                                    borderRadius: BorderRadius.circular(8),
+                                    border: Border.all(color: borderCol, width: 0.8),
+                                  ),
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        '• Profil: ${settingsProvider.profile.name} (Sem. ${settingsProvider.profile.semester})',
+                                        style: TextStyle(fontSize: 11.5, color: textPrimary),
+                                      ),
+                                      Text(
+                                        '• Mata Kuliah: ${subjectProvider.subjects.length} matkul (${subjectProvider.totalCreditHours} SKS)',
+                                        style: TextStyle(fontSize: 11.5, color: textPrimary),
+                                      ),
+                                      Text(
+                                        '• Tugas: ${taskProvider.totalCount} tugas ($totalSubtasks sub-tugas)',
+                                        style: TextStyle(fontSize: 11.5, color: textPrimary),
+                                      ),
+                                      Text(
+                                        '• Fokus Pomodoro: ${settingsProvider.completedPomodoroSessions} sesi (${settingsProvider.totalFocusMinutes} menit)',
+                                        style: TextStyle(fontSize: 11.5, color: textPrimary),
+                                      ),
+                                      Text(
+                                        '• Pengaturan Tema: ${settingsProvider.isDarkMode ? "Dark Mode" : "Light Mode"}',
+                                        style: TextStyle(fontSize: 11.5, color: textPrimary),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                const SizedBox(height: 10),
+                                ConstrainedBox(
+                                  constraints: const BoxConstraints(maxHeight: 140),
+                                  child: Container(
+                                    width: double.infinity,
+                                    padding: const EdgeInsets.all(8),
+                                    decoration: BoxDecoration(
+                                      color: isDark ? AppTheme.darkSurface : AppTheme.lightBorderSubtle,
+                                      borderRadius: BorderRadius.circular(6),
+                                      border: Border.all(color: borderCol, width: 0.8),
+                                    ),
+                                    child: SingleChildScrollView(
+                                      child: SelectableText(
+                                        jsonStr,
+                                        style: TextStyle(
+                                          fontSize: 10.5,
+                                          fontFamily: 'monospace',
+                                          color: textSecondary,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
                           actions: [
+                            TextButton(
+                              onPressed: () {
+                                Clipboard.setData(ClipboardData(text: jsonStr));
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(content: Text('📋 Teks JSON disalin ulang ke clipboard!')),
+                                );
+                              },
+                              child: const Text('Salin Ulang'),
+                            ),
                             ElevatedButton(
                               onPressed: () => Navigator.pop(ctx),
                               child: const Text('OK'),
@@ -227,25 +315,45 @@ class _ProfileSettingsScreenState extends State<ProfileSettingsScreen> {
                       showDialog(
                         context: context,
                         builder: (ctx) => AlertDialog(
-                          title: const Text('Pulihkan Data Cadangan'),
-                          content: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              const Text(
-                                'Tempelkan (paste) teks JSON cadangan di bawah:',
-                                style: TextStyle(fontSize: 12.5),
-                              ),
-                              const SizedBox(height: 10),
-                              TextField(
-                                controller: controller,
-                                maxLines: 4,
-                                style: const TextStyle(fontSize: 12),
-                                decoration: InputDecoration(
-                                  hintText: '{"version": 1, ...}',
-                                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                          title: const Text('Pulihkan Seluruh Data'),
+                          content: SizedBox(
+                            width: 400,
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Text(
+                                  'Tempelkan (paste) teks JSON cadangan untuk memulihkan seluruh tugas, mata kuliah, profil, tema, dan sesi fokus:',
+                                  style: TextStyle(fontSize: 12.5),
                                 ),
-                              ),
-                            ],
+                                const SizedBox(height: 8),
+                                Align(
+                                  alignment: Alignment.centerRight,
+                                  child: TextButton.icon(
+                                    onPressed: () async {
+                                      final clip = await Clipboard.getData(Clipboard.kTextPlain);
+                                      if (clip?.text != null && clip!.text!.trim().isNotEmpty) {
+                                        controller.text = clip.text!.trim();
+                                      }
+                                    },
+                                    icon: const Icon(Icons.content_paste, size: 15),
+                                    label: const Text(
+                                      'Tempel dari Clipboard',
+                                      style: TextStyle(fontSize: 12),
+                                    ),
+                                  ),
+                                ),
+                                TextField(
+                                  controller: controller,
+                                  maxLines: 6,
+                                  style: const TextStyle(fontSize: 11.5, fontFamily: 'monospace'),
+                                  decoration: InputDecoration(
+                                    hintText: '{"app": "TaskApp", "version": 2, ...}',
+                                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
                           actions: [
                             TextButton(
@@ -261,10 +369,28 @@ class _ProfileSettingsScreenState extends State<ProfileSettingsScreen> {
                                   if (ctx.mounted) Navigator.pop(ctx);
                                   if (success) {
                                     if (context.mounted) {
-                                      Provider.of<TaskProvider>(context, listen: false).loadTasks();
-                                      Provider.of<SubjectProvider>(context, listen: false).loadSubjects();
+                                      final taskProv = Provider.of<TaskProvider>(context, listen: false);
+                                      final subProv = Provider.of<SubjectProvider>(context, listen: false);
+                                      final settingsProv = Provider.of<SettingsProvider>(context, listen: false);
+
+                                      taskProv.loadTasks();
+                                      subProv.loadSubjects();
+                                      settingsProv.reloadSettings();
+
+                                      final restoredProfile = settingsProv.profile;
+                                      setState(() {
+                                        _nameController.text = restoredProfile.name;
+                                        _campusController.text = restoredProfile.campus;
+                                        _prodiController.text = restoredProfile.studyProgram;
+                                        _semester = restoredProfile.semester.clamp(1, 14);
+                                      });
+
                                       ScaffoldMessenger.of(context).showSnackBar(
-                                        const SnackBar(content: Text('✅ Data berhasil dipulihkan!')),
+                                        SnackBar(
+                                          content: Text(
+                                            '✅ Seluruh data berhasil dipulihkan (${subProv.subjects.length} matkul, ${taskProv.totalCount} tugas, profil & pengaturan)!',
+                                          ),
+                                        ),
                                       );
                                     }
                                   } else {
