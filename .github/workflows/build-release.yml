@@ -43,7 +43,7 @@ jobs:
         run: |
           VERSION="${{ github.ref_name }}"
           if [ -z "$VERSION" ] || [ "$VERSION" = "main" ]; then
-            VERSION="v2.0.3"
+            VERSION="v2.0.4"
           fi
           cp build/app/outputs/flutter-apk/app-release.apk "TaskApp-${VERSION}.apk"
 
@@ -61,8 +61,8 @@ jobs:
             cp "RELEASE_NOTES_${VERSION}.md" RELEASE_NOTES_CURRENT.md
           elif [ -f "RELEASE_NOTES.md" ]; then
             cp "RELEASE_NOTES.md" RELEASE_NOTES_CURRENT.md
-          elif [ -f "RELEASE_NOTES_v2.0.3.md" ]; then
-            cp "RELEASE_NOTES_v2.0.3.md" RELEASE_NOTES_CURRENT.md
+          elif [ -f "RELEASE_NOTES_v2.0.4.md" ]; then
+            cp "RELEASE_NOTES_v2.0.4.md" RELEASE_NOTES_CURRENT.md
           else
             echo "TaskApp ${VERSION}" > RELEASE_NOTES_CURRENT.md
           fi

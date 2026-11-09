@@ -58,7 +58,7 @@ class TaskApp extends StatelessWidget {
     SystemChrome.setSystemUIOverlayStyle(overlayStyle);
 
     return MaterialApp(
-      title: 'TaskApp - Kuliah & To-Do',
+      title: 'TaskApp',
       debugShowCheckedModeBanner: false,
       scrollBehavior: const AppScrollBehavior(),
       theme: AppTheme.lightTheme,
