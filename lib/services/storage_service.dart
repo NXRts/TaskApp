@@ -2,14 +2,18 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import '../models/task.dart';
-import '../models/subtask.dart';
 import '../models/subject.dart';
 import '../models/user_profile.dart';
 
 class StorageService {
+  static final StorageService _instance = StorageService._internal();
+  factory StorageService() => _instance;
+  StorageService._internal();
+
   static const String tasksBoxName = 'tasks_box_v1';
   static const String subjectsBoxName = 'subjects_box_v1';
   static const String settingsBoxName = 'settings_box_v1';
+  static const String keyHasSeeded = 'has_seeded_v1';
 
   late Box _tasksBox;
   late Box _subjectsBox;
@@ -21,10 +25,22 @@ class StorageService {
     _subjectsBox = await Hive.openBox(subjectsBoxName);
     _settingsBox = await Hive.openBox(settingsBoxName);
 
-    // Seed initial dummy data if first run
-    if (_subjectsBox.isEmpty && _tasksBox.isEmpty) {
-      await _seedDefaultData();
+    // Hapus data dummy lama jika masih tersimpan di local storage
+    const dummyTaskIds = ['task-1', 'task-2', 'task-3', 'task-4'];
+    for (final id in dummyTaskIds) {
+      if (_tasksBox.containsKey(id)) {
+        await _tasksBox.delete(id);
+      }
     }
+
+    const dummySubjectIds = ['sub-1', 'sub-2', 'sub-3', 'sub-4'];
+    for (final id in dummySubjectIds) {
+      if (_subjectsBox.containsKey(id)) {
+        await _subjectsBox.delete(id);
+      }
+    }
+
+    await _settingsBox.put(keyHasSeeded, true);
   }
 
   // --- SUBJECTS ---
@@ -49,7 +65,11 @@ class StorageService {
   }
 
   Future<void> deleteSubject(String id) async {
-    await _subjectsBox.delete(id);
+    try {
+      await _subjectsBox.delete(id);
+    } catch (e) {
+      debugPrint('Error deleting subject: $e');
+    }
   }
 
   // --- TASKS ---
@@ -81,7 +101,11 @@ class StorageService {
   }
 
   Future<void> deleteTask(String id) async {
-    await _tasksBox.delete(id);
+    try {
+      await _tasksBox.delete(id);
+    } catch (e) {
+      debugPrint('Error deleting task: $e');
+    }
   }
 
   // --- USER PROFILE & SETTINGS ---
@@ -103,6 +127,15 @@ class StorageService {
 
   Future<void> setDarkMode(bool isDark) async {
     await _settingsBox.put('is_dark_mode', isDark);
+  }
+
+  int getCompletedPomodoroSessions() {
+    return _settingsBox.get('completed_pomodoro_sessions', defaultValue: 0) as int;
+  }
+
+  Future<void> incrementPomodoroSession() async {
+    final current = getCompletedPomodoroSessions();
+    await _settingsBox.put('completed_pomodoro_sessions', current + 1);
   }
 
   // --- BACKUP & RESTORE ---
@@ -153,132 +186,12 @@ class StorageService {
       if (decoded.containsKey('user_profile') && decoded['user_profile'] is Map) {
         await _settingsBox.put('user_profile', decoded['user_profile']);
       }
+      await _settingsBox.put(keyHasSeeded, true);
       return true;
     } catch (e) {
       debugPrint('Error importing backup: $e');
       return false;
     }
-  }
-
-  // --- SEED SAMPLE DATA ---
-  Future<void> _seedDefaultData() async {
-    final sub1 = Subject(
-      id: 'sub-1',
-      name: 'Pemrograman Mobile & Web',
-      code: 'IF-301',
-      lecturer: 'Dr. Irfan Hakim, M.Kom',
-      room: 'Lab Komputer 3',
-      colorValue: 0xFF4F46E5, // Indigo
-      creditHours: 3,
-      dayOfWeek: 1,
-      timeRange: '08:00 - 10:30',
-    );
-
-    final sub2 = Subject(
-      id: 'sub-2',
-      name: 'Basis Data Lanjut',
-      code: 'IF-202',
-      lecturer: 'Bu Rina Kartika, M.T.',
-      room: 'Gedung B, R302',
-      colorValue: 0xFF059669, // Emerald
-      creditHours: 3,
-      dayOfWeek: 3,
-      timeRange: '10:45 - 13:15',
-    );
-
-    final sub3 = Subject(
-      id: 'sub-3',
-      name: 'Kecerdasan Buatan (AI)',
-      code: 'IF-304',
-      lecturer: 'Prof. Andy Wijaya',
-      room: 'Ruang Seminar 401',
-      colorValue: 0xFF7C3AED, // Violet
-      creditHours: 3,
-      dayOfWeek: 4,
-      timeRange: '13:30 - 16:00',
-    );
-
-    final sub4 = Subject(
-      id: 'sub-4',
-      name: 'Kewirausahaan & Etika',
-      code: 'UNV-102',
-      lecturer: 'Pak Hendra, M.M.',
-      room: 'Auditorium Utama',
-      colorValue: 0xFFD97706, // Amber
-      creditHours: 2,
-      dayOfWeek: 5,
-      timeRange: '09:00 - 10:40',
-    );
-
-    await saveSubject(sub1);
-    await saveSubject(sub2);
-    await saveSubject(sub3);
-    await saveSubject(sub4);
-
-    final now = DateTime.now();
-
-    final task1 = TaskItem(
-      id: 'task-1',
-      title: 'Laporan Praktikum REST API & State Management',
-      description: 'Implementasikan CRUD lokal dan rekam demo video berdurasi maksimal 3 menit.',
-      subjectId: 'sub-1',
-      dueDate: DateTime(now.year, now.month, now.day, 23, 59), // Hari ini jam 23:59
-      priority: TaskPriority.high,
-      category: TaskCategory.academic,
-      taskType: TaskType.practice,
-      subtasks: [
-        SubTask(id: 'st-1', title: 'Desain skema model data', isCompleted: true),
-        SubTask(id: 'st-2', title: 'Setup database lokal & controller', isCompleted: true),
-        SubTask(id: 'st-3', title: 'Bikin PDF laporan & link GitHub', isCompleted: false),
-      ],
-      attachments: ['https://github.com/example/api-task'],
-      notes: 'Format PDF wajib menggunakan template kampus.',
-    );
-
-    final task2 = TaskItem(
-      id: 'task-2',
-      title: 'Tugas Kelompok: Normalisasi Skema BCNF',
-      description: 'Diskusikan studi kasus sistem pemesanan tiket dengan anggota kelompok 4.',
-      subjectId: 'sub-2',
-      dueDate: now.add(const Duration(days: 2)),
-      priority: TaskPriority.medium,
-      category: TaskCategory.academic,
-      taskType: TaskType.group,
-      subtasks: [
-        SubTask(id: 'st-4', title: 'Identifikasi Functional Dependencies', isCompleted: true),
-        SubTask(id: 'st-5', title: 'Ubah ke bentuk 3NF & BCNF', isCompleted: false),
-        SubTask(id: 'st-6', title: 'Buat slide presentasi Canva', isCompleted: false),
-      ],
-      attachments: ['https://drive.google.com/sample-erd'],
-      notes: 'Bagi tugas slide: Alex (Bab 1), Dinda (Bab 2).',
-    );
-
-    final task3 = TaskItem(
-      id: 'task-3',
-      title: 'Kuis AI: Algoritma Heuristik & A* Search',
-      description: 'Pelajari bab 3 dan 4 buku Russell & Norvig sebelum kuis dimulai.',
-      subjectId: 'sub-3',
-      dueDate: now.add(const Duration(days: 4)),
-      priority: TaskPriority.medium,
-      category: TaskCategory.academic,
-      taskType: TaskType.quiz,
-    );
-
-    final task4 = TaskItem(
-      id: 'task-4',
-      title: 'Beli Kertas HVS A4 & Map Folio Praktikum',
-      description: 'Beli di fotocopy depan kampus sebelum jam praktikum dimulai.',
-      dueDate: DateTime(now.year, now.month, now.day, 16, 0),
-      priority: TaskPriority.low,
-      category: TaskCategory.personal,
-      taskType: TaskType.general,
-      isCompleted: false,
-    );
-
-    await saveTask(task1);
-    await saveTask(task2);
-    await saveTask(task3);
-    await saveTask(task4);
   }
 }
 
