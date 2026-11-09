@@ -19,10 +19,15 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   final TextEditingController _searchController = TextEditingController();
+  final ScrollController _filterScrollController = ScrollController();
+  final Map<TaskFilterStatus, GlobalKey> _filterChipKeys = {
+    for (final status in TaskFilterStatus.values) status: GlobalKey(),
+  };
 
   @override
   void dispose() {
     _searchController.dispose();
+    _filterScrollController.dispose();
     super.dispose();
   }
 
@@ -248,7 +253,11 @@ class _HomeScreenState extends State<HomeScreen> {
 
                     // Horizontal Status Filters
                     SingleChildScrollView(
+                      controller: _filterScrollController,
                       scrollDirection: Axis.horizontal,
+                      physics: const BouncingScrollPhysics(
+                        parent: AlwaysScrollableScrollPhysics(),
+                      ),
                       child: Row(
                         children: [
                           _buildFilterChip('Semua', TaskFilterStatus.all),
@@ -386,7 +395,19 @@ class _HomeScreenState extends State<HomeScreen> {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return GestureDetector(
-      onTap: () => taskProvider.setFilterStatus(status),
+      key: _filterChipKeys[status],
+      onTap: () {
+        taskProvider.setFilterStatus(status);
+        final chipContext = _filterChipKeys[status]?.currentContext;
+        if (chipContext != null) {
+          Scrollable.ensureVisible(
+            chipContext,
+            alignment: 0.5,
+            duration: const Duration(milliseconds: 280),
+            curve: Curves.easeOutCubic,
+          );
+        }
+      },
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
         decoration: BoxDecoration(

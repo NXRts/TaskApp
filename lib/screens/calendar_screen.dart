@@ -15,12 +15,86 @@ class CalendarScreen extends StatefulWidget {
 }
 
 class _CalendarScreenState extends State<CalendarScreen> {
-  DateTime _selectedDate = DateTime.now();
+  static const int _pastDaysCount = 14;
+  static const int _totalDaysCount = 45;
+  static const double _itemWidth = 48.0;
+  static const double _itemHorizontalMargin = 3.0;
+  static const double _itemExtent = _itemWidth + (_itemHorizontalMargin * 2);
+  static const double _listHorizontalPadding = 16.0;
+
+  late DateTime _selectedDate;
+  late DateTime _lastKnownToday;
+  ScrollController? _dateScrollController;
+  double _lastViewportWidth = 0;
+
+  static DateTime _normalizeDate(DateTime date) =>
+      DateTime(date.year, date.month, date.day);
+
+  double _calculateCenterOffset(int index, double viewportWidth) {
+    final double itemCenter =
+        _listHorizontalPadding + (index * _itemExtent) + (_itemExtent / 2);
+    final double targetOffset = itemCenter - (viewportWidth / 2);
+    return targetOffset < 0.0 ? 0.0 : targetOffset;
+  }
+
+  void _scrollToIndex(int index, {bool animate = true}) {
+    final controller = _dateScrollController;
+    if (controller == null || !controller.hasClients) return;
+    final viewportWidth = controller.position.viewportDimension;
+    final maxScroll = controller.position.maxScrollExtent;
+    final targetOffset =
+        _calculateCenterOffset(index, viewportWidth).clamp(0.0, maxScroll);
+    if (animate) {
+      controller.animateTo(
+        targetOffset,
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeOutCubic,
+      );
+    } else {
+      controller.jumpTo(targetOffset);
+    }
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    final today = _normalizeDate(DateTime.now());
+    _lastKnownToday = today;
+    _selectedDate = today;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _scrollToIndex(_pastDaysCount, animate: false);
+    });
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final screenWidth = MediaQuery.sizeOf(context).width;
+    if (_dateScrollController == null) {
+      _lastViewportWidth = screenWidth;
+      _dateScrollController = ScrollController(
+        initialScrollOffset: _calculateCenterOffset(_pastDaysCount, screenWidth),
+      );
+    } else if ((screenWidth - _lastViewportWidth).abs() > 1.0) {
+      _lastViewportWidth = screenWidth;
+      final selectedIndex = _pastDaysCount +
+          _normalizeDate(_selectedDate).difference(_lastKnownToday).inDays;
+      final targetIndex = selectedIndex.clamp(0, _totalDaysCount - 1);
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _scrollToIndex(targetIndex, animate: false);
+      });
+    }
+  }
+
+  @override
+  void dispose() {
+    _dateScrollController?.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
     final taskProvider = Provider.of<TaskProvider>(context);
-    final dayTasks = taskProvider.getTasksForDate(_selectedDate);
 
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final textPrimary = isDark ? AppTheme.darkTextPrimary : AppTheme.lightTextPrimary;
@@ -28,9 +102,28 @@ class _CalendarScreenState extends State<CalendarScreen> {
     final borderCol = isDark ? AppTheme.darkBorder : AppTheme.lightBorder;
 
     final now = DateTime.now();
-    final today = DateTime(now.year, now.month, now.day);
-    final dateList = List.generate(28, (index) {
-      return today.subtract(const Duration(days: 7)).add(Duration(days: index));
+    final today = _normalizeDate(now);
+
+    // Jika hari sudah berganti (tanggal sebelumnya sudah terlewat), otomatis geser ke tanggal sekarang di tengah
+    if (today != _lastKnownToday) {
+      final previousToday = _lastKnownToday;
+      _lastKnownToday = today;
+      if (_normalizeDate(_selectedDate).isAtSameMomentAs(previousToday) ||
+          _normalizeDate(_selectedDate).isBefore(today)) {
+        _selectedDate = today;
+      }
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          _scrollToIndex(_pastDaysCount, animate: true);
+        }
+      });
+    }
+
+    final dayTasks = taskProvider.getTasksForDate(_selectedDate);
+    final dateList = List.generate(_totalDaysCount, (index) {
+      return today
+          .subtract(const Duration(days: _pastDaysCount))
+          .add(Duration(days: index));
     });
 
     return Scaffold(
@@ -39,7 +132,12 @@ class _CalendarScreenState extends State<CalendarScreen> {
         actions: [
           TextButton(
             onPressed: () {
-              setState(() => _selectedDate = DateTime.now());
+              final currentToday = _normalizeDate(DateTime.now());
+              setState(() {
+                _lastKnownToday = currentToday;
+                _selectedDate = currentToday;
+              });
+              _scrollToIndex(_pastDaysCount, animate: true);
             },
             child: Text(
               'Hari Ini',
@@ -77,26 +175,37 @@ class _CalendarScreenState extends State<CalendarScreen> {
           SizedBox(
             height: 70,
             child: ListView.builder(
+              controller: _dateScrollController,
               scrollDirection: Axis.horizontal,
-              padding: const EdgeInsets.symmetric(horizontal: 16),
+              physics: const BouncingScrollPhysics(
+                parent: AlwaysScrollableScrollPhysics(),
+              ),
+              padding: const EdgeInsets.symmetric(
+                horizontal: _listHorizontalPadding,
+              ),
+              itemExtent: _itemExtent,
               itemCount: dateList.length,
               itemBuilder: (context, index) {
                 final date = dateList[index];
                 final isSelected = date.year == _selectedDate.year &&
                     date.month == _selectedDate.month &&
                     date.day == _selectedDate.day;
-                final isToday = date.year == now.year &&
-                    date.month == now.month &&
-                    date.day == now.day;
+                final isToday = date.year == today.year &&
+                    date.month == today.month &&
+                    date.day == today.day;
                 final hasTasks = taskProvider.getTasksForDate(date).isNotEmpty;
 
                 return GestureDetector(
                   onTap: () {
                     setState(() => _selectedDate = date);
+                    _scrollToIndex(index, animate: true);
                   },
                   child: Container(
-                    width: 48,
-                    margin: const EdgeInsets.symmetric(horizontal: 3, vertical: 4),
+                    width: _itemWidth,
+                    margin: const EdgeInsets.symmetric(
+                      horizontal: _itemHorizontalMargin,
+                      vertical: 4,
+                    ),
                     decoration: BoxDecoration(
                       color: isSelected
                           ? (isDark ? AppTheme.darkAccent : AppTheme.lightAccent)
