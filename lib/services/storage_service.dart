@@ -57,6 +57,7 @@ class StorageService {
           list.add(Subject.fromMap(val));
         }
       }
+      list.sort();
       return list;
     } catch (e) {
       debugPrint('Error getting subjects: $e');

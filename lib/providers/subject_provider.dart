@@ -12,8 +12,13 @@ class SubjectProvider with ChangeNotifier {
 
   List<Subject> get subjects => _subjects;
 
+  void _sortSubjects() {
+    _subjects.sort();
+  }
+
   void loadSubjects() {
     _subjects = _storageService.getSubjects();
+    _sortSubjects();
     notifyListeners();
   }
 
@@ -32,6 +37,7 @@ class SubjectProvider with ChangeNotifier {
 
   Future<void> addSubject(Subject subject) async {
     _subjects.add(subject);
+    _sortSubjects();
     await _storageService.saveSubject(subject);
     notifyListeners();
   }
@@ -40,6 +46,7 @@ class SubjectProvider with ChangeNotifier {
     final index = _subjects.indexWhere((s) => s.id == subject.id);
     if (index != -1) {
       _subjects[index] = subject;
+      _sortSubjects();
       await _storageService.saveSubject(subject);
       notifyListeners();
     }

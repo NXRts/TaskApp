@@ -28,6 +28,7 @@
 
 ### 2.2 Manajemen Mata Kuliah (`Subject`)
 * Menyimpan atribut mata kuliah: `id`, `name`, `code`, `lecturer` (dosen pengampu), `room` (ruangan), `colorValue` (label warna ARGB), `creditHours` (bobot SKS), `dayOfWeek` (Senin–Minggu), dan `timeRange` (jam perkuliahan).
+* **Pengurutan Kronologis Otomatis**: Daftar mata kuliah diurutkan secara otomatis dan konsisten berdasarkan hari perkuliahan (Senin–Minggu: 1 s/d 7) dan jam mulai kuliah (`startMinutes`), disusul abjad nama mata kuliah. Mata kuliah tanpa jadwal ditempatkan di bagian paling bawah.
 * Menghitung total beban SKS semester aktif secara otomatis.
 
 ### 2.3 Kalender & Timeline Pintar (`CalendarScreen`)

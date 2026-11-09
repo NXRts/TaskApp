@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-class Subject {
+class Subject implements Comparable<Subject> {
   final String id;
   String name;
   String code;
@@ -24,6 +24,43 @@ class Subject {
   });
 
   Color get color => Color(colorValue);
+
+  /// Menghitung menit awal dari timeRange (misal: "09.30-12.00" -> 570 menit)
+  int get startMinutes {
+    if (timeRange == null || timeRange!.trim().isEmpty) return 9999;
+    final match = RegExp(r'(\d{1,2})[:.](\d{2})').firstMatch(timeRange!);
+    if (match != null) {
+      final hour = int.tryParse(match.group(1)!) ?? 0;
+      final minute = int.tryParse(match.group(2)!) ?? 0;
+      return hour * 60 + minute;
+    }
+    final hourOnly = RegExp(r'(\d{1,2})').firstMatch(timeRange!);
+    if (hourOnly != null) {
+      final hour = int.tryParse(hourOnly.group(1)!) ?? 0;
+      return hour * 60;
+    }
+    return 9999;
+  }
+
+  @override
+  int compareTo(Subject other) {
+    // 1. Urutkan berdasarkan hari (1 = Senin .. 7 = Minggu). Yang belum ada hari di paling bawah.
+    final dayA = dayOfWeek ?? 999;
+    final dayB = other.dayOfWeek ?? 999;
+    if (dayA != dayB) {
+      return dayA.compareTo(dayB);
+    }
+
+    // 2. Urutkan berdasarkan jam mulai (menit ke-0 s/d 1439). Yang belum ada jam di paling bawah.
+    final timeA = startMinutes;
+    final timeB = other.startMinutes;
+    if (timeA != timeB) {
+      return timeA.compareTo(timeB);
+    }
+
+    // 3. Fallback: urutkan berdasarkan nama mata kuliah (A-Z)
+    return name.toLowerCase().compareTo(other.name.toLowerCase());
+  }
 
   String get dayName {
     switch (dayOfWeek) {
