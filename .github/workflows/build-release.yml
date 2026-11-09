@@ -43,7 +43,7 @@ jobs:
         run: |
           VERSION="${{ github.ref_name }}"
           if [ -z "$VERSION" ] || [ "$VERSION" = "main" ]; then
-            VERSION="v2.0.0"
+            VERSION="v2.0.1"
           fi
           cp build/app/outputs/flutter-apk/app-release.apk "TaskApp-${VERSION}.apk"
 
@@ -54,12 +54,25 @@ jobs:
           path: build/app/outputs/flutter-apk/app-release.apk
           if-no-files-found: error
 
+      - name: Prepare Release Notes
+        run: |
+          VERSION="${{ github.ref_name }}"
+          if [ -f "RELEASE_NOTES_${VERSION}.md" ]; then
+            cp "RELEASE_NOTES_${VERSION}.md" RELEASE_NOTES_CURRENT.md
+          elif [ -f "RELEASE_NOTES.md" ]; then
+            cp "RELEASE_NOTES.md" RELEASE_NOTES_CURRENT.md
+          elif [ -f "RELEASE_NOTES_v2.0.1.md" ]; then
+            cp "RELEASE_NOTES_v2.0.1.md" RELEASE_NOTES_CURRENT.md
+          else
+            echo "TaskApp ${VERSION}" > RELEASE_NOTES_CURRENT.md
+          fi
+
       - name: Upload Release Asset (GitHub Releases)
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v2.0.0
-          name: "TaskApp v2.0.0 — Modern Editorial Productivity & Academic Planner"
-          body_path: RELEASE_NOTES_v2.0.0.md
+          tag_name: ${{ github.ref_name }}
+          name: "TaskApp ${{ github.ref_name }} — Modern Editorial Productivity & Academic Planner"
+          body_path: RELEASE_NOTES_CURRENT.md
           draft: false
           prerelease: false
           files: |
