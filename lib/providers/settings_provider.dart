@@ -14,6 +14,13 @@ class SettingsProvider with ChangeNotifier {
 
   bool get isDarkMode => _isDarkMode;
   UserProfile get profile => _profile;
+  int get completedPomodoroSessions => _storageService.getCompletedPomodoroSessions();
+  int get totalFocusMinutes => completedPomodoroSessions * 25;
+
+  Future<void> recordCompletedSession() async {
+    await _storageService.incrementPomodoroSession();
+    notifyListeners();
+  }
 
   Future<void> toggleTheme() async {
     _isDarkMode = !_isDarkMode;
