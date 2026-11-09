@@ -19,8 +19,12 @@ class StorageService {
   late Box _subjectsBox;
   late Box _settingsBox;
 
-  Future<void> init() async {
-    await Hive.initFlutter();
+  Future<void> init({String? customPath}) async {
+    if (customPath != null) {
+      Hive.init(customPath);
+    } else {
+      await Hive.initFlutter();
+    }
     _tasksBox = await Hive.openBox(tasksBoxName);
     _subjectsBox = await Hive.openBox(subjectsBoxName);
     _settingsBox = await Hive.openBox(settingsBoxName);
@@ -133,30 +137,80 @@ class StorageService {
     return _settingsBox.get('completed_pomodoro_sessions', defaultValue: 0) as int;
   }
 
+  Future<void> setCompletedPomodoroSessions(int sessions) async {
+    await _settingsBox.put('completed_pomodoro_sessions', sessions < 0 ? 0 : sessions);
+  }
+
   Future<void> incrementPomodoroSession() async {
     final current = getCompletedPomodoroSessions();
     await _settingsBox.put('completed_pomodoro_sessions', current + 1);
   }
 
-  // --- BACKUP & RESTORE ---
-  String exportBackupJson() {
-    final subjectsList = <dynamic>[];
-    for (var key in _subjectsBox.keys) {
-      subjectsList.add(_subjectsBox.get(key));
+  static dynamic _deepConvertToJsonCompatible(dynamic value) {
+    if (value is Map) {
+      return value.map<String, dynamic>(
+        (key, val) => MapEntry(key.toString(), _deepConvertToJsonCompatible(val)),
+      );
+    } else if (value is List) {
+      return value.map(_deepConvertToJsonCompatible).toList();
     }
+    return value;
+  }
 
-    final tasksList = <dynamic>[];
-    for (var key in _tasksBox.keys) {
-      tasksList.add(_tasksBox.get(key));
+  // --- BACKUP & RESTORE (100% FULL DATA SOVEREIGNTY) ---
+  String exportBackupJson({bool pretty = true}) {
+    final subjects = getSubjects();
+    final subjectsList = subjects.map((s) => s.toMap()).toList();
+
+    final tasks = getTasks();
+    final tasksList = tasks.map((t) => t.toMap()).toList();
+
+    final profileMap = getUserProfile().toMap();
+    final darkMode = isDarkMode();
+    final pomodoroSessions = getCompletedPomodoroSessions();
+
+    final rawSettings = <String, dynamic>{};
+    for (var key in _settingsBox.keys) {
+      rawSettings[key.toString()] = _deepConvertToJsonCompatible(_settingsBox.get(key));
     }
+    rawSettings['user_profile'] = profileMap;
+    rawSettings['is_dark_mode'] = darkMode;
+    rawSettings['completed_pomodoro_sessions'] = pomodoroSessions;
+    rawSettings[keyHasSeeded] = true;
 
-    final data = {
-      'version': 1,
+    final totalSubtasks = tasks.fold<int>(0, (sum, t) => sum + t.subtasks.length);
+    final completedTasks = tasks.where((t) => t.isCompleted).length;
+    final totalSks = subjects.fold<int>(0, (sum, s) => sum + s.creditHours);
+
+    final data = <String, dynamic>{
+      'app': 'TaskApp',
+      'version': 2,
       'exportedAt': DateTime.now().toIso8601String(),
+      'summary': {
+        'subjects_count': subjectsList.length,
+        'total_credit_hours': totalSks,
+        'tasks_count': tasksList.length,
+        'completed_tasks_count': completedTasks,
+        'pending_tasks_count': tasksList.length - completedTasks,
+        'subtasks_count': totalSubtasks,
+        'completed_pomodoro_sessions': pomodoroSessions,
+        'total_focus_minutes': pomodoroSessions * 25,
+      },
+      'user_profile': profileMap,
+      'settings': {
+        'is_dark_mode': darkMode,
+        'completed_pomodoro_sessions': pomodoroSessions,
+        'total_focus_minutes': pomodoroSessions * 25,
+        'has_seeded_v1': true,
+        'raw_settings': rawSettings,
+      },
       'subjects': subjectsList,
       'tasks': tasksList,
-      'user_profile': _settingsBox.get('user_profile'),
     };
+
+    if (pretty) {
+      return const JsonEncoder.withIndent('  ').convert(data);
+    }
     return jsonEncode(data);
   }
 
@@ -165,27 +219,79 @@ class StorageService {
       final decoded = jsonDecode(jsonStr);
       if (decoded is! Map) return false;
 
+      final hasKnownSection = decoded.containsKey('subjects') ||
+          decoded.containsKey('tasks') ||
+          decoded.containsKey('user_profile') ||
+          decoded.containsKey('settings') ||
+          decoded.containsKey('is_dark_mode') ||
+          decoded.containsKey('completed_pomodoro_sessions');
+      if (!hasKnownSection) return false;
+
+      // 1. Pulihkan seluruh Mata Kuliah (Subjects)
       if (decoded.containsKey('subjects') && decoded['subjects'] is List) {
         await _subjectsBox.clear();
         for (var sub in decoded['subjects']) {
-          if (sub is Map && sub.containsKey('id')) {
-            await _subjectsBox.put(sub['id'], sub);
+          if (sub is Map && sub['id'] != null) {
+            final normalizedSub = Subject.fromMap(sub).toMap();
+            await _subjectsBox.put(normalizedSub['id'] as String, normalizedSub);
           }
         }
       }
 
+      // 2. Pulihkan seluruh Tugas beserta Sub-tugas, Lampiran, & Catatan (Tasks)
       if (decoded.containsKey('tasks') && decoded['tasks'] is List) {
         await _tasksBox.clear();
         for (var task in decoded['tasks']) {
-          if (task is Map && task.containsKey('id')) {
-            await _tasksBox.put(task['id'], task);
+          if (task is Map && task['id'] != null) {
+            final normalizedTask = TaskItem.fromMap(task).toMap();
+            await _tasksBox.put(normalizedTask['id'] as String, normalizedTask);
           }
         }
       }
 
-      if (decoded.containsKey('user_profile') && decoded['user_profile'] is Map) {
-        await _settingsBox.put('user_profile', decoded['user_profile']);
+      // 3. Pulihkan Pengaturan & Statistik (Settings, Theme, Pomodoro)
+      if (decoded.containsKey('settings') && decoded['settings'] is Map) {
+        final settingsMap = decoded['settings'] as Map;
+
+        if (settingsMap['raw_settings'] is Map) {
+          final raw = settingsMap['raw_settings'] as Map;
+          for (final entry in raw.entries) {
+            await _settingsBox.put(
+              entry.key.toString(),
+              _deepConvertToJsonCompatible(entry.value),
+            );
+          }
+        }
+
+        if (settingsMap['is_dark_mode'] is bool) {
+          await setDarkMode(settingsMap['is_dark_mode'] as bool);
+        }
+        if (settingsMap['completed_pomodoro_sessions'] is int) {
+          await setCompletedPomodoroSessions(
+            settingsMap['completed_pomodoro_sessions'] as int,
+          );
+        }
+        if (settingsMap['user_profile'] is Map) {
+          final profile = UserProfile.fromMap(settingsMap['user_profile'] as Map);
+          await saveUserProfile(profile);
+        }
       }
+
+      // 4. Pulihkan kunci level root (kompatibilitas penuh v1 & v2)
+      if (decoded.containsKey('user_profile') && decoded['user_profile'] is Map) {
+        final profile = UserProfile.fromMap(decoded['user_profile'] as Map);
+        await saveUserProfile(profile);
+      }
+      if (decoded.containsKey('is_dark_mode') && decoded['is_dark_mode'] is bool) {
+        await setDarkMode(decoded['is_dark_mode'] as bool);
+      }
+      if (decoded.containsKey('completed_pomodoro_sessions') &&
+          decoded['completed_pomodoro_sessions'] is int) {
+        await setCompletedPomodoroSessions(
+          decoded['completed_pomodoro_sessions'] as int,
+        );
+      }
+
       await _settingsBox.put(keyHasSeeded, true);
       return true;
     } catch (e) {

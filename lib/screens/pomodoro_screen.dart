@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/task_provider.dart';
+import '../providers/settings_provider.dart';
 import '../utils/app_theme.dart';
 
 /// Zen Minimalist Focus (Pomodoro) Screen
@@ -19,7 +20,6 @@ class _PomodoroScreenState extends State<PomodoroScreen> {
   int _remainingSeconds = focusDuration;
   bool _isRunning = false;
   bool _isBreak = false;
-  int _completedSessions = 0;
   Timer? _timer;
 
   String? _selectedTaskId;
@@ -39,10 +39,13 @@ class _PomodoroScreenState extends State<PomodoroScreen> {
         setState(() => _remainingSeconds--);
       } else {
         _timer?.cancel();
+        if (!_isBreak && mounted) {
+          Provider.of<SettingsProvider>(context, listen: false)
+              .recordCompletedSession();
+        }
         setState(() {
           _isRunning = false;
           if (!_isBreak) {
-            _completedSessions++;
             _isBreak = true;
             _remainingSeconds = breakDuration;
           } else {
@@ -90,7 +93,12 @@ class _PomodoroScreenState extends State<PomodoroScreen> {
   @override
   Widget build(BuildContext context) {
     final taskProvider = Provider.of<TaskProvider>(context);
+    final settingsProvider = Provider.of<SettingsProvider>(context);
+    final completedSessions = settingsProvider.completedPomodoroSessions;
     final pendingTasks = taskProvider.allTasks.where((t) => !t.isCompleted).toList();
+    if (_selectedTaskId != null && !pendingTasks.any((t) => t.id == _selectedTaskId)) {
+      _selectedTaskId = null;
+    }
 
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final textPrimary = isDark ? AppTheme.darkTextPrimary : AppTheme.lightTextPrimary;
@@ -266,7 +274,7 @@ class _PomodoroScreenState extends State<PomodoroScreen> {
                   ),
                   const SizedBox(width: 8),
                   Text(
-                    '$_completedSessions sesi fokus terselesaikan hari ini',
+                    '$completedSessions sesi fokus terselesaikan (${settingsProvider.totalFocusMinutes} menit)',
                     style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w500, color: textPrimary),
                   ),
                 ],
