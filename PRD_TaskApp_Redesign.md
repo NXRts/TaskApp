@@ -8,7 +8,7 @@
 
 ### Prinsip Desain Utama (*Modern Editorial × Premium Minimalism*)
 1. **Zero-Latency & 100% Offline**: Seluruh operasi baca/tulis menggunakan database lokal NoSQL (**Hive**) dengan waktu muat di bawah 1 detik tanpa ketergantungan jaringan maupun akun cloud.
-2. **Visual Tenang (*Anti-AI Slop*)**: Menggunakan palet kertas hangat (*Warm Bone Paper* `#FBFBF9`) untuk mode terang dan obsidian hangat (*Warm Obsidian* `#0E0F12`) untuk mode gelap, garis batas tipis (*hairline border* `0.8px`), serta indikator warna semantik yang terkendali.
+2. **Visual Tenang (*Anti-AI Slop*) & Sinkronisasi System UI**: Menggunakan palet kertas hangat (*Warm Bone Paper* `#FBFBF9`) untuk mode terang dan obsidian hangat (*Warm Obsidian* `#0E0F12`) untuk mode gelap, garis batas tipis (*hairline border* `0.8px`), indikator warna semantik yang terkendali, serta sinkronisasi penuh dengan **Status Bar & Android System Navigation Bar** (`SystemUiOverlayStyle`) agar bilah navigasi bawah Android menyatu sempurna tanpa blok warna putih yang mengganggu di mode gelap.
 3. **Navigasi Lintas Perangkat**: Mendukung interaksi penuh melalui layar sentuh (*touch*), klik-tahan-geser kursor (*mouse drag*), *trackpad*, dan *stylus* (`AppScrollBehavior`).
 4. **Kedaulatan Data Penuh (*100% Data Sovereignty*)**: Pengguna memegang kendali penuh atas seluruh data mereka melalui fitur **Full-State JSON Export & Import** tanpa terkecuali.
 

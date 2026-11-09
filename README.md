@@ -8,7 +8,7 @@
 
 > **TaskApp** adalah aplikasi manajemen tugas kuliah dan aktivitas harian dengan pendekatan **Modern Editorial Productivity × Premium Minimalism**. Dibangun khusus untuk mahasiswa aktif yang membutuhkan aplikasi perencana studi yang berfokus tinggi, bebas distraksi (*Anti-AI Slop*), memahami beban SKS perkuliahan, dan bekerja **100% offline-first**.
 
-[📥 **Unduh APK Rilis Terbaru (v2.0.2)**](https://github.com/NXRts/TaskApp/releases/download/v2.0.2/TaskApp-v2.0.2.apk) · [✨ Catatan Rilis (v2.0.2)](RELEASE_NOTES_v2.0.2.md) · [📖 Dokumentasi Desain (PRD)](PRD_TaskApp_Redesign.md)
+[📥 **Unduh APK Rilis Terbaru (v2.0.3)**](https://github.com/NXRts/TaskApp/releases/download/v2.0.3/TaskApp-v2.0.3.apk) · [✨ Catatan Rilis (v2.0.3)](RELEASE_NOTES_v2.0.3.md) · [📖 Dokumentasi Desain (PRD)](PRD_TaskApp_Redesign.md)
 
 ---
 

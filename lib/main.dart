@@ -1,5 +1,6 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'services/storage_service.dart';
 import 'providers/task_provider.dart';
@@ -52,6 +53,9 @@ class TaskApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final settingsProvider = Provider.of<SettingsProvider>(context);
+    final overlayStyle =
+        AppTheme.systemOverlayStyle(settingsProvider.isDarkMode);
+    SystemChrome.setSystemUIOverlayStyle(overlayStyle);
 
     return MaterialApp(
       title: 'TaskApp - Kuliah & To-Do',
@@ -60,6 +64,10 @@ class TaskApp extends StatelessWidget {
       theme: AppTheme.lightTheme,
       darkTheme: AppTheme.darkTheme,
       themeMode: settingsProvider.isDarkMode ? ThemeMode.dark : ThemeMode.light,
+      builder: (context, child) => AnnotatedRegion<SystemUiOverlayStyle>(
+        value: overlayStyle,
+        child: child ?? const SizedBox.shrink(),
+      ),
       home: const MainScreen(),
     );
   }

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 /// Modern Editorial Productivity × Premium Minimalism Design System
 /// Inspired by Things 3, Linear, and Notion.
@@ -35,6 +36,21 @@ class AppTheme {
   static const Color successSage = Color(0xFF059669); // Emerald 600
   static const Color infoSlate = Color(0xFF64748B); // Slate 500
 
+  // --- SYSTEM UI OVERLAY ---
+
+  static SystemUiOverlayStyle systemOverlayStyle(bool isDark) {
+    return SystemUiOverlayStyle(
+      statusBarColor: Colors.transparent,
+      statusBarIconBrightness: isDark ? Brightness.light : Brightness.dark,
+      statusBarBrightness: isDark ? Brightness.dark : Brightness.light,
+      systemNavigationBarColor: isDark ? darkSurface : lightSurface,
+      systemNavigationBarDividerColor: isDark ? darkBorder : lightBorder,
+      systemNavigationBarIconBrightness:
+          isDark ? Brightness.light : Brightness.dark,
+      systemNavigationBarContrastEnforced: false,
+    );
+  }
+
   // --- THEME DATA ---
 
   static ThemeData lightTheme = ThemeData(
@@ -62,13 +78,14 @@ class AppTheme {
         side: const BorderSide(color: lightBorder, width: 1),
       ),
     ),
-    appBarTheme: const AppBarTheme(
+    appBarTheme: AppBarTheme(
       backgroundColor: lightBg,
       foregroundColor: lightTextPrimary,
       elevation: 0,
       scrolledUnderElevation: 0,
       centerTitle: false,
-      titleTextStyle: TextStyle(
+      systemOverlayStyle: systemOverlayStyle(false),
+      titleTextStyle: const TextStyle(
         color: lightTextPrimary,
         fontSize: 18,
         fontWeight: FontWeight.w600,
@@ -147,13 +164,14 @@ class AppTheme {
         side: const BorderSide(color: darkBorder, width: 1),
       ),
     ),
-    appBarTheme: const AppBarTheme(
+    appBarTheme: AppBarTheme(
       backgroundColor: darkBg,
       foregroundColor: darkTextPrimary,
       elevation: 0,
       scrolledUnderElevation: 0,
       centerTitle: false,
-      titleTextStyle: TextStyle(
+      systemOverlayStyle: systemOverlayStyle(true),
+      titleTextStyle: const TextStyle(
         color: darkTextPrimary,
         fontSize: 18,
         fontWeight: FontWeight.w600,
