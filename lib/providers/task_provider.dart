@@ -34,6 +34,15 @@ class TaskProvider with ChangeNotifier {
     notifyListeners();
   }
 
+  TaskItem? getTaskById(String? id) {
+    if (id == null) return null;
+    try {
+      return _tasks.firstWhere((t) => t.id == id);
+    } catch (_) {
+      return null;
+    }
+  }
+
   // --- FILTERS & SEARCH ---
   void setFilterStatus(TaskFilterStatus status) {
     _filterStatus = status;

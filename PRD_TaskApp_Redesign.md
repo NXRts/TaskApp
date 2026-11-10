@@ -38,6 +38,11 @@
 
 ### 2.4 Mode Fokus Belajar (`PomodoroScreen`)
 * Timer fokus bergaya Zen (25 menit sesi fokus / 5 menit istirahat) yang dapat ditautkan ke tugas spesifik.
+* **Sistem Notifikasi & Bunyi Alarm Lonceng (`PomodoroAlertService`)**:
+  * **Bunyi Lonceng Zen & Haptic Feedback**: Memutar harmoni lonceng audio (`focus_complete.wav` & `break_complete.wav`) dan getaran haptic saat sesi fokus atau istirahat selesai.
+  * **Notifikasi Sistem Operasi (`flutter_local_notifications`)**: Menampilkan notifikasi push sistem pada Android, iOS, dan desktop sehingga pengguna tetap mengetahui akhir sesi meski aplikasi berada di latar belakang.
+  * **Dialog Penyelesaian Interaktif**: Modal bottom sheet informatif untuk langsung memulai rehat 5 menit atau memulai sesi fokus berikutnya.
+  * **Kontrol Fleksibel**: Tombol toggle suara & notifikasi langsung di bilah atas (*AppBar*) serta tombol uji coba suara lonceng.
 * Mencatat dan menyimpan akumulasi sesi fokus (`completed_pomodoro_sessions`) dan total menit fokus (`total_focus_minutes`) secara permanen di penyimpanan lokal.
 
 ---
