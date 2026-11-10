@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'services/storage_service.dart';
+import 'services/pomodoro_alert_service.dart';
 import 'providers/task_provider.dart';
 import 'providers/subject_provider.dart';
 import 'providers/settings_provider.dart';
@@ -28,6 +29,9 @@ void main() async {
   // Initialize offline local storage
   final storageService = StorageService();
   await storageService.init();
+
+  // Initialize Pomodoro audio and local notification service
+  await PomodoroAlertService.instance.init();
 
   runApp(
     MultiProvider(

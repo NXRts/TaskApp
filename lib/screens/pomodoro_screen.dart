@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/task_provider.dart';
 import '../providers/settings_provider.dart';
+import '../services/pomodoro_alert_service.dart';
 import '../utils/app_theme.dart';
 
 /// Zen Minimalist Focus (Pomodoro) Screen
@@ -39,13 +40,25 @@ class _PomodoroScreenState extends State<PomodoroScreen> {
         setState(() => _remainingSeconds--);
       } else {
         _timer?.cancel();
-        if (!_isBreak && mounted) {
+        final wasBreak = _isBreak;
+        final taskProvider = Provider.of<TaskProvider>(context, listen: false);
+        final task = _selectedTaskId != null ? taskProvider.getTaskById(_selectedTaskId) : null;
+        final taskTitle = task?.title;
+
+        if (!wasBreak && mounted) {
           Provider.of<SettingsProvider>(context, listen: false)
               .recordCompletedSession();
         }
+
+        // Mainkan bunyi lonceng & notifikasi sistem
+        PomodoroAlertService.instance.notifySessionComplete(
+          isBreak: wasBreak,
+          taskTitle: taskTitle,
+        );
+
         setState(() {
           _isRunning = false;
-          if (!_isBreak) {
+          if (!wasBreak) {
             _isBreak = true;
             _remainingSeconds = breakDuration;
           } else {
@@ -53,6 +66,11 @@ class _PomodoroScreenState extends State<PomodoroScreen> {
             _remainingSeconds = focusDuration;
           }
         });
+
+        // Tampilkan dialog penyelesaian interaktif
+        if (mounted) {
+          _showCompletionModal(wasBreak: wasBreak, taskTitle: taskTitle);
+        }
       }
     });
   }
@@ -90,6 +108,115 @@ class _PomodoroScreenState extends State<PomodoroScreen> {
     return (total - _remainingSeconds) / total;
   }
 
+  void _showCompletionModal({required bool wasBreak, String? taskTitle}) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final textPrimary = isDark ? AppTheme.darkTextPrimary : AppTheme.lightTextPrimary;
+    final textSecondary = isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary;
+    final borderCol = isDark ? AppTheme.darkBorder : AppTheme.lightBorder;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) {
+        return Container(
+          padding: const EdgeInsets.fromLTRB(24, 20, 24, 32),
+          decoration: BoxDecoration(
+            color: isDark ? AppTheme.darkSurface : AppTheme.lightSurface,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+            border: Border.all(color: borderCol, width: 0.8),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 38,
+                height: 4,
+                margin: const EdgeInsets.only(bottom: 20),
+                decoration: BoxDecoration(
+                  color: borderCol,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              Container(
+                width: 56,
+                height: 56,
+                decoration: BoxDecoration(
+                  color: wasBreak
+                      ? (isDark ? AppTheme.darkAccent.withValues(alpha: 0.15) : AppTheme.lightBorderSubtle)
+                      : AppTheme.successSage.withValues(alpha: 0.15),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  wasBreak ? Icons.local_cafe_outlined : Icons.check_circle_outline,
+                  color: wasBreak ? (isDark ? AppTheme.darkAccent : AppTheme.lightAccent) : AppTheme.successSage,
+                  size: 28,
+                ),
+              ),
+              const SizedBox(height: 16),
+              Text(
+                wasBreak ? 'Waktu Rehat Selesai!' : 'Sesi Fokus Selesai!',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w700,
+                  color: textPrimary,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                wasBreak
+                    ? 'Istirahat 5 menit sudah selesai untuk menyegarkan pikiran. Siap untuk kembali produktif?'
+                    : (taskTitle != null && taskTitle.trim().isNotEmpty
+                        ? 'Target "$taskTitle" berhasil kamu fokuskan selama 25 menit. Ambil rehat 5 menit sekarang!'
+                        : 'Hebat! Kamu telah menuntaskan 25 menit fokus penuh. Luangkan waktu 5 menit untuk rehat sejenak.'),
+                textAlign: TextAlign.center,
+                style: TextStyle(fontSize: 13, color: textSecondary, height: 1.4),
+              ),
+              const SizedBox(height: 24),
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton(
+                      style: OutlinedButton.styleFrom(
+                        side: BorderSide(color: borderCol),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                      ),
+                      onPressed: () => Navigator.pop(ctx),
+                      child: Text('Tutup', style: TextStyle(fontSize: 13, color: textSecondary)),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: wasBreak
+                            ? (isDark ? AppTheme.darkAccent : AppTheme.lightAccent)
+                            : AppTheme.successSage,
+                        foregroundColor: Colors.white,
+                        elevation: 0,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                      ),
+                      onPressed: () {
+                        Navigator.pop(ctx);
+                        _startTimer();
+                      },
+                      child: Text(
+                        wasBreak ? 'Mulai Fokus (25m)' : 'Mulai Rehat (5m)',
+                        style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final taskProvider = Provider.of<TaskProvider>(context);
@@ -108,6 +235,68 @@ class _PomodoroScreenState extends State<PomodoroScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Fokus Belajar'),
+        actions: [
+          IconButton(
+            tooltip: PomodoroAlertService.instance.soundEnabled
+                ? 'Bunyi alarm aktif'
+                : 'Bunyi alarm nonaktif',
+            icon: Icon(
+              PomodoroAlertService.instance.soundEnabled
+                  ? Icons.volume_up_outlined
+                  : Icons.volume_off_outlined,
+              size: 21,
+            ),
+            onPressed: () {
+              setState(() {
+                PomodoroAlertService.instance.soundEnabled =
+                    !PomodoroAlertService.instance.soundEnabled;
+              });
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(
+                    PomodoroAlertService.instance.soundEnabled
+                        ? 'Bunyi alarm Pomodoro diaktifkan'
+                        : 'Bunyi alarm Pomodoro dimatikan',
+                  ),
+                  duration: const Duration(seconds: 1),
+                  behavior: SnackBarBehavior.floating,
+                ),
+              );
+              if (PomodoroAlertService.instance.soundEnabled) {
+                PomodoroAlertService.instance.playAlertSound(isBreak: _isBreak);
+              }
+            },
+          ),
+          IconButton(
+            tooltip: PomodoroAlertService.instance.notificationEnabled
+                ? 'Notifikasi sistem aktif'
+                : 'Notifikasi sistem nonaktif',
+            icon: Icon(
+              PomodoroAlertService.instance.notificationEnabled
+                  ? Icons.notifications_active_outlined
+                  : Icons.notifications_off_outlined,
+              size: 21,
+            ),
+            onPressed: () {
+              setState(() {
+                PomodoroAlertService.instance.notificationEnabled =
+                    !PomodoroAlertService.instance.notificationEnabled;
+              });
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(
+                    PomodoroAlertService.instance.notificationEnabled
+                        ? 'Notifikasi sistem Pomodoro diaktifkan'
+                        : 'Notifikasi sistem Pomodoro dimatikan',
+                  ),
+                  duration: const Duration(seconds: 1),
+                  behavior: SnackBarBehavior.floating,
+                ),
+              );
+            },
+          ),
+          const SizedBox(width: 8),
+        ],
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
