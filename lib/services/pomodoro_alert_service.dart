@@ -49,7 +49,7 @@ class PomodoroAlertService {
         linux: linuxSettings,
       );
 
-      await notificationsPlugin.initialize(settings: initSettings);
+      await notificationsPlugin.initialize(initSettings);
 
       // Minta izin notifikasi untuk Android 13+ (API 33+)
       if (!kIsWeb && Platform.isAndroid) {
@@ -182,10 +182,10 @@ class PomodoroAlertService {
 
     try {
       await notificationsPlugin.show(
-        id: isBreak ? 101 : 100,
-        title: title,
-        body: body,
-        notificationDetails: notificationDetails,
+        isBreak ? 101 : 100,
+        title,
+        body,
+        notificationDetails,
       );
     } catch (e) {
       debugPrint('Error showing local notification: $e');

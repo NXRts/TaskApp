@@ -46,3 +46,4 @@
 ---
 
 **Full Changelog**: https://github.com/NXRts/TaskApp/compare/v2.0.5...v2.0.6
+
