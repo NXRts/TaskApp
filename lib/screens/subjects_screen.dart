@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../models/subject.dart';
 import '../providers/subject_provider.dart';
 import '../providers/task_provider.dart';
 import '../widgets/add_subject_dialog.dart';
@@ -174,10 +175,11 @@ class SubjectsScreen extends StatelessWidget {
                             Divider(color: borderCol, height: 1),
                             const SizedBox(height: 8),
 
-                            // Bottom row: Pending tasks count & arrow
+                            // Bottom row: Pending tasks count & Attendance status badge
                             Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
+                                _buildAttendanceBadge(subject),
+                                const Spacer(),
                                 Text(
                                   pendingCount > 0 ? '$pendingCount tugas aktif' : 'Semua tugas selesai',
                                   style: TextStyle(
@@ -186,6 +188,7 @@ class SubjectsScreen extends StatelessWidget {
                                     color: pendingCount > 0 ? AppTheme.warningOchre : AppTheme.successSage,
                                   ),
                                 ),
+                                const SizedBox(width: 6),
                                 Icon(Icons.arrow_forward_ios, size: 12, color: textSecondary),
                               ],
                             ),
@@ -197,6 +200,45 @@ class SubjectsScreen extends StatelessWidget {
                 );
               },
             ),
+    );
+  }
+
+  Widget _buildAttendanceBadge(Subject subject) {
+    Color badgeColor;
+    String badgeText;
+
+    switch (subject.attendanceStatus) {
+      case AttendanceStatus.critical:
+        badgeColor = AppTheme.urgentRose;
+        badgeText = '🔴 ${subject.totalAbsences}x Absen (Kritis)';
+        break;
+      case AttendanceStatus.warning:
+        badgeColor = AppTheme.warningOchre;
+        badgeText = '🟡 ${subject.totalAbsences}x Absen (Waspada)';
+        break;
+      case AttendanceStatus.safe:
+        badgeColor = AppTheme.successSage;
+        badgeText = subject.totalAbsences == 0
+            ? '🟢 100% Hadir'
+            : '🟢 ${subject.totalAbsences}x Absen (Aman)';
+        break;
+    }
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+      decoration: BoxDecoration(
+        color: badgeColor.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(4),
+        border: Border.all(color: badgeColor.withValues(alpha: 0.3), width: 0.8),
+      ),
+      child: Text(
+        badgeText,
+        style: TextStyle(
+          fontSize: 10.5,
+          fontWeight: FontWeight.w700,
+          color: badgeColor,
+        ),
+      ),
     );
   }
 }
