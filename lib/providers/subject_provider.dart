@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import '../models/subject.dart';
+import '../models/attendance_record.dart';
 import '../services/storage_service.dart';
 
 class SubjectProvider with ChangeNotifier {
@@ -56,6 +57,28 @@ class SubjectProvider with ChangeNotifier {
     _subjects.removeWhere((s) => s.id == id);
     await _storageService.deleteSubject(id);
     notifyListeners();
+  }
+
+  Future<void> recordAbsence(String subjectId, AttendanceRecord record) async {
+    final subject = getSubjectById(subjectId);
+    if (subject == null) return;
+    final updatedAbsences = List<AttendanceRecord>.from(subject.absences);
+    final existingIndex = updatedAbsences.indexWhere((a) => a.meetingNumber == record.meetingNumber);
+    if (existingIndex != -1) {
+      updatedAbsences[existingIndex] = record;
+    } else {
+      updatedAbsences.add(record);
+    }
+    updatedAbsences.sort((a, b) => a.meetingNumber.compareTo(b.meetingNumber));
+    await updateSubject(subject.copyWith(absences: updatedAbsences));
+  }
+
+  Future<void> removeAbsence(String subjectId, String recordId) async {
+    final subject = getSubjectById(subjectId);
+    if (subject == null) return;
+    final updatedAbsences = List<AttendanceRecord>.from(subject.absences)
+      ..removeWhere((a) => a.id == recordId);
+    await updateSubject(subject.copyWith(absences: updatedAbsences));
   }
 }
 

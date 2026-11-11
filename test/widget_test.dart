@@ -2,6 +2,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:taskapp/models/task.dart';
 import 'package:taskapp/models/subtask.dart';
 import 'package:taskapp/models/subject.dart';
+import 'package:taskapp/models/attendance_record.dart';
 
 void main() {
   test('TaskItem progress and urgency calculations', () {
@@ -20,6 +21,103 @@ void main() {
     expect(task.progress, 0.5);
     expect(task.isCompleted, false);
     expect(task.isOverdue, false);
+  });
+
+  test('Attendance Sentinel metrics and dynamic status transitions', () {
+    final subject = Subject(
+      id: 'sub-sentinel',
+      name: 'Struktur Data',
+      totalMeetings: 16,
+    );
+
+    // Initial state: 0 absences -> 100% attendance, Safe status
+    expect(subject.totalMeetings, 16);
+    expect(subject.maxAllowedAbsences, 4);
+    expect(subject.totalAbsences, 0);
+    expect(subject.attendedMeetings, 16);
+    expect(subject.attendancePercentage, 100.0);
+    expect(subject.remainingAbsenceQuota, 4);
+    expect(subject.attendanceStatus, AttendanceStatus.safe);
+
+    // 1 Absence (Sakit) -> Still Safe (0-1)
+    final subjectWith1Absence = subject.copyWith(
+      absences: [
+        AttendanceRecord(
+          id: 'abs-1',
+          meetingNumber: 1,
+          date: DateTime(2026, 9, 1),
+          type: 'sakit',
+          note: 'Flu demam',
+        ),
+      ],
+    );
+    expect(subjectWith1Absence.totalAbsences, 1);
+    expect(subjectWith1Absence.attendedMeetings, 15);
+    expect(subjectWith1Absence.attendancePercentage, 93.75);
+    expect(subjectWith1Absence.remainingAbsenceQuota, 3);
+    expect(subjectWith1Absence.attendanceStatus, AttendanceStatus.safe);
+
+    // 2-3 Absences -> Warning (Waspada)
+    final subjectWith2Absences = subjectWith1Absence.copyWith(
+      absences: [
+        ...subjectWith1Absence.absences,
+        AttendanceRecord(
+          id: 'abs-2',
+          meetingNumber: 3,
+          date: DateTime(2026, 9, 15),
+          type: 'izin',
+          note: 'Urusan keluarga',
+        ),
+      ],
+    );
+    expect(subjectWith2Absences.totalAbsences, 2);
+    expect(subjectWith2Absences.remainingAbsenceQuota, 2);
+    expect(subjectWith2Absences.attendanceStatus, AttendanceStatus.warning);
+
+    final subjectWith3Absences = subjectWith2Absences.copyWith(
+      absences: [
+        ...subjectWith2Absences.absences,
+        AttendanceRecord(
+          id: 'abs-3',
+          meetingNumber: 6,
+          date: DateTime(2026, 10, 5),
+          type: 'sakit',
+          note: 'Rawat jalan',
+        ),
+      ],
+    );
+    expect(subjectWith3Absences.totalAbsences, 3);
+    expect(subjectWith3Absences.remainingAbsenceQuota, 1);
+    expect(subjectWith3Absences.attendanceStatus, AttendanceStatus.warning);
+
+    // 4+ Absences -> Critical (Kritis >= 4, Batas 75% terlampaui)
+    final subjectWith4Absences = subjectWith3Absences.copyWith(
+      absences: [
+        ...subjectWith3Absences.absences,
+        AttendanceRecord(
+          id: 'abs-4',
+          meetingNumber: 8,
+          date: DateTime(2026, 10, 20),
+          type: 'alfa',
+          note: 'Kesiangan',
+        ),
+      ],
+    );
+    expect(subjectWith4Absences.totalAbsences, 4);
+    expect(subjectWith4Absences.attendedMeetings, 12);
+    expect(subjectWith4Absences.attendancePercentage, 75.0);
+    expect(subjectWith4Absences.remainingAbsenceQuota, 0);
+    expect(subjectWith4Absences.attendanceStatus, AttendanceStatus.critical);
+
+    // Serialization and deserialization test
+    final map = subjectWith4Absences.toMap();
+    final reconstructed = Subject.fromMap(map);
+    expect(reconstructed.totalMeetings, 16);
+    expect(reconstructed.absences.length, 4);
+    expect(reconstructed.absences[0].type, 'sakit');
+    expect(reconstructed.absences[1].type, 'izin');
+    expect(reconstructed.absences[3].type, 'alfa');
+    expect(reconstructed.attendanceStatus, AttendanceStatus.critical);
   });
 
   test('Subject credit hours and mapping', () {

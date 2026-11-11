@@ -1,4 +1,11 @@
 import 'package:flutter/material.dart';
+import 'attendance_record.dart';
+
+enum AttendanceStatus {
+  safe,     // 🟢 Aman (0-1 kali alfa/absen)
+  warning,  // 🟡 Waspada (2-3 kali alfa/absen)
+  critical, // 🔴 Kritis (>= 4 kali alfa/absen)
+}
 
 class Subject implements Comparable<Subject> {
   final String id;
@@ -10,6 +17,8 @@ class Subject implements Comparable<Subject> {
   int creditHours; // SKS
   int? dayOfWeek; // 1 = Senin, 7 = Minggu
   String? timeRange;
+  int totalMeetings; // Preset default 16 pertemuan per semester
+  List<AttendanceRecord> absences;
 
   Subject({
     required this.id,
@@ -21,7 +30,9 @@ class Subject implements Comparable<Subject> {
     this.creditHours = 3,
     this.dayOfWeek,
     this.timeRange,
-  });
+    this.totalMeetings = 16,
+    List<AttendanceRecord>? absences,
+  }) : absences = absences ?? [];
 
   Color get color => Color(colorValue);
 
@@ -83,6 +94,38 @@ class Subject implements Comparable<Subject> {
     }
   }
 
+  // --- ATTENDANCE SENTINEL METRICS ---
+
+  int get totalAbsences => absences.length;
+  int get attendedMeetings => (totalMeetings - totalAbsences).clamp(0, totalMeetings);
+  double get attendancePercentage => totalMeetings > 0
+      ? (attendedMeetings / totalMeetings) * 100
+      : 100.0;
+  int get maxAllowedAbsences => (totalMeetings * 0.25).floor(); // Default 4 untuk 16 pertemuan
+  int get remainingAbsenceQuota => (maxAllowedAbsences - totalAbsences).clamp(0, maxAllowedAbsences);
+
+  /// Status Kehadiran Sesuai Aturan Kampus:
+  /// 🟢 Aman: 0–1 kali alfa/absen
+  /// 🟡 Waspada: 2–3 kali alfa/absen ("Sisa kuota izin Anda tinggal 1 kali")
+  /// 🔴 Kritis: >= 4 kali alfa/absen ("Batas 75% terlampaui! Anda berisiko dilarang ikut UAS")
+  AttendanceStatus get attendanceStatus {
+    if (totalAbsences >= maxAllowedAbsences) {
+      return AttendanceStatus.critical;
+    } else if (totalAbsences >= 2) {
+      return AttendanceStatus.warning;
+    } else {
+      return AttendanceStatus.safe;
+    }
+  }
+
+  AttendanceRecord? getAbsenceForMeeting(int meetingNumber) {
+    try {
+      return absences.firstWhere((a) => a.meetingNumber == meetingNumber);
+    } catch (_) {
+      return null;
+    }
+  }
+
   Map<String, dynamic> toMap() {
     return {
       'id': id,
@@ -94,6 +137,8 @@ class Subject implements Comparable<Subject> {
       'creditHours': creditHours,
       'dayOfWeek': dayOfWeek,
       'timeRange': timeRange,
+      'totalMeetings': totalMeetings,
+      'absences': absences.map((a) => a.toMap()).toList(),
     };
   }
 
@@ -108,6 +153,11 @@ class Subject implements Comparable<Subject> {
       creditHours: map['creditHours'] as int? ?? 3,
       dayOfWeek: map['dayOfWeek'] as int?,
       timeRange: map['timeRange'] as String?,
+      totalMeetings: map['totalMeetings'] as int? ?? 16,
+      absences: (map['absences'] as List?)
+              ?.map((a) => AttendanceRecord.fromMap(a as Map))
+              .toList() ??
+          [],
     );
   }
 
@@ -121,6 +171,8 @@ class Subject implements Comparable<Subject> {
     int? creditHours,
     int? dayOfWeek,
     String? timeRange,
+    int? totalMeetings,
+    List<AttendanceRecord>? absences,
   }) {
     return Subject(
       id: id ?? this.id,
@@ -132,6 +184,8 @@ class Subject implements Comparable<Subject> {
       creditHours: creditHours ?? this.creditHours,
       dayOfWeek: dayOfWeek ?? this.dayOfWeek,
       timeRange: timeRange ?? this.timeRange,
+      totalMeetings: totalMeetings ?? this.totalMeetings,
+      absences: absences ?? this.absences,
     );
   }
 }

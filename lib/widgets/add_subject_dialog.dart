@@ -23,6 +23,7 @@ class _AddSubjectDialogState extends State<AddSubjectDialog> {
   late TextEditingController _timeController;
 
   late int _sks;
+  late int _totalMeetings;
   int? _dayOfWeek;
   late int _colorValue;
 
@@ -48,6 +49,7 @@ class _AddSubjectDialogState extends State<AddSubjectDialog> {
       _roomController = TextEditingController(text: s.room);
       _timeController = TextEditingController(text: s.timeRange ?? '');
       _sks = s.creditHours;
+      _totalMeetings = s.totalMeetings;
       _dayOfWeek = s.dayOfWeek;
       _colorValue = s.colorValue;
     } else {
@@ -57,6 +59,7 @@ class _AddSubjectDialogState extends State<AddSubjectDialog> {
       _roomController = TextEditingController();
       _timeController = TextEditingController();
       _sks = 3;
+      _totalMeetings = 16;
       _dayOfWeek = 1;
       _colorValue = _palette.first;
     }
@@ -84,6 +87,7 @@ class _AddSubjectDialogState extends State<AddSubjectDialog> {
         lecturer: _lecturerController.text.trim(),
         room: _roomController.text.trim(),
         creditHours: _sks,
+        totalMeetings: _totalMeetings,
         dayOfWeek: _dayOfWeek,
         timeRange: _timeController.text.trim().isNotEmpty
             ? _timeController.text.trim()
@@ -99,6 +103,7 @@ class _AddSubjectDialogState extends State<AddSubjectDialog> {
         lecturer: _lecturerController.text.trim(),
         room: _roomController.text.trim(),
         creditHours: _sks,
+        totalMeetings: _totalMeetings,
         dayOfWeek: _dayOfWeek,
         timeRange: _timeController.text.trim().isNotEmpty
             ? _timeController.text.trim()
@@ -144,11 +149,11 @@ class _AddSubjectDialogState extends State<AddSubjectDialog> {
                 ),
                 const SizedBox(height: 10),
 
-                // Kode & SKS
+                // Kode, SKS, dan Total Pertemuan
                 Row(
                   children: [
                     Expanded(
-                      flex: 2,
+                      flex: 3,
                       child: TextFormField(
                         controller: _codeController,
                         decoration: InputDecoration(
@@ -160,7 +165,7 @@ class _AddSubjectDialogState extends State<AddSubjectDialog> {
                     ),
                     const SizedBox(width: 8),
                     Expanded(
-                      flex: 1,
+                      flex: 2,
                       child: DropdownButtonFormField<int>(
                         value: _sks,
                         decoration: InputDecoration(
@@ -172,6 +177,23 @@ class _AddSubjectDialogState extends State<AddSubjectDialog> {
                         }).toList(),
                         onChanged: (val) {
                           if (val != null) setState(() => _sks = val);
+                        },
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      flex: 3,
+                      child: DropdownButtonFormField<int>(
+                        value: _totalMeetings,
+                        decoration: InputDecoration(
+                          labelText: 'Pertemuan',
+                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                        ),
+                        items: [12, 14, 16, 18, 20].map((k) {
+                          return DropdownMenuItem(value: k, child: Text('$k x'));
+                        }).toList(),
+                        onChanged: (val) {
+                          if (val != null) setState(() => _totalMeetings = val);
                         },
                       ),
                     ),
