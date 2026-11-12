@@ -558,14 +558,31 @@ class _SubjectDetailScreenState extends State<SubjectDetailScreen> {
             ),
           ],
         ),
-        const SizedBox(height: 8),
+        const SizedBox(height: 6),
+
+        // Color Legend
+        SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          child: Row(
+            children: [
+              _buildLegendDot(AppTheme.successSage, 'Hadir (Hijau)'),
+              const SizedBox(width: 12),
+              _buildLegendDot(Colors.blue, 'Sakit (Biru)'),
+              const SizedBox(width: 12),
+              _buildLegendDot(AppTheme.warningOchre, 'Izin (Kuning)'),
+              const SizedBox(width: 12),
+              _buildLegendDot(AppTheme.urgentRose, 'Alfa (Merah)'),
+            ],
+          ),
+        ),
+        const SizedBox(height: 10),
 
         Wrap(
           spacing: 8,
           runSpacing: 8,
           children: List.generate(currentSubject.totalMeetings, (index) {
             final meetingNum = index + 1;
-            final absence = currentSubject.getAbsenceForMeeting(meetingNum);
+            final record = currentSubject.getAttendanceForMeeting(meetingNum);
 
             Color chipBorder;
             Color chipBg;
@@ -573,18 +590,25 @@ class _SubjectDetailScreenState extends State<SubjectDetailScreen> {
             String chipLabel;
             IconData? chipIcon;
 
-            if (absence != null) {
-              switch (absence.type) {
+            if (record != null) {
+              switch (record.type.toLowerCase()) {
+                case 'hadir':
+                  chipBorder = AppTheme.successSage;
+                  chipBg = AppTheme.successSage.withValues(alpha: 0.16);
+                  chipText = AppTheme.successSage;
+                  chipLabel = 'P$meetingNum (H)';
+                  chipIcon = Icons.check_circle_rounded;
+                  break;
                 case 'sakit':
                   chipBorder = Colors.blue;
-                  chipBg = Colors.blue.withValues(alpha: 0.15);
+                  chipBg = Colors.blue.withValues(alpha: 0.16);
                   chipText = Colors.blue;
                   chipLabel = 'P$meetingNum (S)';
                   chipIcon = Icons.local_hospital_outlined;
                   break;
                 case 'izin':
                   chipBorder = AppTheme.warningOchre;
-                  chipBg = AppTheme.warningOchre.withValues(alpha: 0.15);
+                  chipBg = AppTheme.warningOchre.withValues(alpha: 0.16);
                   chipText = AppTheme.warningOchre;
                   chipLabel = 'P$meetingNum (I)';
                   chipIcon = Icons.assignment_outlined;
@@ -592,7 +616,7 @@ class _SubjectDetailScreenState extends State<SubjectDetailScreen> {
                 case 'alfa':
                 default:
                   chipBorder = AppTheme.urgentRose;
-                  chipBg = AppTheme.urgentRose.withValues(alpha: 0.15);
+                  chipBg = AppTheme.urgentRose.withValues(alpha: 0.16);
                   chipText = AppTheme.urgentRose;
                   chipLabel = 'P$meetingNum (A)';
                   chipIcon = Icons.cancel_outlined;
@@ -601,9 +625,9 @@ class _SubjectDetailScreenState extends State<SubjectDetailScreen> {
             } else {
               chipBorder = borderCol;
               chipBg = isDark ? AppTheme.darkSurfaceElevated : AppTheme.lightBorderSubtle;
-              chipText = textPrimary;
+              chipText = textSecondary;
               chipLabel = 'P$meetingNum';
-              chipIcon = Icons.check_circle_outline;
+              chipIcon = Icons.radio_button_unchecked;
             }
 
             return InkWell(
@@ -614,7 +638,7 @@ class _SubjectDetailScreenState extends State<SubjectDetailScreen> {
                     subjectId: currentSubject.id,
                     totalMeetings: currentSubject.totalMeetings,
                     defaultMeetingNumber: meetingNum,
-                    initialRecord: absence,
+                    initialRecord: record,
                   ),
                 );
               },
@@ -625,7 +649,7 @@ class _SubjectDetailScreenState extends State<SubjectDetailScreen> {
                 decoration: BoxDecoration(
                   color: chipBg,
                   borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: chipBorder, width: absence != null ? 1.4 : 0.8),
+                  border: Border.all(color: chipBorder, width: record != null ? 1.4 : 0.8),
                 ),
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
@@ -636,7 +660,7 @@ class _SubjectDetailScreenState extends State<SubjectDetailScreen> {
                       chipLabel,
                       style: TextStyle(
                         fontSize: 10.5,
-                        fontWeight: absence != null ? FontWeight.w700 : FontWeight.w500,
+                        fontWeight: record != null ? FontWeight.w700 : FontWeight.w500,
                         color: chipText,
                       ),
                       maxLines: 1,
@@ -650,12 +674,12 @@ class _SubjectDetailScreenState extends State<SubjectDetailScreen> {
 
         const SizedBox(height: 24),
 
-        // 3. Absence Log (Catatan Riwayat Ketidakhadiran)
+        // 3. Attendance Log (Catatan Riwayat Presensi)
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             Text(
-              'CATATAN RIWAYAT KETIDAKHADIRAN',
+              'CATATAN RIWAYAT PRESENSI',
               style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, letterSpacing: 1.1, color: textSecondary),
             ),
             InkWell(
@@ -669,7 +693,7 @@ class _SubjectDetailScreenState extends State<SubjectDetailScreen> {
                 );
               },
               child: Text(
-                '+ Catat Absen',
+                '+ Catat Presensi',
                 style: TextStyle(
                   fontSize: 12,
                   fontWeight: FontWeight.w600,
@@ -695,12 +719,12 @@ class _SubjectDetailScreenState extends State<SubjectDetailScreen> {
                 Icon(Icons.verified_outlined, size: 36, color: AppTheme.successSage),
                 const SizedBox(height: 8),
                 Text(
-                  'Belum ada catatan ketidakhadiran',
+                  'Belum ada catatan presensi',
                   style: TextStyle(fontSize: 13.5, fontWeight: FontWeight.w600, color: textPrimary),
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  'Kehadiran Anda 100% sempurna semester ini. Terus pertahankan!',
+                  'Klik salah satu nomor pertemuan di atas (P1 - ${currentSubject.totalMeetings}) untuk mencatat kehadiran Anda.',
                   style: TextStyle(fontSize: 11.5, color: textSecondary),
                   textAlign: TextAlign.center,
                 ),
@@ -712,7 +736,11 @@ class _SubjectDetailScreenState extends State<SubjectDetailScreen> {
             children: currentSubject.absences.map((rec) {
               Color badgeColor;
               IconData badgeIcon;
-              switch (rec.type) {
+              switch (rec.type.toLowerCase()) {
+                case 'hadir':
+                  badgeColor = AppTheme.successSage;
+                  badgeIcon = Icons.check_circle_rounded;
+                  break;
                 case 'sakit':
                   badgeColor = Colors.blue;
                   badgeIcon = Icons.local_hospital_outlined;
@@ -776,7 +804,11 @@ class _SubjectDetailScreenState extends State<SubjectDetailScreen> {
                           ),
                           const SizedBox(height: 2),
                           Text(
-                            rec.note.isNotEmpty ? rec.note : 'Tanpa catatan alasan',
+                            rec.note.isNotEmpty
+                                ? rec.note
+                                : (rec.type.toLowerCase() == 'hadir'
+                                    ? 'Hadir perkuliahan'
+                                    : 'Tanpa catatan alasan'),
                             style: TextStyle(
                               fontSize: 11.5,
                               color: rec.note.isNotEmpty ? textSecondary : textSecondary.withValues(alpha: 0.6),
@@ -806,6 +838,24 @@ class _SubjectDetailScreenState extends State<SubjectDetailScreen> {
               );
             }).toList(),
           ),
+      ],
+    );
+  }
+
+  Widget _buildLegendDot(Color color, String label) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          width: 8,
+          height: 8,
+          decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+        ),
+        const SizedBox(width: 4),
+        Text(
+          label,
+          style: const TextStyle(fontSize: 10.5, fontWeight: FontWeight.w500),
+        ),
       ],
     );
   }

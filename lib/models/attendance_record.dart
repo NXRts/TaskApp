@@ -2,7 +2,7 @@ class AttendanceRecord {
   final String id;
   final int meetingNumber; // 1 to totalMeetings (e.g. 1-16)
   final DateTime date;
-  final String type; // 'sakit', 'izin', 'alfa'
+  final String type; // 'hadir', 'sakit', 'izin', 'alfa'
   final String note;
 
   AttendanceRecord({
@@ -13,8 +13,12 @@ class AttendanceRecord {
     this.note = '',
   });
 
+  bool get isAttended => type.toLowerCase() == 'hadir';
+
   String get typeLabel {
     switch (type.toLowerCase()) {
+      case 'hadir':
+        return 'Hadir';
       case 'sakit':
         return 'Sakit';
       case 'izin':

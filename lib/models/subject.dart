@@ -96,7 +96,8 @@ class Subject implements Comparable<Subject> {
 
   // --- ATTENDANCE SENTINEL METRICS ---
 
-  int get totalAbsences => absences.length;
+  int get totalAbsences => absences.where((a) => a.type.toLowerCase() != 'hadir').length;
+  int get explicitlyAttendedCount => absences.where((a) => a.type.toLowerCase() == 'hadir').length;
   int get attendedMeetings => (totalMeetings - totalAbsences).clamp(0, totalMeetings);
   double get attendancePercentage => totalMeetings > 0
       ? (attendedMeetings / totalMeetings) * 100
@@ -118,13 +119,15 @@ class Subject implements Comparable<Subject> {
     }
   }
 
-  AttendanceRecord? getAbsenceForMeeting(int meetingNumber) {
+  AttendanceRecord? getAttendanceForMeeting(int meetingNumber) {
     try {
       return absences.firstWhere((a) => a.meetingNumber == meetingNumber);
     } catch (_) {
       return null;
     }
   }
+
+  AttendanceRecord? getAbsenceForMeeting(int meetingNumber) => getAttendanceForMeeting(meetingNumber);
 
   Map<String, dynamic> toMap() {
     return {
