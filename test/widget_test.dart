@@ -39,6 +39,24 @@ void main() {
     expect(subject.remainingAbsenceQuota, 4);
     expect(subject.attendanceStatus, AttendanceStatus.safe);
 
+    // 1 Presence (Hadir) -> totalAbsences stays 0, explicitlyAttendedCount = 1
+    final subjectWithHadir = subject.copyWith(
+      absences: [
+        AttendanceRecord(
+          id: 'hadir-1',
+          meetingNumber: 1,
+          date: DateTime(2026, 9, 1),
+          type: 'hadir',
+          note: 'Masuk kuliah tatap muka',
+        ),
+      ],
+    );
+    expect(subjectWithHadir.totalAbsences, 0);
+    expect(subjectWithHadir.explicitlyAttendedCount, 1);
+    expect(subjectWithHadir.attendedMeetings, 16);
+    expect(subjectWithHadir.attendancePercentage, 100.0);
+    expect(subjectWithHadir.attendanceStatus, AttendanceStatus.safe);
+
     // 1 Absence (Sakit) -> Still Safe (0-1)
     final subjectWith1Absence = subject.copyWith(
       absences: [

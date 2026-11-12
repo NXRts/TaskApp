@@ -41,7 +41,7 @@ class _RecordAbsenceDialogState extends State<RecordAbsenceDialog> {
     } else {
       _meetingNumber = widget.defaultMeetingNumber ?? 1;
       _selectedDate = DateTime.now();
-      _type = 'sakit';
+      _type = 'hadir';
       _noteController = TextEditingController();
     }
   }
@@ -106,11 +106,11 @@ class _RecordAbsenceDialogState extends State<RecordAbsenceDialog> {
 
     return AlertDialog(
       title: Text(
-        widget.initialRecord != null ? 'Ubah Catatan Ketidakhadiran' : 'Catat Ketidakhadiran Kuliah',
+        widget.initialRecord != null ? 'Ubah Status Presensi Pertemuan' : 'Catat Presensi Perkuliahan',
         style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
       ),
       content: SizedBox(
-        width: 360,
+        width: 380,
         child: SingleChildScrollView(
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -162,9 +162,9 @@ class _RecordAbsenceDialogState extends State<RecordAbsenceDialog> {
 
               const SizedBox(height: 14),
 
-              // Pilihan Status Ketidakhadiran
+              // Pilihan Status Presensi
               Text(
-                'STATUS KETIDAKHADIRAN',
+                'PILIH STATUS KEHADIRAN',
                 style: TextStyle(
                   fontSize: 10.5,
                   fontWeight: FontWeight.w700,
@@ -177,6 +177,15 @@ class _RecordAbsenceDialogState extends State<RecordAbsenceDialog> {
               Row(
                 children: [
                   _buildTypePill(
+                    type: 'hadir',
+                    label: 'Hadir',
+                    icon: Icons.check_circle_outline,
+                    activeColor: AppTheme.successSage,
+                    borderCol: borderCol,
+                    isDark: isDark,
+                  ),
+                  const SizedBox(width: 6),
+                  _buildTypePill(
                     type: 'sakit',
                     label: 'Sakit',
                     icon: Icons.local_hospital_outlined,
@@ -184,7 +193,7 @@ class _RecordAbsenceDialogState extends State<RecordAbsenceDialog> {
                     borderCol: borderCol,
                     isDark: isDark,
                   ),
-                  const SizedBox(width: 8),
+                  const SizedBox(width: 6),
                   _buildTypePill(
                     type: 'izin',
                     label: 'Izin',
@@ -193,7 +202,7 @@ class _RecordAbsenceDialogState extends State<RecordAbsenceDialog> {
                     borderCol: borderCol,
                     isDark: isDark,
                   ),
-                  const SizedBox(width: 8),
+                  const SizedBox(width: 6),
                   _buildTypePill(
                     type: 'alfa',
                     label: 'Alfa',
@@ -211,12 +220,14 @@ class _RecordAbsenceDialogState extends State<RecordAbsenceDialog> {
               TextFormField(
                 controller: _noteController,
                 decoration: InputDecoration(
-                  labelText: 'Alasan / Keterangan (Opsional)',
-                  hintText: _type == 'sakit'
-                      ? 'e.g. Demam, flu, surat dokter terlampir'
-                      : _type == 'izin'
-                          ? 'e.g. Urusan keluarga mendesak / lomba'
-                          : 'e.g. Kesiangan / terkendala transportasi',
+                  labelText: 'Catatan / Materi / Alasan (Opsional)',
+                  hintText: _type == 'hadir'
+                      ? 'e.g. Masuk tatap muka / pembahasan materi'
+                      : _type == 'sakit'
+                          ? 'e.g. Demam, flu, surat dokter terlampir'
+                          : _type == 'izin'
+                              ? 'e.g. Urusan keluarga mendesak / lomba'
+                              : 'e.g. Kesiangan / terkendala transportasi',
                   hintStyle: TextStyle(fontSize: 12, color: textSecondary),
                   border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
                 ),
@@ -230,7 +241,7 @@ class _RecordAbsenceDialogState extends State<RecordAbsenceDialog> {
         if (widget.initialRecord != null)
           TextButton(
             onPressed: _delete,
-            child: const Text('Hapus', style: TextStyle(color: AppTheme.urgentRose)),
+            child: const Text('Reset (Belum Kuliah)', style: TextStyle(color: AppTheme.urgentRose)),
           ),
         TextButton(
           onPressed: () => Navigator.pop(context),
