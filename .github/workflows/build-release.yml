@@ -43,7 +43,7 @@ jobs:
         run: |
           VERSION="${{ github.ref_name }}"
           if [ -z "$VERSION" ] || [ "$VERSION" = "main" ]; then
-            VERSION="v2.2.0"
+            VERSION="v2.2.1"
           fi
           cp build/app/outputs/flutter-apk/app-release.apk "TaskApp-${VERSION}.apk"
 

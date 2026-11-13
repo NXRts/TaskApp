@@ -1,72 +1,58 @@
-# TaskApp v2.2.0 — Campus Companion: Attendance Sentinel & Visual Weekly Timetable Matrix
+# TaskApp v2.2.1 — Calendar Daily Timetable Hours (24h & 12h AM/PM)
 
-> **TaskApp v2.2.0 "Campus Companion"** membawa transformasi besar dalam pengalaman akademik mahasiswa. Memperkenalkan dua pilar fitur utama: **Attendance Sentinel** (monitor presensi kuliah 16 pertemuan & kuota bolos 75%) dan **Visual Weekly Timetable Matrix** (jadwal kuliah mingguan bentuk matriks 06.00–16.00 dengan deteksi jeda waktu kosong/free study window).
-
----
-
-## ✨ Apa yang Baru di Versi 2.2.0 (Changelog)
-
-### 🛡️ 1. Monitor Presensi Kuliah & Kuota Bolos 75% (Attendance Sentinel)
-* **Kalkulasi Batas Aman 75% Otomatis**:
-  * Menghitung sisa kuota izin/alfa per semester (default batas maksimal 4x absen dari 16 pertemuan) agar mahasiswa terhindar dari pencekalan Ujian Akhir Semester (UAS).
-  * Preset jumlah pertemuan fleksibel (dapat diatur 12, 14, 16, 18, hingga 20 pertemuan).
-* **Matriks Visual 16 Pertemuan (P1 - P16) Interaktif**:
-  * 🟢 **Hadir (`P1 (H)`)**: Tombol berubah warna hijau saat mahasiswa menghadiri perkuliahan.
-  * 🔵 **Sakit (`P1 (S)`)**: Tombol berubah biru untuk pencatatan izin sakit.
-  * 🟡 **Izin (`P1 (I)`)**: Tombol berubah kuning saat izin keperluan mendesak atau delegasi lomba.
-  * 🔴 **Alfa (`P1 (A)`)**: Tombol berubah merah saat tidak hadir tanpa keterangan.
-  * ⚪ **Belum Terlaksana**: Tampilan netral untuk pertemuan mendatang yang dapat di-reset kapan saja.
-* **Tingkat Status Sentinel Dinamis**:
-  * 🟢 **Aman**: 0–1 kali alfa/izin (tingkat kehadiran tinggi).
-  * 🟡 **Waspada**: 2–3 kali alfa/izin (*"Sisa kuota izin Anda tinggal 1 kali"*).
-  * 🔴 **Kritis**: $\ge 4$ kali alfa (*"Batas 75% terlampaui! Anda berisiko dilarang ikut UAS"*).
-* **Riwayat Catatan Presensi Terintegrasi**: Log kronologis tanggal berformat Indonesia, tipe ketidakhadiran, serta catatan materi atau alasan.
-* **Chip Indikator Langsung**: Setiap kartu mata kuliah menampilkan status presensi secara instan (`🟢 100% Hadir`, `🟡 2x Absen`, atau `🔴 4x Absen`).
+> **TaskApp v2.2.1** memperluas fungsionalitas manajemen waktu mahasiswa dengan menghadirkan **Garis Waktu Harian Per Jam (Daily Timetable Hours)** di menu *Kalender & Jadwal*, dilengkapi opsi format waktu **24 Jam** dan **12 Jam (AM/PM)**. Tampilan tetap rapi, bersih, dan interaktif meskipun belum ada agenda atau jadwal kuliah pada hari yang dipilih.
 
 ---
 
-### 🗓️ 2. Jadwal Kuliah Mingguan Bentuk Matriks Visual (Timetable Visual Matrix)
-* **Grid Visual Jam 6 Pagi s/d Jam 4 Sore (`06:00` – `16:00`)**:
-  * Menampilkan jadwal perkuliahan dalam bentuk tabel matriks mingguan (Senin s/d Sabtu, otomatis adaptif bila ada kuliah hari Minggu).
-  * Kolom penunjuk waktu *sticky* di sebelah kiri tersinkronisasi sempurna dengan pengguliran (*scroll*) vertikal dan horizontal.
-  * Dilengkapi **Auto-scroll Pintar**: Saat dibuka di siang hari, layar otomatis bergeser lembut ke jam perkuliahan yang sedang aktif.
-* **Blok Warna Mata Kuliah Informatif**:
-  * Kotak jadwal berwarna sesuai tema mata kuliah, menampilkan nama mata kuliah, kode/SKS, ruangan kelas (`Icons.meeting_room_outlined`), dan jam kuliah.
-  * 1-Klik pada blok langsung membuka halaman detail mata kuliah.
-* **Deteksi Cerdas Slot Jeda Kosong (*Free Study Window*)**:
-  * Otomatis mengidentifikasi waktu luang di antara dua kelas kuliah pada hari yang sama (misal: jeda jam 10.30–13.20 $\rightarrow$ `☕ Jeda 2j 50m`).
-  * Desain elegan, bersih, dan tidak mendominasi layar.
-  * Mengetuk jeda kosong memunculkan lembar rekomendasi produktivitas dengan tombol cepat **Mulai Fokus Pomodoro** atau **Buat Tugas Baru**.
-* **Garis Waktu Berjalan Real-time (*Live Current Time Indicator*)**:
-  * Penunjuk waktu langsung berwarna merah (*live red dot & line*) pada kolom hari ini untuk melihat posisi jam sekarang secara seketika.
-* **Filter Cepat Per Hari**: Tab chip `[Semua (Grid)]`, `[Senin]`, `[Selasa]`, `[Rabu]`, `[Kamis]`, `[Jumat]`, `[Sabtu]` dengan label penanda `(Hari ini)`.
-* **Notifikasi Jadwal Belum Lengkap**: Menampilkan banner pengingat ramah untuk mata kuliah yang belum diisi jadwal hari/jamnya dengan 1-klik pengaturan.
+## ✨ Apa yang Baru di Versi 2.2.1 (Changelog)
+
+### ⏱️ 1. Garis Waktu Harian Per Jam di Menu Kalender (Daily Timetable Hours)
+* **Visualisasi 24 Jam Penuh (`00:00` s/d `24:00` / `12 AM` s/d `12 AM`)**:
+  * Menampilkan garis waktu vertikal harian per jam yang terstruktur rapi untuk setiap tanggal yang dipilih.
+  * **Tetap Tampil Bersih Walau Kosong (*Empty State Ready*)**: Meskipun tidak ada jadwal kuliah atau tugas pada hari tertentu, baris jam 24 jam tetap ditampilkan rapi sehingga mahasiswa dapat melihat gambaran blok waktu harian mereka dengan jelas.
+  * **Jadwalkan Tugas Instan dari Slot Jam**: Mengetuk baris jam kosong mana pun langsung membuka modal tambah tugas dengan tanggal dan jam tenggat yang sudah terisi otomatis sesuai jam yang diketuk.
+* **Integrasi Kuliah & Tenggat Tugas**:
+  * **Blok Perkuliahan Hari Ini**: Menampilkan mata kuliah yang terjadwal pada hari tersebut dengan blok berwarna sesuai tema matkul, nama ruangan kelas, jumlah SKS, dan rentang jam kuliah. Mengetuk blok kuliah langsung membuka layar detail mata kuliah.
+  * **Kartu Tugas Terjadwal**: Tugas dengan tenggat pada hari tersebut otomatis diposisikan pada baris jam tenggatnya, lengkap dengan checkbox centang selesai instan, indikator prioritas, dan teks coret saat tugas selesai. Mengetuk tugas membuka detail modal tugas.
+  * **Penataan Berdampingan Bebas Tumpuk (*Smart Column Layout*)**: Jika jadwal kuliah dan tenggat tugas berada pada jam yang sama, sistem otomatis membagi kolom secara berdampingan sehingga keduanya tetap terbaca jelas tanpa saling menutupi.
+* **Garis Waktu Real-Time (*Live Current Time Indicator*)**:
+  * Garis horizontal dan titik merah aktif yang menunjukkan posisi jam dan menit sekarang secara *real-time* saat tanggal yang dibuka adalah hari ini.
+* **Auto-Scroll Pintar**:
+  * Saat membuka kalender hari ini, layar otomatis bergeser lembut ke jam saat ini.
+  * Saat membuka tanggal lain, layar bergeser ke jam 07.00 pagi agar jadwal perkuliahan pagi langsung terlihat tanpa perlu menggulir manual dari tengah malam.
 
 ---
 
-### 🎨 3. Peningkatan Antarmuka & Navigasi (UI/UX)
-* **Tab Navigasi Fleksibel di Layar Mata Kuliah**: Tombol beralih instan antara mode **Daftar Mata Kuliah** dan **Matriks Jadwal Mingguan**.
-* **Perbaikan Tampilan Waktu (*Clipping Fix*)**: Menghilangkan masalah teks jam yang terpotong di bagian atas dan bawah layar.
-* **Editorial Minimalist Aesthetic**: Tetap setia pada palet Obsidian Gelap `#0E0F12` dan aksen kobalt `#3B82F6` yang matang dan bebas distraksi.
+### 🌐 2. Pilihan Format Waktu 24 Jam & 12 Jam (AM/PM)
+* **Tombol Beralih Format Waktu Instan**:
+  * Tombol interaktif di header agenda kalender dengan ikon jam `24 Jam` $\leftrightarrow$ `12 Jam (AM/PM)`.
+  * **Mode 24 Jam**: Label jam ditampilkan dalam format `00:00`, `01:00`, ..., `12:00`, `13:00`, ..., `24:00`.
+  * **Mode 12 Jam AM/PM**: Label jam ditampilkan dalam format `12 AM`, `1 AM`, ..., `11 AM`, `12 PM`, `1 PM`, ..., `11 PM`. Rentang jam kuliah dan waktu tugas juga otomatis menyesuaikan (contoh: `8:00 AM - 9:40 AM`, `1:30 PM`).
+* **Penyimpanan Preferensi Lokal (Offline Persistence)**:
+  * Pilihan format waktu pengguna tersimpan secara permanen di database lokal Hive, sehingga pilihan format waktu tetap aktif saat aplikasi dibuka kembali.
 
 ---
 
-## 📥 Panduan Instalasi (Android APK)
+### 🎛️ 3. Pengalih Tampilan (View Mode Switcher)
+* **Dua Mode Tampilan di Layar Kalender**:
+  * ⏱️ **Garis Waktu (Timeline)**: Tampilan visual per jam yang komprehensif menggabungkan jadwal kuliah dan tugas harian.
+  * 📋 **Daftar (List)**: Tampilan daftar kartu tugas klasik dengan ringkasan status tenggat dan tombol jadwalkan tugas baru.
+* **Indikator Jumlah Cepat**:
+  * Badge ringkas di header menampilkan jumlah kuliah dan jumlah tugas pada tanggal yang dipilih.
 
-1. Unduh berkas **`TaskApp-v2.2.0.apk`** atau **`app-release.apk`** dari daftar **Assets** di bawah.
+---
+
+### 🛠️ 4. Peningkatan Sistem & Stabilitas CI/CD
+* **Upgrade Gradle & Validasi Flutter Build**:
+  * Memperbarui Gradle Wrapper ke versi **9.3.1** yang kompatibel penuh dengan Flutter Gradle Plugin terbaru.
+  * Menambahkan parameter `--android-skip-build-dependency-validation` pada alur GitHub Actions untuk memastikan build APK release selalu berjalan tanpa hambatan.
+
+---
+
+## 📥 Panduan Unduh & Instalasi (Android APK)
+
+1. Unduh berkas **`TaskApp-v2.2.1.apk`** atau **`app-release.apk`** dari daftar **Assets** di bawah.
 2. Buka berkas APK yang telah diunduh di perangkat Android Anda.
 3. Jika muncul permintaan izin penginstalan dari sumber tidak dikenal, pilih **Izinkan (Allow)**.
 4. Tekan **Pasang (Install)** atau **Perbarui (Update)**.
-5. Selesai! Semua data tugas, mata kuliah, presensi, catatan, dan pengaturan Anda akan tetap tersimpan aman (100% Offline & No Data Loss).
-
----
-
-## 📱 Spesifikasi Sistem
-* **Sistem Operasi**: Android 6.0 (Marshmallow, API 23) ke atas
-* **Arsitektur**: `arm64-v8a`, `armeabi-v7a`, `x86_64`
-* **Kebutuhan Jaringan**: 100% Offline (Bekerja penuh tanpa koneksi internet)
-* **Ukuran File**: ~21 MB
-
----
-
-**Full Changelog**: https://github.com/NXRts/TaskApp/compare/v2.0.6...v2.2.0
+5. Selesai! Semua data tugas, mata kuliah, presensi, catatan, dan preferensi Anda tetap tersimpan utuh dan aman (100% Offline & Tanpa Ketergantungan Cloud).

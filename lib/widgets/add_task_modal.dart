@@ -12,8 +12,9 @@ import 'add_subject_dialog.dart';
 /// Modern Editorial Add/Edit Task Bottom Sheet
 class AddTaskModal extends StatefulWidget {
   final TaskItem? initialTask;
+  final DateTime? initialDueDate;
 
-  const AddTaskModal({super.key, this.initialTask});
+  const AddTaskModal({super.key, this.initialTask, this.initialDueDate});
 
   @override
   State<AddTaskModal> createState() => _AddTaskModalState();
@@ -64,8 +65,10 @@ class _AddTaskModalState extends State<AddTaskModal> {
       _category = TaskCategory.academic;
       _priority = TaskPriority.medium;
       _taskType = TaskType.individual;
-      _dueDate = DateTime.now().add(const Duration(days: 1));
-      _dueTime = const TimeOfDay(hour: 23, minute: 59);
+      _dueDate = widget.initialDueDate ?? DateTime.now().add(const Duration(days: 1));
+      _dueTime = widget.initialDueDate != null
+          ? TimeOfDay(hour: widget.initialDueDate!.hour, minute: widget.initialDueDate!.minute)
+          : const TimeOfDay(hour: 23, minute: 59);
     }
   }
 

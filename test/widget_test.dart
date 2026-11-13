@@ -4,6 +4,7 @@ import 'package:taskapp/models/subtask.dart';
 import 'package:taskapp/models/subject.dart';
 import 'package:taskapp/models/attendance_record.dart';
 import 'package:taskapp/widgets/timetable_matrix_view.dart';
+import 'package:taskapp/screens/calendar_screen.dart';
 
 void main() {
   test('TaskItem progress and urgency calculations', () {
@@ -252,5 +253,49 @@ void main() {
     expect(freeWindow.durationMinutes, 150);
     expect(freeWindow.durationFormatted, '2j 30m');
     expect(freeWindow.timeRangeFormatted, '10:30 - 13:00');
+  });
+
+  test('CalendarTimeHelper 24-hour and 12-hour AM/PM format conversions', () {
+    // 24-Hour hour labels
+    expect(CalendarTimeHelper.formatHourLabel(0, true), '00:00');
+    expect(CalendarTimeHelper.formatHourLabel(6, true), '06:00');
+    expect(CalendarTimeHelper.formatHourLabel(12, true), '12:00');
+    expect(CalendarTimeHelper.formatHourLabel(15, true), '15:00');
+    expect(CalendarTimeHelper.formatHourLabel(23, true), '23:00');
+    expect(CalendarTimeHelper.formatHourLabel(24, true), '24:00');
+
+    // 12-Hour AM/PM hour labels
+    expect(CalendarTimeHelper.formatHourLabel(0, false), '12 AM');
+    expect(CalendarTimeHelper.formatHourLabel(6, false), '6 AM');
+    expect(CalendarTimeHelper.formatHourLabel(11, false), '11 AM');
+    expect(CalendarTimeHelper.formatHourLabel(12, false), '12 PM');
+    expect(CalendarTimeHelper.formatHourLabel(15, false), '3 PM');
+    expect(CalendarTimeHelper.formatHourLabel(23, false), '11 PM');
+    expect(CalendarTimeHelper.formatHourLabel(24, false), '12 AM');
+
+    // Minute conversions
+    expect(CalendarTimeHelper.formatMinutes(0, true), '00:00');
+    expect(CalendarTimeHelper.formatMinutes(0, false), '12:00 AM');
+
+    expect(CalendarTimeHelper.formatMinutes(450, true), '07:30'); // 7*60+30 = 450
+    expect(CalendarTimeHelper.formatMinutes(450, false), '7:30 AM');
+
+    expect(CalendarTimeHelper.formatMinutes(720, true), '12:00');
+    expect(CalendarTimeHelper.formatMinutes(720, false), '12:00 PM');
+
+    expect(CalendarTimeHelper.formatMinutes(810, true), '13:30'); // 13*60+30 = 810
+    expect(CalendarTimeHelper.formatMinutes(810, false), '1:30 PM');
+
+    expect(CalendarTimeHelper.formatMinutes(1439, true), '23:59');
+    expect(CalendarTimeHelper.formatMinutes(1439, false), '11:59 PM');
+
+    // DateTime conversion
+    final dtMorning = DateTime(2026, 11, 13, 8, 15);
+    expect(CalendarTimeHelper.formatDateTime(dtMorning, true), '08:15');
+    expect(CalendarTimeHelper.formatDateTime(dtMorning, false), '8:15 AM');
+
+    final dtAfternoon = DateTime(2026, 11, 13, 16, 45);
+    expect(CalendarTimeHelper.formatDateTime(dtAfternoon, true), '16:45');
+    expect(CalendarTimeHelper.formatDateTime(dtAfternoon, false), '4:45 PM');
   });
 }

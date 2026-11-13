@@ -8,6 +8,7 @@ import '../models/user_profile.dart';
 class StorageService {
   static final StorageService _instance = StorageService._internal();
   factory StorageService() => _instance;
+  static StorageService get instance => _instance;
   StorageService._internal();
 
   static const String tasksBoxName = 'tasks_box_v1';
@@ -132,6 +133,14 @@ class StorageService {
 
   Future<void> setDarkMode(bool isDark) async {
     await _settingsBox.put('is_dark_mode', isDark);
+  }
+
+  bool getIs24HourTimeFormat() {
+    return _settingsBox.get('is_24_hour_format', defaultValue: true) as bool;
+  }
+
+  Future<void> setIs24HourTimeFormat(bool is24) async {
+    await _settingsBox.put('is_24_hour_format', is24);
   }
 
   int getCompletedPomodoroSessions() {
