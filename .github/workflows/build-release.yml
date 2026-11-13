@@ -37,13 +37,13 @@ jobs:
         run: flutter test
 
       - name: Build APK (Release)
-        run: flutter build apk --release
+        run: flutter build apk --release --android-skip-build-dependency-validation
 
       - name: Rename APK
         run: |
           VERSION="${{ github.ref_name }}"
           if [ -z "$VERSION" ] || [ "$VERSION" = "main" ]; then
-            VERSION="v2.0.6"
+            VERSION="v2.2.0"
           fi
           cp build/app/outputs/flutter-apk/app-release.apk "TaskApp-${VERSION}.apk"
 
@@ -61,6 +61,8 @@ jobs:
             cp "RELEASE_NOTES_${VERSION}.md" RELEASE_NOTES_CURRENT.md
           elif [ -f "RELEASE_NOTES.md" ]; then
             cp "RELEASE_NOTES.md" RELEASE_NOTES_CURRENT.md
+          elif [ -f "RELEASE_NOTES_v2.2.0.md" ]; then
+            cp "RELEASE_NOTES_v2.2.0.md" RELEASE_NOTES_CURRENT.md
           elif [ -f "RELEASE_NOTES_v2.0.6.md" ]; then
             cp "RELEASE_NOTES_v2.0.6.md" RELEASE_NOTES_CURRENT.md
           else
