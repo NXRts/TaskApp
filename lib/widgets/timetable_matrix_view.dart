@@ -8,7 +8,7 @@ import 'add_task_modal.dart';
 import 'add_subject_dialog.dart';
 import '../utils/app_theme.dart';
 
-/// Model representing a free time slot between classes or in the study schedule
+/// Model representing a free time slot between classes in the study schedule
 class FreeStudyWindow {
   final int dayOfWeek;
   final int startMinutes;
@@ -43,7 +43,7 @@ class FreeStudyWindow {
   }
 }
 
-/// Visual Timetable Matrix (Jadwal Kuliah Mingguan Bentuk Matriks Visual)
+/// Visual Timetable Matrix (Jadwal Kuliah Mingguan 06.00 - 16.00)
 class TimetableMatrixView extends StatefulWidget {
   const TimetableMatrixView({super.key});
 
@@ -57,8 +57,30 @@ class _TimetableMatrixViewState extends State<TimetableMatrixView> {
   final ScrollController _horizontalController = ScrollController();
   final ScrollController _verticalController = ScrollController();
 
-  static const double _hourHeight = 64.0;
+  static const double _hourHeight = 60.0;
   static const double _timeColWidth = 52.0;
+  static const double _gridTopOffset = 12.0;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (_verticalController.hasClients) {
+        final now = DateTime.now();
+        // Jika sedang di jam siang (08.00 - 16.00), scroll lembut mendekati jam sekarang
+        if (now.hour >= 8 && now.hour <= 16) {
+          final targetHour = now.hour - 1;
+          final targetOffset = (_gridTopOffset + (targetHour - 6) * _hourHeight - 10)
+              .clamp(0.0, _verticalController.position.maxScrollExtent);
+          _verticalController.animateTo(
+            targetOffset,
+            duration: const Duration(milliseconds: 350),
+            curve: Curves.easeOutCubic,
+          );
+        }
+      }
+    });
+  }
 
   @override
   void dispose() {
@@ -88,37 +110,19 @@ class _TimetableMatrixViewState extends State<TimetableMatrixView> {
     }
   }
 
-  List<FreeStudyWindow> _computeFreeWindows(
-    List<Subject> daySubjects,
-    int day,
-    int matrixStartMin,
-    int matrixEndMin,
-  ) {
+  /// Menghitung jeda kosong hanya di antara dua mata kuliah berurutan pada hari yang sama
+  List<FreeStudyWindow> _computeFreeWindows(List<Subject> daySubjects, int day) {
     final windows = <FreeStudyWindow>[];
-    if (daySubjects.isEmpty) return windows;
+    if (daySubjects.length < 2) return windows;
 
-    // 1. Cek jeda sebelum kuliah pertama
-    final first = daySubjects.first;
-    if (first.startMinutes - matrixStartMin >= 45) {
-      windows.add(
-        FreeStudyWindow(
-          dayOfWeek: day,
-          startMinutes: matrixStartMin,
-          endMinutes: first.startMinutes,
-          succeedingSubject: first,
-        ),
-      );
-    }
-
-    // 2. Cek jeda di antara dua mata kuliah berurutan
     for (int i = 0; i < daySubjects.length - 1; i++) {
       final current = daySubjects[i];
       final next = daySubjects[i + 1];
       final gapStart = current.safeEndMinutes;
       final gapEnd = next.startMinutes;
 
-      // Jeda minimal 25 menit dianggap waktu luang belajar/istirahat
-      if (gapEnd - gapStart >= 25) {
+      // Jeda minimal 20 menit di antara dua kelas kuliah
+      if (gapEnd - gapStart >= 20) {
         windows.add(
           FreeStudyWindow(
             dayOfWeek: day,
@@ -129,19 +133,6 @@ class _TimetableMatrixViewState extends State<TimetableMatrixView> {
           ),
         );
       }
-    }
-
-    // 3. Cek jeda setelah kuliah terakhir hingga jam akhir matriks
-    final last = daySubjects.last;
-    if (matrixEndMin - last.safeEndMinutes >= 45) {
-      windows.add(
-        FreeStudyWindow(
-          dayOfWeek: day,
-          startMinutes: last.safeEndMinutes,
-          endMinutes: matrixEndMin,
-          precedingSubject: last,
-        ),
-      );
     }
 
     return windows;
@@ -202,7 +193,7 @@ class _TimetableMatrixViewState extends State<TimetableMatrixView> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            'Slot Waktu Kosong (Free Study Window)',
+                            'Slot Jeda Kosong (Free Study Window)',
                             style: TextStyle(
                               fontSize: 15,
                               fontWeight: FontWeight.w700,
@@ -234,17 +225,7 @@ class _TimetableMatrixViewState extends State<TimetableMatrixView> {
                     children: [
                       if (window.precedingSubject != null && window.succeedingSubject != null)
                         Text(
-                          'Jeda antara kuliah "${window.precedingSubject!.name}" dan "${window.succeedingSubject!.name}".',
-                          style: TextStyle(fontSize: 12.5, color: textPrimary, height: 1.3),
-                        )
-                      else if (window.succeedingSubject != null)
-                        Text(
-                          'Waktu luang pagi sebelum kuliah "${window.succeedingSubject!.name}" dimulai.',
-                          style: TextStyle(fontSize: 12.5, color: textPrimary, height: 1.3),
-                        )
-                      else if (window.precedingSubject != null)
-                        Text(
-                          'Waktu luang sore setelah kuliah "${window.precedingSubject!.name}" selesai.',
+                          'Jeda waktu luang di antara kuliah "${window.precedingSubject!.name}" dan "${window.succeedingSubject!.name}".',
                           style: TextStyle(fontSize: 12.5, color: textPrimary, height: 1.3),
                         ),
                       const SizedBox(height: 8),
@@ -255,8 +236,8 @@ class _TimetableMatrixViewState extends State<TimetableMatrixView> {
                           Expanded(
                             child: Text(
                               pomodoroSessions > 0
-                                  ? 'Cukup untuk $pomodoroSessions sesi fokus Pomodoro atau menyelesaikan tugas mendesak.'
-                                  : 'Gunakan jeda singkat ini untuk istirahat atau mengulang catatan kuliah.',
+                                  ? 'Bisa dimanfaatkan untuk $pomodoroSessions sesi Pomodoro fokus atau mencicil tugas.'
+                                  : 'Gunakan waktu ini untuk istirahat, makan, atau membaca ringkasan materi kuliah.',
                               style: TextStyle(fontSize: 11.5, color: textSecondary),
                             ),
                           ),
@@ -332,9 +313,9 @@ class _TimetableMatrixViewState extends State<TimetableMatrixView> {
     final borderCol = isDark ? AppTheme.darkBorder : AppTheme.lightBorder;
     final accentCol = isDark ? AppTheme.darkAccent : AppTheme.brandCobalt;
 
-    // Deteksi batas jam matriks secara dinamis (default 07.00 - 18.00)
-    int startHour = 7;
-    int endHour = 18;
+    // Matriks jam 6 pagi s/d jam 4 sore (06:00 - 16:00)
+    int startHour = 6;
+    int endHour = 16;
     for (final s in subjects) {
       if (s.startMinutes < 9999) {
         final sh = s.startMinutes ~/ 60;
@@ -349,7 +330,7 @@ class _TimetableMatrixViewState extends State<TimetableMatrixView> {
     final totalHours = endHour - startHour;
     final matrixStartMin = startHour * 60;
     final matrixEndMin = endHour * 60;
-    final totalGridHeight = totalHours * _hourHeight;
+    final double totalGridHeight = _gridTopOffset + totalHours * _hourHeight + 36.0;
 
     // Cek apakah ada jadwal di hari Minggu (7)
     final hasSundayClass = subjects.any((s) => s.dayOfWeek == 7);
@@ -365,7 +346,9 @@ class _TimetableMatrixViewState extends State<TimetableMatrixView> {
         ? allDays
         : [_selectedDayFilter];
 
-    final todayWeekday = DateTime.now().weekday;
+    final now = DateTime.now();
+    final todayWeekday = now.weekday;
+    final currentMinutesOfDay = now.hour * 60 + now.minute;
 
     return Column(
       children: [
@@ -437,22 +420,22 @@ class _TimetableMatrixViewState extends State<TimetableMatrixView> {
             ),
           ),
 
-        // 3. Timetable Grid View (Synchronized Time Column + Day Columns)
+        // 3. Timetable Grid View (Synchronized 24-Hour Column + Day Columns)
         Expanded(
           child: LayoutBuilder(
             builder: (context, constraints) {
               final double dayColWidth = _selectedDayFilter != 0
                   ? (constraints.maxWidth - _timeColWidth).clamp(240.0, 600.0)
-                  : 135.0;
+                  : 142.0;
 
               return SingleChildScrollView(
                 controller: _verticalController,
                 physics: const AlwaysScrollableScrollPhysics(),
-                padding: const EdgeInsets.only(bottom: 90),
+                padding: const EdgeInsets.only(bottom: 120),
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Sticky Left: Time Labels Column
+                    // Sticky Left: 24-Hour Labels Column (Never clipped)
                     SizedBox(
                       width: _timeColWidth,
                       child: Column(
@@ -469,26 +452,28 @@ class _TimetableMatrixViewState extends State<TimetableMatrixView> {
                             alignment: Alignment.center,
                             child: Text(
                               'Jam',
-                              style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: textSecondary),
+                              style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: textSecondary),
                             ),
                           ),
-                          // Hour markers
+                          // Hour markers (06:00 s/d 16:00 with safe top offset)
                           SizedBox(
                             height: totalGridHeight,
                             child: Stack(
+                              clipBehavior: Clip.none,
                               children: List.generate(totalHours + 1, (index) {
                                 final hour = startHour + index;
-                                final top = index * _hourHeight;
+                                final top = _gridTopOffset + index * _hourHeight;
+                                final label = '${hour.toString().padLeft(2, '0')}:00';
                                 return Positioned(
                                   top: top - 7,
                                   left: 0,
                                   right: 6,
                                   child: Text(
-                                    '${hour.toString().padLeft(2, '0')}:00',
+                                    label,
                                     textAlign: TextAlign.right,
                                     style: TextStyle(
                                       fontSize: 10,
-                                      fontWeight: FontWeight.w500,
+                                      fontWeight: FontWeight.w600,
                                       color: textSecondary.withValues(alpha: 0.8),
                                     ),
                                   ),
@@ -514,13 +499,7 @@ class _TimetableMatrixViewState extends State<TimetableMatrixView> {
                                 .toList()
                               ..sort();
 
-                            final freeWindows = _computeFreeWindows(
-                              daySubjects,
-                              day,
-                              matrixStartMin,
-                              matrixEndMin,
-                            );
-
+                            final freeWindows = _computeFreeWindows(daySubjects, day);
                             final isToday = day == todayWeekday;
 
                             return Container(
@@ -571,36 +550,40 @@ class _TimetableMatrixViewState extends State<TimetableMatrixView> {
                                     ),
                                   ),
 
-                                  // Day Body Grid (Stacked with hour lines, free windows, and course blocks)
+                                  // Day Body Grid (Stacked with hour lines, clean free windows, course blocks & live indicator)
                                   SizedBox(
                                     height: totalGridHeight,
                                     child: Stack(
                                       clipBehavior: Clip.none,
                                       children: [
-                                        // 1. Horizontal hour grid background lines
-                                        ...List.generate(totalHours, (index) {
+                                        // 1. Horizontal hour grid background lines (06:00 s/d 16:00)
+                                        ...List.generate(totalHours + 1, (index) {
+                                          final hour = startHour + index;
+                                          final isMajor = hour % 3 == 0;
                                           return Positioned(
-                                            top: index * _hourHeight,
+                                            top: _gridTopOffset + index * _hourHeight,
                                             left: 0,
                                             right: 0,
                                             child: Divider(
                                               height: 1,
-                                              thickness: 0.6,
-                                              color: borderCol.withValues(alpha: 0.4),
+                                              thickness: isMajor ? 0.8 : 0.5,
+                                              color: isMajor
+                                                  ? borderCol.withValues(alpha: 0.5)
+                                                  : borderCol.withValues(alpha: 0.25),
                                             ),
                                           );
                                         }),
 
-                                        // 2. Free Study Windows (Slot Waktu Kosong)
+                                        // 2. Free Study Windows (Hanya di antara dua kelas kuliah)
                                         ...freeWindows.map((fw) {
-                                          final top = (fw.startMinutes - matrixStartMin) * (_hourHeight / 60.0);
+                                          final top = _gridTopOffset + (fw.startMinutes - matrixStartMin) * (_hourHeight / 60.0);
                                           final height = fw.durationMinutes * (_hourHeight / 60.0);
 
                                           return Positioned(
-                                            top: top + 2,
+                                            top: top + 1.5,
                                             left: 3,
                                             right: 3,
-                                            height: (height - 4).clamp(24.0, totalGridHeight),
+                                            height: (height - 3).clamp(24.0, totalGridHeight),
                                             child: Material(
                                               color: Colors.transparent,
                                               child: InkWell(
@@ -609,14 +592,13 @@ class _TimetableMatrixViewState extends State<TimetableMatrixView> {
                                                 child: Container(
                                                   padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 3),
                                                   decoration: BoxDecoration(
-                                                    color: isDark
-                                                        ? AppTheme.darkSurfaceElevated.withValues(alpha: 0.4)
-                                                        : AppTheme.lightBorderSubtle.withValues(alpha: 0.6),
+                                                    color: (isDark ? AppTheme.darkAccent : AppTheme.brandCobalt)
+                                                        .withValues(alpha: 0.05),
                                                     borderRadius: BorderRadius.circular(6),
                                                     border: Border.all(
-                                                      color: borderCol.withValues(alpha: 0.8),
+                                                      color: (isDark ? AppTheme.darkAccent : AppTheme.brandCobalt)
+                                                          .withValues(alpha: 0.25),
                                                       width: 0.8,
-                                                      strokeAlign: BorderSide.strokeAlignInside,
                                                     ),
                                                   ),
                                                   child: Column(
@@ -631,7 +613,7 @@ class _TimetableMatrixViewState extends State<TimetableMatrixView> {
                                                             size: 11,
                                                             color: isDark ? AppTheme.darkAccent : AppTheme.brandCobalt,
                                                           ),
-                                                          const SizedBox(width: 3),
+                                                          const SizedBox(width: 4),
                                                           Flexible(
                                                             child: Text(
                                                               'Jeda ${fw.durationFormatted}',
@@ -645,12 +627,12 @@ class _TimetableMatrixViewState extends State<TimetableMatrixView> {
                                                           ),
                                                         ],
                                                       ),
-                                                      if (height >= 40)
+                                                      if (height >= 38)
                                                         Text(
                                                           fw.timeRangeFormatted,
                                                           style: TextStyle(
                                                             fontSize: 8.5,
-                                                            color: textSecondary.withValues(alpha: 0.8),
+                                                            color: textSecondary.withValues(alpha: 0.75),
                                                           ),
                                                           overflow: TextOverflow.ellipsis,
                                                         ),
@@ -664,14 +646,14 @@ class _TimetableMatrixViewState extends State<TimetableMatrixView> {
 
                                         // 3. Class Subject Blocks
                                         ...daySubjects.map((sub) {
-                                          final top = (sub.startMinutes - matrixStartMin) * (_hourHeight / 60.0);
+                                          final top = _gridTopOffset + (sub.startMinutes - matrixStartMin) * (_hourHeight / 60.0);
                                           final height = sub.durationMinutes * (_hourHeight / 60.0);
 
                                           return Positioned(
-                                            top: top + 2,
+                                            top: top + 1.5,
                                             left: 3,
                                             right: 3,
-                                            height: (height - 4).clamp(32.0, totalGridHeight),
+                                            height: (height - 3).clamp(32.0, totalGridHeight),
                                             child: Material(
                                               color: Colors.transparent,
                                               child: InkWell(
@@ -685,7 +667,7 @@ class _TimetableMatrixViewState extends State<TimetableMatrixView> {
                                                 },
                                                 borderRadius: BorderRadius.circular(6),
                                                 child: Container(
-                                                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+                                                  padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 4),
                                                   decoration: BoxDecoration(
                                                     color: sub.color.withValues(alpha: isDark ? 0.25 : 0.14),
                                                     borderRadius: BorderRadius.circular(6),
@@ -724,7 +706,7 @@ class _TimetableMatrixViewState extends State<TimetableMatrixView> {
                                                           children: [
                                                             Icon(
                                                               Icons.meeting_room_outlined,
-                                                              size: 10,
+                                                              size: 10.5,
                                                               color: sub.color,
                                                             ),
                                                             const SizedBox(width: 3),
@@ -763,6 +745,33 @@ class _TimetableMatrixViewState extends State<TimetableMatrixView> {
                                             ),
                                           );
                                         }),
+
+                                        // 4. Live Current Time Indicator Line (Hanya pada hari ini jika dalam jam matriks)
+                                        if (isToday && currentMinutesOfDay >= matrixStartMin && currentMinutesOfDay <= matrixEndMin) ...[
+                                          Positioned(
+                                            top: _gridTopOffset + (currentMinutesOfDay - matrixStartMin) * (_hourHeight / 60.0) - 1,
+                                            left: 0,
+                                            right: 0,
+                                            child: Row(
+                                              children: [
+                                                Container(
+                                                  width: 5,
+                                                  height: 5,
+                                                  decoration: const BoxDecoration(
+                                                    color: AppTheme.urgentRose,
+                                                    shape: BoxShape.circle,
+                                                  ),
+                                                ),
+                                                Expanded(
+                                                  child: Container(
+                                                    height: 1.5,
+                                                    color: AppTheme.urgentRose.withValues(alpha: 0.8),
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                        ],
                                       ],
                                     ),
                                   ),
