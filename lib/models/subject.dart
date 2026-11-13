@@ -53,6 +53,44 @@ class Subject implements Comparable<Subject> {
     return 9999;
   }
 
+  /// Menghitung menit akhir dari timeRange (misal: "09.30-12.00" -> 720 menit)
+  int get endMinutes {
+    if (timeRange == null || timeRange!.trim().isEmpty) return 9999;
+    final matches = RegExp(r'(\d{1,2})[:.](\d{2})').allMatches(timeRange!).toList();
+    if (matches.length >= 2) {
+      final hour = int.tryParse(matches[1].group(1)!) ?? 0;
+      final minute = int.tryParse(matches[1].group(2)!) ?? 0;
+      return hour * 60 + minute;
+    }
+    final hoursOnly = RegExp(r'(\d{1,2})').allMatches(timeRange!).toList();
+    if (hoursOnly.length >= 2) {
+      final hour = int.tryParse(hoursOnly[1].group(1)!) ?? 0;
+      return hour * 60;
+    }
+    if (startMinutes != 9999) {
+      final duration = creditHours > 0 ? creditHours * 50 : 100;
+      return startMinutes + duration;
+    }
+    return 9999;
+  }
+
+  /// Menit akhir yang aman (dijamin lebih besar dari menit awal)
+  int get safeEndMinutes {
+    if (startMinutes == 9999) return 9999;
+    final end = endMinutes;
+    if (end <= startMinutes || end == 9999) {
+      final duration = creditHours > 0 ? creditHours * 50 : 100;
+      return startMinutes + duration;
+    }
+    return end;
+  }
+
+  /// Durasi perkuliahan dalam menit
+  int get durationMinutes {
+    if (startMinutes == 9999) return 0;
+    return (safeEndMinutes - startMinutes).clamp(30, 360);
+  }
+
   @override
   int compareTo(Subject other) {
     // 1. Urutkan berdasarkan hari (1 = Senin .. 7 = Minggu). Yang belum ada hari di paling bawah.

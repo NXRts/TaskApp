@@ -3,6 +3,7 @@ import 'package:taskapp/models/task.dart';
 import 'package:taskapp/models/subtask.dart';
 import 'package:taskapp/models/subject.dart';
 import 'package:taskapp/models/attendance_record.dart';
+import 'package:taskapp/widgets/timetable_matrix_view.dart';
 
 void main() {
   test('TaskItem progress and urgency calculations', () {
@@ -210,5 +211,46 @@ void main() {
       'Pendidikan Pancasila', // Jumat 13.10
       'Matkul Tanpa Jadwal', // Tanpa hari
     ]);
+  });
+
+  test('Subject timetable startMinutes, endMinutes, duration, and FreeStudyWindow', () {
+    final s1 = Subject(
+      id: 'sub-1',
+      name: 'Kalkulus',
+      dayOfWeek: 1, // Senin
+      timeRange: '08:00 - 10:30',
+      room: 'Lab 3',
+      creditHours: 3,
+    );
+
+    expect(s1.startMinutes, 480); // 08:00
+    expect(s1.endMinutes, 630);   // 10:30
+    expect(s1.safeEndMinutes, 630);
+    expect(s1.durationMinutes, 150); // 2.5 hours
+
+    final s2 = Subject(
+      id: 'sub-2',
+      name: 'Pemrograman Mobile',
+      dayOfWeek: 1, // Senin
+      timeRange: '13:00 - 15:30',
+      room: 'Ruang 402',
+      creditHours: 3,
+    );
+
+    expect(s2.startMinutes, 780); // 13:00
+    expect(s2.endMinutes, 930);   // 15:30
+
+    // Gap between s1 and s2: 780 - 630 = 150 minutes (2h 30m)
+    final freeWindow = FreeStudyWindow(
+      dayOfWeek: 1,
+      startMinutes: s1.safeEndMinutes,
+      endMinutes: s2.startMinutes,
+      precedingSubject: s1,
+      succeedingSubject: s2,
+    );
+
+    expect(freeWindow.durationMinutes, 150);
+    expect(freeWindow.durationFormatted, '2j 30m');
+    expect(freeWindow.timeRangeFormatted, '10:30 - 13:00');
   });
 }
