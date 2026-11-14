@@ -26,6 +26,7 @@ class _ScheduleExportScreenState extends State<ScheduleExportScreen>
   final GlobalKey _wallpaperKey = GlobalKey();
 
   bool _showLecturerOnWallpaper = false;
+  WallpaperLayoutMode _wallpaperLayoutMode = WallpaperLayoutMode.auto;
   bool _isExporting = false;
 
   @override
@@ -162,6 +163,8 @@ class _ScheduleExportScreenState extends State<ScheduleExportScreen>
             subjects,
             tasks,
             isDark,
+            textPrimary,
+            textSecondary,
             accentCol,
             borderCol,
           ),
@@ -182,15 +185,15 @@ class _ScheduleExportScreenState extends State<ScheduleExportScreen>
     Color accentCol,
   ) {
     final screenHeight = MediaQuery.sizeOf(context).height;
-    final previewHeight = (screenHeight * 0.60).clamp(420.0, 560.0);
+    final previewHeight = (screenHeight * 0.58).clamp(380.0, 540.0);
 
     return SingleChildScrollView(
-      padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
+      padding: const EdgeInsets.fromLTRB(16, 14, 16, 32),
       child: Column(
         children: [
           // Info banner
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
             decoration: BoxDecoration(
               color: accentCol.withValues(alpha: 0.08),
               borderRadius: BorderRadius.circular(8),
@@ -199,36 +202,87 @@ class _ScheduleExportScreenState extends State<ScheduleExportScreen>
             child: Row(
               children: [
                 Icon(Icons.info_outline_rounded, size: 16, color: accentCol),
-                const SizedBox(width: 10),
+                const SizedBox(width: 8),
                 Expanded(
                   child: Text(
-                    'Gambar beresolusi tinggi (9:16) berlatar Obsidian Gelap dirancang presisi untuk wallpaper lockscreen ponsel.',
-                    style: TextStyle(fontSize: 11.5, color: textPrimary, height: 1.35),
+                    'Wallpaper 9:16 Obsidian Gelap dirancang presisi untuk lockscreen ponsel (bebas potong jam).',
+                    style: TextStyle(fontSize: 11, color: textPrimary, height: 1.3),
                   ),
                 ),
               ],
             ),
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 12),
 
-          // Options Row
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                'Tampilkan Nama Dosen',
-                style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: textPrimary),
-              ),
-              Switch(
-                value: _showLecturerOnWallpaper,
-                activeColor: accentCol,
-                onChanged: (val) {
-                  setState(() => _showLecturerOnWallpaper = val);
-                },
-              ),
-            ],
+          // Options: Lecturer switch & Layout selector
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            decoration: BoxDecoration(
+              color: isDark ? AppTheme.darkSurface : AppTheme.lightSurface,
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: borderCol, width: 0.8),
+            ),
+            child: Column(
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      'Tampilkan Nama Dosen',
+                      style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w600, color: textPrimary),
+                    ),
+                    Switch(
+                      value: _showLecturerOnWallpaper,
+                      activeColor: accentCol,
+                      onChanged: (val) {
+                        setState(() => _showLecturerOnWallpaper = val);
+                      },
+                    ),
+                  ],
+                ),
+                Divider(color: borderCol.withValues(alpha: 0.6), height: 1),
+                const SizedBox(height: 8),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      'Tata Letak',
+                      style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w600, color: textPrimary),
+                    ),
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        _buildLayoutChoiceChip(
+                          label: 'Otomatis',
+                          mode: WallpaperLayoutMode.auto,
+                          isDark: isDark,
+                          accentCol: accentCol,
+                          borderCol: borderCol,
+                        ),
+                        const SizedBox(width: 5),
+                        _buildLayoutChoiceChip(
+                          label: '2 Kolom',
+                          mode: WallpaperLayoutMode.twoColumns,
+                          isDark: isDark,
+                          accentCol: accentCol,
+                          borderCol: borderCol,
+                        ),
+                        const SizedBox(width: 5),
+                        _buildLayoutChoiceChip(
+                          label: '1 Kolom',
+                          mode: WallpaperLayoutMode.singleColumn,
+                          isDark: isDark,
+                          accentCol: accentCol,
+                          borderCol: borderCol,
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ],
+            ),
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: 14),
 
           // Wallpaper Mockup Frame with RepaintBoundary
           Center(
@@ -238,7 +292,7 @@ class _ScheduleExportScreenState extends State<ScheduleExportScreen>
                 borderRadius: BorderRadius.circular(22),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withValues(alpha: isDark ? 0.6 : 0.25),
+                    color: Colors.black.withValues(alpha: isDark ? 0.6 : 0.22),
                     blurRadius: 18,
                     spreadRadius: 2,
                     offset: const Offset(0, 8),
@@ -257,11 +311,12 @@ class _ScheduleExportScreenState extends State<ScheduleExportScreen>
                   subjects: subjects,
                   is24HourFormat: is24Hour,
                   showLecturer: _showLecturerOnWallpaper,
+                  layoutMode: _wallpaperLayoutMode,
                 ),
               ),
             ),
           ),
-          const SizedBox(height: 24),
+          const SizedBox(height: 20),
 
           // Action Buttons: Share & Save
           Row(
@@ -309,76 +364,105 @@ class _ScheduleExportScreenState extends State<ScheduleExportScreen>
     );
   }
 
+  Widget _buildLayoutChoiceChip({
+    required String label,
+    required WallpaperLayoutMode mode,
+    required bool isDark,
+    required Color accentCol,
+    required Color borderCol,
+  }) {
+    final isSelected = _wallpaperLayoutMode == mode;
+    return GestureDetector(
+      onTap: () {
+        setState(() => _wallpaperLayoutMode = mode);
+      },
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+        decoration: BoxDecoration(
+          color: isSelected
+              ? accentCol.withValues(alpha: 0.18)
+              : (isDark ? AppTheme.darkSurfaceElevated : AppTheme.lightBorderSubtle),
+          borderRadius: BorderRadius.circular(5),
+          border: Border.all(
+            color: isSelected ? accentCol : borderCol,
+            width: 0.8,
+          ),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            fontSize: 10,
+            fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+            color: isSelected ? accentCol : (isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary),
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// Clean, 100% Overflow-Free PDF Preview Tab
   Widget _buildPdfTab(
     BuildContext context,
     UserProfile profile,
     List<Subject> subjects,
     List<TaskItem> tasks,
     bool isDark,
+    Color textPrimary,
+    Color textSecondary,
     Color accentCol,
     Color borderCol,
   ) {
     return Column(
       children: [
-        // Action Bar for PDF
+        // Action Bar for PDF - Completely Responsive, No Overflow
         Container(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
           decoration: BoxDecoration(
             color: isDark ? AppTheme.darkSurface : AppTheme.lightSurface,
             border: Border(bottom: BorderSide(color: borderCol, width: 0.8)),
           ),
           child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Row(
-                children: [
-                  const Icon(Icons.print_outlined, size: 16),
-                  const SizedBox(width: 6),
-                  Text(
-                    'Format Kertas A4 Standar Cetak',
-                    style: TextStyle(
-                      fontSize: 11.5,
-                      fontWeight: FontWeight.w600,
-                      color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary,
-                    ),
+              Icon(Icons.picture_as_pdf_outlined, size: 18, color: accentCol),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  'Dokumen PDF A4 Standar Cetak',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: textPrimary,
                   ),
-                ],
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
               ),
-              Row(
-                children: [
-                  TextButton.icon(
-                    onPressed: () async {
-                      final bytes = await ScheduleExportService.generateStudySummaryPdf(
-                        profile: profile,
-                        subjects: subjects,
-                        tasks: tasks,
-                      );
-                      await ScheduleExportService.sharePdf(bytes);
-                    },
-                    icon: const Icon(Icons.share_rounded, size: 14),
-                    label: const Text('Bagikan', style: TextStyle(fontSize: 11.5)),
-                  ),
-                  const SizedBox(width: 6),
-                  ElevatedButton.icon(
-                    onPressed: () async {
-                      final bytes = await ScheduleExportService.generateStudySummaryPdf(
-                        profile: profile,
-                        subjects: subjects,
-                        tasks: tasks,
-                      );
-                      await ScheduleExportService.printPdf(bytes);
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: accentCol,
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                      elevation: 0,
-                    ),
-                    icon: const Icon(Icons.print_rounded, size: 14),
-                    label: const Text('Cetak / Simpan', style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w700)),
-                  ),
-                ],
+              const SizedBox(width: 8),
+              IconButton(
+                visualDensity: VisualDensity.compact,
+                tooltip: 'Bagikan Berkas PDF',
+                icon: const Icon(Icons.share_rounded, size: 18),
+                onPressed: () async {
+                  final bytes = await ScheduleExportService.generateStudySummaryPdf(
+                    profile: profile,
+                    subjects: subjects,
+                    tasks: tasks,
+                  );
+                  await ScheduleExportService.sharePdf(bytes);
+                },
+              ),
+              IconButton(
+                visualDensity: VisualDensity.compact,
+                tooltip: 'Cetak Dokumen',
+                icon: const Icon(Icons.print_rounded, size: 18),
+                onPressed: () async {
+                  final bytes = await ScheduleExportService.generateStudySummaryPdf(
+                    profile: profile,
+                    subjects: subjects,
+                    tasks: tasks,
+                  );
+                  await ScheduleExportService.printPdf(bytes);
+                },
               ),
             ],
           ),

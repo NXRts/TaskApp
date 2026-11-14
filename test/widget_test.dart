@@ -416,4 +416,56 @@ void main() {
     expect(find.text('Sinyal & Sistem'), findsOneWidget);
     expect(find.text('SENIN'), findsOneWidget);
   });
+
+  testWidgets('WallpaperScheduleWidget two-column layout fits all 6 days without cut-offs', (tester) async {
+    final profile = UserProfile(
+      name: 'Yusuf Arrofi',
+      campus: 'UMUKA',
+      studyProgram: 'Teknik Informatika',
+      semester: 1,
+    );
+
+    final subjects = [
+      Subject(id: 's1', name: 'Logika Informatika', creditHours: 3, dayOfWeek: 1, timeRange: '07.00-09.30', room: 'L.03.11'),
+      Subject(id: 's2', name: 'Pengantar TI', creditHours: 2, dayOfWeek: 1, timeRange: '13.20-15.00', room: 'L01.01'),
+      Subject(id: 's3', name: 'Kalkulus', creditHours: 3, dayOfWeek: 2, timeRange: '09.30-12.00', room: 'L.03.11'),
+      Subject(id: 's4', name: 'Algoritma', creditHours: 2, dayOfWeek: 3, timeRange: '08.40-10.20', room: 'L.01.02'),
+      Subject(id: 's5', name: 'Praktikum Algoritma', creditHours: 1, dayOfWeek: 3, timeRange: '13.20-15.00', room: 'Lab Kom'),
+      Subject(id: 's6', name: 'Sistem Operasi', creditHours: 2, dayOfWeek: 4, timeRange: '07.00-08.40', room: 'L01.01'),
+      Subject(id: 's7', name: 'Pendidikan Agama', creditHours: 2, dayOfWeek: 4, timeRange: '13.20-15.00', room: 'L02.01'),
+      Subject(id: 's8', name: 'Praktikum SO', creditHours: 1, dayOfWeek: 5, timeRange: '08.00-09.20', room: 'Lab Kom'),
+      Subject(id: 's9', name: 'Pendidikan Pancasila', creditHours: 2, dayOfWeek: 5, timeRange: '13.10-14.30', room: 'L.01.03'),
+      Subject(id: 's10', name: 'English for Academic', creditHours: 2, dayOfWeek: 6, timeRange: '07.50-09.30', room: 'L.03.15'),
+    ];
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: Center(
+            child: SizedBox(
+              width: 360,
+              height: 640,
+              child: WallpaperScheduleWidget(
+                profile: profile,
+                subjects: subjects,
+                layoutMode: WallpaperLayoutMode.twoColumns,
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+
+    // Verify all 6 days are rendered
+    expect(find.text('SENIN'), findsOneWidget);
+    expect(find.text('SELASA'), findsOneWidget);
+    expect(find.text('RABU'), findsOneWidget);
+    expect(find.text('KAMIS'), findsOneWidget);
+    expect(find.text('JUMAT'), findsOneWidget);
+    expect(find.text('SABTU'), findsOneWidget);
+
+    // Verify subjects from early week and late week are both rendered
+    expect(find.text('Logika Informatika'), findsOneWidget);
+    expect(find.text('English for Academic'), findsOneWidget);
+  });
 }
