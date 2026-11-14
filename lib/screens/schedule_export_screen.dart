@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:printing/printing.dart';
+import 'package:gal/gal.dart';
 import '../models/subject.dart';
 import '../models/task.dart';
 import '../models/user_profile.dart';
@@ -68,26 +69,45 @@ class _ScheduleExportScreenState extends State<ScheduleExportScreen>
     try {
       final bytes = await ScheduleExportService.capturePng(_wallpaperKey, pixelRatio: 3.0);
       if (bytes != null && mounted) {
-        final file = await ScheduleExportService.savePngFile(bytes);
+        final result = await ScheduleExportService.saveToGallery(bytes);
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Row(
                 children: [
-                  const Icon(Icons.check_circle_rounded, color: AppTheme.successSage, size: 20),
+                  Icon(
+                    result.isSuccess ? Icons.check_circle_rounded : Icons.error_outline_rounded,
+                    color: result.isSuccess ? AppTheme.successSage : Colors.amber,
+                    size: 20,
+                  ),
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
-                      'Wallpaper tersimpan di: ${file.path}',
+                      result.message,
                       style: const TextStyle(fontSize: 12),
                     ),
                   ),
                 ],
               ),
+              action: result.isGallery
+                  ? SnackBarAction(
+                      label: 'Buka Galeri',
+                      textColor: AppTheme.darkAccent,
+                      onPressed: () {
+                        try {
+                          Gal.open();
+                        } catch (_) {}
+                      },
+                    )
+                  : null,
               duration: const Duration(seconds: 4),
             ),
           );
         }
+      } else if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Gagal membuat gambar wallpaper')),
+        );
       }
     } catch (e) {
       if (mounted) {
@@ -336,8 +356,13 @@ class _ScheduleExportScreenState extends State<ScheduleExportScreen>
                     side: BorderSide(color: borderCol),
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                   ),
-                  icon: const Icon(Icons.download_rounded, size: 18),
-                  label: const Text('Simpan PNG', style: TextStyle(fontSize: 12.5)),
+                  icon: const Icon(Icons.photo_library_rounded, size: 18),
+                  label: const Text(
+                    'Simpan ke Galeri',
+                    style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
                 ),
               ),
               const SizedBox(width: 12),

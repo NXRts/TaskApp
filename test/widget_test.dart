@@ -371,6 +371,26 @@ void main() {
     // Standard PDF signature starts with '%PDF'
     final pdfHeader = String.fromCharCodes(pdfBytes.sublist(0, 4));
     expect(pdfHeader, '%PDF');
+
+    // 3. WallpaperSaveResult model tests
+    const successResult = WallpaperSaveResult(
+      isSuccess: true,
+      isGallery: true,
+      message: 'Wallpaper berhasil disimpan ke Galeri HP (Album: TaskApp)!',
+    );
+    expect(successResult.isSuccess, isTrue);
+    expect(successResult.isGallery, isTrue);
+    expect(successResult.message, contains('Galeri HP'));
+
+    const localResult = WallpaperSaveResult(
+      isSuccess: true,
+      isGallery: false,
+      filePath: '/storage/emulated/0/Download/wallpaper.png',
+      message: 'Wallpaper tersimpan di: /storage/emulated/0/Download/wallpaper.png',
+    );
+    expect(localResult.isSuccess, isTrue);
+    expect(localResult.isGallery, isFalse);
+    expect(localResult.filePath, isNotNull);
   });
 
   testWidgets('WallpaperScheduleWidget renders student info and subjects', (tester) async {

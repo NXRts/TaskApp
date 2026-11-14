@@ -3,6 +3,7 @@ import 'dart:typed_data';
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
+import 'package:gal/gal.dart';
 import 'package:intl/intl.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:path_provider/path_provider.dart';
@@ -13,6 +14,21 @@ import 'package:share_plus/share_plus.dart';
 import '../models/subject.dart';
 import '../models/task.dart';
 import '../models/user_profile.dart';
+
+/// Result object for saving wallpaper images
+class WallpaperSaveResult {
+  final bool isSuccess;
+  final bool isGallery;
+  final String? filePath;
+  final String message;
+
+  const WallpaperSaveResult({
+    required this.isSuccess,
+    required this.isGallery,
+    this.filePath,
+    required this.message,
+  });
+}
 
 /// Service for exporting visual wallpapers (PNG) and study summary documents (PDF)
 class ScheduleExportService {
@@ -60,6 +76,67 @@ class ScheduleExportService {
     final file = File('${dir.path}/$name');
     await file.writeAsBytes(bytes);
     return file;
+  }
+
+  /// Save PNG bytes directly into phone's native Gallery (Android MediaStore / iOS Photos)
+  /// in the 'TaskApp' album so it appears immediately in the phone's Gallery app.
+  /// Falls back to local directory (Downloads/Documents) on unsupported platforms.
+  static Future<WallpaperSaveResult> saveToGallery(Uint8List bytes, {String? filename}) async {
+    final name = filename ?? 'TaskApp_Jadwal_Wallpaper_${DateFormat('yyyyMMdd_HHmmss').format(DateTime.now())}';
+
+    // Try saving directly to device gallery via Gal (Android MediaStore / iOS Photos)
+    if (Platform.isAndroid || Platform.isIOS || Platform.isMacOS || Platform.isWindows) {
+      try {
+        await Gal.putImageBytes(
+          bytes,
+          album: 'TaskApp',
+          name: name,
+        );
+        return const WallpaperSaveResult(
+          isSuccess: true,
+          isGallery: true,
+          message: 'Wallpaper berhasil disimpan ke Galeri HP (Album: TaskApp)!',
+        );
+      } on GalException catch (e) {
+        debugPrint('GalException saving to gallery: ${e.type}');
+        if (e.type == GalExceptionType.permissionDenied) {
+          return const WallpaperSaveResult(
+            isSuccess: false,
+            isGallery: false,
+            message: 'Izin galeri ditolak. Harap izinkan akses penyimpanan di Pengaturan HP.',
+          );
+        } else if (e.type == GalExceptionType.notEnoughSpace) {
+          return const WallpaperSaveResult(
+            isSuccess: false,
+            isGallery: false,
+            message: 'Penyimpanan ponsel tidak mencukupi.',
+          );
+        }
+      } catch (e) {
+        debugPrint('Gal save fallback triggered: $e');
+      }
+    }
+
+    // Graceful fallback for Linux desktop or if native gallery export encountered an issue
+    try {
+      final baseDir = await getDownloadsDirectory() ?? await getApplicationDocumentsDirectory();
+      final file = File('${baseDir.path}/$name.png');
+      await file.writeAsBytes(bytes);
+      return WallpaperSaveResult(
+        isSuccess: true,
+        isGallery: false,
+        filePath: file.path,
+        message: 'Wallpaper tersimpan di: ${file.path}',
+      );
+    } catch (e) {
+      final file = await savePngFile(bytes, filename: '$name.png');
+      return WallpaperSaveResult(
+        isSuccess: true,
+        isGallery: false,
+        filePath: file.path,
+        message: 'Wallpaper tersimpan di: ${file.path}',
+      );
+    }
   }
 
   /// Share PNG Wallpaper using system share sheet
