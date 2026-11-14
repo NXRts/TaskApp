@@ -61,10 +61,6 @@ jobs:
             cp "RELEASE_NOTES_${VERSION}.md" RELEASE_NOTES_CURRENT.md
           elif [ -f "RELEASE_NOTES.md" ]; then
             cp "RELEASE_NOTES.md" RELEASE_NOTES_CURRENT.md
-          elif [ -f "RELEASE_NOTES_v2.2.0.md" ]; then
-            cp "RELEASE_NOTES_v2.2.0.md" RELEASE_NOTES_CURRENT.md
-          elif [ -f "RELEASE_NOTES_v2.0.6.md" ]; then
-            cp "RELEASE_NOTES_v2.0.6.md" RELEASE_NOTES_CURRENT.md
           else
             echo "TaskApp ${VERSION}" > RELEASE_NOTES_CURRENT.md
           fi
