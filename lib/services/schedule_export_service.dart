@@ -150,7 +150,7 @@ class ScheduleExportService {
                         pw.SizedBox(height: 2),
                         pw.Text(
                           '${profile.studyProgram.isNotEmpty ? profile.studyProgram : ''}${profile.studyProgram.isNotEmpty && profile.campus.isNotEmpty ? ' - ' : ''}${profile.campus}',
-                          style: pw.TextStyle(color: textMuted, fontSize: 10),
+                          style: pw.TextStyle(color: PdfColor.fromInt(0xFF334155), fontSize: 10, fontWeight: pw.FontWeight.bold),
                         ),
                       ],
                     ],

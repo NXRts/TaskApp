@@ -4,12 +4,20 @@ import '../models/user_profile.dart';
 import '../services/schedule_export_service.dart';
 import '../utils/app_theme.dart';
 
+enum WallpaperLayoutMode {
+  auto,
+  twoColumns,
+  singleColumn,
+}
+
 /// 9:16 Aspect Ratio Lockscreen Wallpaper Widget (Obsidian Minimalist Aesthetic)
+/// Designed with canonical 360 x 640 logical resolution (1080 x 1920 Full HD at 3x scale)
 class WallpaperScheduleWidget extends StatelessWidget {
   final UserProfile profile;
   final List<Subject> subjects;
   final bool is24HourFormat;
   final bool showLecturer;
+  final WallpaperLayoutMode layoutMode;
 
   const WallpaperScheduleWidget({
     super.key,
@@ -17,6 +25,7 @@ class WallpaperScheduleWidget extends StatelessWidget {
     required this.subjects,
     this.is24HourFormat = true,
     this.showLecturer = false,
+    this.layoutMode = WallpaperLayoutMode.auto,
   });
 
   @override
@@ -34,6 +43,21 @@ class WallpaperScheduleWidget extends StatelessWidget {
       }
     }
 
+    // Determine whether to use 2-column or 1-column layout
+    final bool useTwoColumns;
+    switch (layoutMode) {
+      case WallpaperLayoutMode.twoColumns:
+        useTwoColumns = true;
+        break;
+      case WallpaperLayoutMode.singleColumn:
+        useTwoColumns = false;
+        break;
+      case WallpaperLayoutMode.auto:
+        // Automatically choose 2 columns when schedule is packed (>= 5 days or >= 7 classes)
+        useTwoColumns = dayMap.length >= 5 || sortedSubjects.length >= 7;
+        break;
+    }
+
     return AspectRatio(
       aspectRatio: 9 / 16,
       child: Container(
@@ -49,12 +73,12 @@ class WallpaperScheduleWidget extends StatelessWidget {
             ],
           ),
         ),
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // Top safe breathing space for phone lockscreen clock widget (~50px)
-            const SizedBox(height: 38),
+            // Top safe breathing space for phone lockscreen clock widget (~32px)
+            const SizedBox(height: 30),
 
             // Discreet Header Tag
             Row(
@@ -76,8 +100,8 @@ class WallpaperScheduleWidget extends StatelessWidget {
                       style: TextStyle(
                         fontSize: 9,
                         fontWeight: FontWeight.w700,
-                        letterSpacing: 1.5,
-                        color: Colors.white.withValues(alpha: 0.5),
+                        letterSpacing: 1.4,
+                        color: Colors.white.withValues(alpha: 0.55),
                       ),
                     ),
                   ],
@@ -85,10 +109,10 @@ class WallpaperScheduleWidget extends StatelessWidget {
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                   decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.06),
+                    color: Colors.white.withValues(alpha: 0.08),
                     borderRadius: BorderRadius.circular(4),
                     border: Border.all(
-                      color: Colors.white.withValues(alpha: 0.12),
+                      color: Colors.white.withValues(alpha: 0.15),
                       width: 0.6,
                     ),
                   ),
@@ -97,21 +121,21 @@ class WallpaperScheduleWidget extends StatelessWidget {
                     style: TextStyle(
                       fontSize: 8.5,
                       fontWeight: FontWeight.w700,
-                      color: Colors.white.withValues(alpha: 0.8),
+                      color: Colors.white.withValues(alpha: 0.85),
                     ),
                   ),
                 ),
               ],
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: 7),
 
             // Student Name & Profile Card
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6.5),
               decoration: BoxDecoration(
                 color: const Color(0xFF141721),
                 borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: Colors.white.withValues(alpha: 0.08), width: 0.8),
+                border: Border.all(color: Colors.white.withValues(alpha: 0.1), width: 0.8),
               ),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -132,12 +156,12 @@ class WallpaperScheduleWidget extends StatelessWidget {
                           overflow: TextOverflow.ellipsis,
                         ),
                         if (profile.studyProgram.isNotEmpty || profile.campus.isNotEmpty) ...[
-                          const SizedBox(height: 2),
+                          const SizedBox(height: 1.5),
                           Text(
                             '${profile.studyProgram.isNotEmpty ? profile.studyProgram : ''}${profile.studyProgram.isNotEmpty && profile.campus.isNotEmpty ? ' • ' : ''}${profile.campus}',
                             style: TextStyle(
-                              fontSize: 9.5,
-                              color: Colors.white.withValues(alpha: 0.6),
+                              fontSize: 9,
+                              color: Colors.white.withValues(alpha: 0.65),
                             ),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
@@ -148,30 +172,30 @@ class WallpaperScheduleWidget extends StatelessWidget {
                   ),
                   const SizedBox(width: 8),
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 4),
+                    padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3.5),
                     decoration: BoxDecoration(
-                      color: AppTheme.brandCobalt.withValues(alpha: 0.18),
+                      color: AppTheme.brandCobalt.withValues(alpha: 0.22),
                       borderRadius: BorderRadius.circular(6),
                       border: Border.all(
-                        color: AppTheme.brandCobalt.withValues(alpha: 0.4),
+                        color: AppTheme.brandCobalt.withValues(alpha: 0.5),
                         width: 0.8,
                       ),
                     ),
                     child: Text(
                       '$totalSks SKS',
                       style: const TextStyle(
-                        fontSize: 10,
+                        fontSize: 9.5,
                         fontWeight: FontWeight.w700,
-                        color: Color(0xFF60A5FA),
+                        color: Color(0xFF93C5FD),
                       ),
                     ),
                   ),
                 ],
               ),
             ),
-            const SizedBox(height: 10),
+            const SizedBox(height: 8),
 
-            // Schedule Body (Grouped by Day)
+            // Schedule Body - Auto-fitted to guarantee 0 overflow & 100% visible content
             Expanded(
               child: dayMap.isEmpty
                   ? Center(
@@ -183,20 +207,22 @@ class WallpaperScheduleWidget extends StatelessWidget {
                         ),
                       ),
                     )
-                  : ListView(
-                      padding: EdgeInsets.zero,
-                      physics: const NeverScrollableScrollPhysics(),
-                      children: [
-                        for (final entry in dayMap.entries) ...[
-                          _buildDaySection(entry.key, entry.value),
-                          const SizedBox(height: 6),
-                        ],
-                      ],
+                  : Center(
+                      child: FittedBox(
+                        fit: BoxFit.scaleDown,
+                        alignment: Alignment.topCenter,
+                        child: SizedBox(
+                          width: 332,
+                          child: useTwoColumns
+                              ? _buildTwoColumnLayout(dayMap)
+                              : _buildSingleColumnLayout(dayMap),
+                        ),
+                      ),
                     ),
             ),
 
             // Minimalist Footer
-            const SizedBox(height: 6),
+            const SizedBox(height: 4),
             Center(
               child: Text(
                 'TASKAPP • OFFLINE ACADEMIC OS',
@@ -208,20 +234,210 @@ class WallpaperScheduleWidget extends StatelessWidget {
                 ),
               ),
             ),
-            const SizedBox(height: 4),
+            const SizedBox(height: 2),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildDaySection(int day, List<Subject> daySubjects) {
+  /// Balanced Two-Column Split Layout (Senin-Rabu di kiri, Kamis-Sabtu di kanan)
+  Widget _buildTwoColumnLayout(Map<int, List<Subject>> dayMap) {
+    final entries = dayMap.entries.toList();
+
+    int totalCount = 0;
+    for (final e in entries) {
+      totalCount += e.value.length;
+    }
+    final int halfCount = (totalCount / 2).ceil();
+
+    final List<MapEntry<int, List<Subject>>> leftEntries = [];
+    final List<MapEntry<int, List<Subject>>> rightEntries = [];
+
+    int currentCount = 0;
+    for (final e in entries) {
+      if (currentCount < halfCount || leftEntries.isEmpty) {
+        leftEntries.add(e);
+        currentCount += e.value.length;
+      } else {
+        rightEntries.add(e);
+      }
+    }
+
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Left Column
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              for (final entry in leftEntries) ...[
+                _buildCompactDaySection(entry.key, entry.value),
+                const SizedBox(height: 5),
+              ],
+            ],
+          ),
+        ),
+        const SizedBox(width: 8),
+
+        // Right Column
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              for (final entry in rightEntries) ...[
+                _buildCompactDaySection(entry.key, entry.value),
+                const SizedBox(height: 5),
+              ],
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  /// Compact Day Section for Two-Column Layout
+  Widget _buildCompactDaySection(int day, List<Subject> daySubjects) {
     final dayName = ScheduleExportService.getDayName(day).toUpperCase();
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Day header chip
+        // Day Header
+        Row(
+          children: [
+            Text(
+              dayName,
+              style: const TextStyle(
+                fontSize: 9,
+                fontWeight: FontWeight.w800,
+                letterSpacing: 0.6,
+                color: Color(0xFF93C5FD),
+              ),
+            ),
+            const SizedBox(width: 4),
+            Text(
+              '(${daySubjects.length})',
+              style: TextStyle(
+                fontSize: 8,
+                fontWeight: FontWeight.w600,
+                color: Colors.white.withValues(alpha: 0.45),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 3),
+
+        // Class items in compact card
+        for (final subject in daySubjects) ...[
+          Container(
+            margin: const EdgeInsets.only(bottom: 3),
+            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3.5),
+            decoration: BoxDecoration(
+              color: const Color(0xFF13151E),
+              borderRadius: BorderRadius.circular(5),
+              border: Border.all(
+                color: Colors.white.withValues(alpha: 0.08),
+                width: 0.6,
+              ),
+            ),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  width: 3,
+                  height: 20,
+                  margin: const EdgeInsets.only(top: 1),
+                  decoration: BoxDecoration(
+                    color: subject.color,
+                    borderRadius: BorderRadius.circular(1.5),
+                  ),
+                ),
+                const SizedBox(width: 5),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        subject.name,
+                        style: const TextStyle(
+                          fontSize: 9,
+                          fontWeight: FontWeight.w700,
+                          color: Colors.white,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      const SizedBox(height: 1),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Flexible(
+                            child: Text(
+                              subject.room.isNotEmpty ? subject.room : '${subject.creditHours} SKS',
+                              style: TextStyle(
+                                fontSize: 7.5,
+                                color: Colors.white.withValues(alpha: 0.6),
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                          if (subject.timeRange?.isNotEmpty == true)
+                            Text(
+                              subject.timeRange!,
+                              style: TextStyle(
+                                fontSize: 7.5,
+                                fontWeight: FontWeight.w600,
+                                color: Colors.white.withValues(alpha: 0.8),
+                              ),
+                            ),
+                        ],
+                      ),
+                      if (showLecturer && subject.lecturer.isNotEmpty) ...[
+                        const SizedBox(height: 1),
+                        Text(
+                          subject.lecturer,
+                          style: TextStyle(
+                            fontSize: 7,
+                            color: Colors.white.withValues(alpha: 0.45),
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+
+  /// Single-Column Layout (Streamlined rows that adapt cleanly to all screen sizes)
+  Widget _buildSingleColumnLayout(Map<int, List<Subject>> dayMap) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        for (final entry in dayMap.entries) ...[
+          _buildSingleDaySection(entry.key, entry.value),
+          const SizedBox(height: 4),
+        ],
+      ],
+    );
+  }
+
+  Widget _buildSingleDaySection(int day, List<Subject> daySubjects) {
+    final dayName = ScheduleExportService.getDayName(day).toUpperCase();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Day Header
         Row(
           children: [
             Text(
@@ -239,32 +455,32 @@ class WallpaperScheduleWidget extends StatelessWidget {
               style: TextStyle(
                 fontSize: 8.5,
                 fontWeight: FontWeight.w600,
-                color: Colors.white.withValues(alpha: 0.4),
+                color: Colors.white.withValues(alpha: 0.45),
               ),
             ),
           ],
         ),
-        const SizedBox(height: 4),
+        const SizedBox(height: 2.5),
 
-        // Class items
+        // Class items in single column
         for (final subject in daySubjects) ...[
           Container(
-            margin: const EdgeInsets.only(bottom: 3.5),
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4.5),
+            margin: const EdgeInsets.only(bottom: 2.5),
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3.5),
             decoration: BoxDecoration(
               color: const Color(0xFF13151E),
               borderRadius: BorderRadius.circular(6),
               border: Border.all(
-                color: Colors.white.withValues(alpha: 0.07),
+                color: Colors.white.withValues(alpha: 0.08),
                 width: 0.6,
               ),
             ),
             child: Row(
               children: [
-                // Subject color pill
+                // Subject color bar
                 Container(
                   width: 3.5,
-                  height: 24,
+                  height: 20,
                   decoration: BoxDecoration(
                     color: subject.color,
                     borderRadius: BorderRadius.circular(2),
@@ -272,7 +488,7 @@ class WallpaperScheduleWidget extends StatelessWidget {
                 ),
                 const SizedBox(width: 7),
 
-                // Subject Name & Room/Lecturer
+                // Name, Room, & SKS
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -280,7 +496,7 @@ class WallpaperScheduleWidget extends StatelessWidget {
                       Text(
                         subject.name,
                         style: const TextStyle(
-                          fontSize: 10,
+                          fontSize: 9.5,
                           fontWeight: FontWeight.w700,
                           color: Colors.white,
                         ),
@@ -331,9 +547,9 @@ class WallpaperScheduleWidget extends StatelessWidget {
                 // Time Range
                 if (subject.timeRange?.isNotEmpty == true)
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                     decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.05),
+                      color: Colors.white.withValues(alpha: 0.06),
                       borderRadius: BorderRadius.circular(4),
                     ),
                     child: Text(
@@ -341,7 +557,7 @@ class WallpaperScheduleWidget extends StatelessWidget {
                       style: TextStyle(
                         fontSize: 8,
                         fontWeight: FontWeight.w600,
-                        color: Colors.white.withValues(alpha: 0.8),
+                        color: Colors.white.withValues(alpha: 0.85),
                       ),
                     ),
                   ),
