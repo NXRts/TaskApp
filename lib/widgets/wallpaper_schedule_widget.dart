@@ -11,6 +11,7 @@ enum WallpaperLayoutMode {
 }
 
 /// 9:16 Aspect Ratio Lockscreen Wallpaper Widget (Obsidian Minimalist Aesthetic)
+/// Designed with canonical 360 x 640 logical resolution (1080 x 1920 Full HD at 3x scale)
 class WallpaperScheduleWidget extends StatelessWidget {
   final UserProfile profile;
   final List<Subject> subjects;
@@ -52,8 +53,8 @@ class WallpaperScheduleWidget extends StatelessWidget {
         useTwoColumns = false;
         break;
       case WallpaperLayoutMode.auto:
-        // If there are 4 or more days, or 6 or more classes, 2 columns ensures nothing gets cut off
-        useTwoColumns = dayMap.length >= 4 || sortedSubjects.length >= 6;
+        // Automatically choose 2 columns when schedule is packed (>= 5 days or >= 7 classes)
+        useTwoColumns = dayMap.length >= 5 || sortedSubjects.length >= 7;
         break;
     }
 
@@ -76,8 +77,8 @@ class WallpaperScheduleWidget extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // Top safe breathing space for phone lockscreen clock widget (~36px)
-            const SizedBox(height: 34),
+            // Top safe breathing space for phone lockscreen clock widget (~32px)
+            const SizedBox(height: 30),
 
             // Discreet Header Tag
             Row(
@@ -126,11 +127,11 @@ class WallpaperScheduleWidget extends StatelessWidget {
                 ),
               ],
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: 7),
 
             // Student Name & Profile Card
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6.5),
               decoration: BoxDecoration(
                 color: const Color(0xFF141721),
                 borderRadius: BorderRadius.circular(8),
@@ -155,7 +156,7 @@ class WallpaperScheduleWidget extends StatelessWidget {
                           overflow: TextOverflow.ellipsis,
                         ),
                         if (profile.studyProgram.isNotEmpty || profile.campus.isNotEmpty) ...[
-                          const SizedBox(height: 2),
+                          const SizedBox(height: 1.5),
                           Text(
                             '${profile.studyProgram.isNotEmpty ? profile.studyProgram : ''}${profile.studyProgram.isNotEmpty && profile.campus.isNotEmpty ? ' • ' : ''}${profile.campus}',
                             style: TextStyle(
@@ -171,7 +172,7 @@ class WallpaperScheduleWidget extends StatelessWidget {
                   ),
                   const SizedBox(width: 8),
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 4),
+                    padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3.5),
                     decoration: BoxDecoration(
                       color: AppTheme.brandCobalt.withValues(alpha: 0.22),
                       borderRadius: BorderRadius.circular(6),
@@ -194,7 +195,7 @@ class WallpaperScheduleWidget extends StatelessWidget {
             ),
             const SizedBox(height: 8),
 
-            // Schedule Body - Zero Scrollbar, 100% visible
+            // Schedule Body - Auto-fitted to guarantee 0 overflow & 100% visible content
             Expanded(
               child: dayMap.isEmpty
                   ? Center(
@@ -206,13 +207,22 @@ class WallpaperScheduleWidget extends StatelessWidget {
                         ),
                       ),
                     )
-                  : (useTwoColumns
-                      ? _buildTwoColumnLayout(dayMap)
-                      : _buildSingleColumnLayout(dayMap)),
+                  : Center(
+                      child: FittedBox(
+                        fit: BoxFit.scaleDown,
+                        alignment: Alignment.topCenter,
+                        child: SizedBox(
+                          width: 332,
+                          child: useTwoColumns
+                              ? _buildTwoColumnLayout(dayMap)
+                              : _buildSingleColumnLayout(dayMap),
+                        ),
+                      ),
+                    ),
             ),
 
             // Minimalist Footer
-            const SizedBox(height: 6),
+            const SizedBox(height: 4),
             Center(
               child: Text(
                 'TASKAPP • OFFLINE ACADEMIC OS',
@@ -231,11 +241,10 @@ class WallpaperScheduleWidget extends StatelessWidget {
     );
   }
 
-  /// Balanced Two-Column Split Layout (Prevents cut-offs for full weekly schedules)
+  /// Balanced Two-Column Split Layout (Senin-Rabu di kiri, Kamis-Sabtu di kanan)
   Widget _buildTwoColumnLayout(Map<int, List<Subject>> dayMap) {
     final entries = dayMap.entries.toList();
 
-    // Balance entries between left and right column by counting subjects
     int totalCount = 0;
     for (final e in entries) {
       totalCount += e.value.length;
@@ -324,7 +333,7 @@ class WallpaperScheduleWidget extends StatelessWidget {
         for (final subject in daySubjects) ...[
           Container(
             margin: const EdgeInsets.only(bottom: 3),
-            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3.5),
             decoration: BoxDecoration(
               color: const Color(0xFF13151E),
               borderRadius: BorderRadius.circular(5),
@@ -336,10 +345,9 @@ class WallpaperScheduleWidget extends StatelessWidget {
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Subject color bar
                 Container(
                   width: 3,
-                  height: 22,
+                  height: 20,
                   margin: const EdgeInsets.only(top: 1),
                   decoration: BoxDecoration(
                     color: subject.color,
@@ -347,8 +355,6 @@ class WallpaperScheduleWidget extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(width: 5),
-
-                // Name & details
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -412,14 +418,14 @@ class WallpaperScheduleWidget extends StatelessWidget {
     );
   }
 
-  /// Single-Column Layout (For semesters with fewer days or classes)
+  /// Single-Column Layout (Streamlined rows that adapt cleanly to all screen sizes)
   Widget _buildSingleColumnLayout(Map<int, List<Subject>> dayMap) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         for (final entry in dayMap.entries) ...[
           _buildSingleDaySection(entry.key, entry.value),
-          const SizedBox(height: 5),
+          const SizedBox(height: 4),
         ],
       ],
     );
@@ -454,13 +460,13 @@ class WallpaperScheduleWidget extends StatelessWidget {
             ),
           ],
         ),
-        const SizedBox(height: 3),
+        const SizedBox(height: 2.5),
 
         // Class items in single column
         for (final subject in daySubjects) ...[
           Container(
-            margin: const EdgeInsets.only(bottom: 3),
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4.5),
+            margin: const EdgeInsets.only(bottom: 2.5),
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3.5),
             decoration: BoxDecoration(
               color: const Color(0xFF13151E),
               borderRadius: BorderRadius.circular(6),
@@ -474,7 +480,7 @@ class WallpaperScheduleWidget extends StatelessWidget {
                 // Subject color bar
                 Container(
                   width: 3.5,
-                  height: 24,
+                  height: 20,
                   decoration: BoxDecoration(
                     color: subject.color,
                     borderRadius: BorderRadius.circular(2),
@@ -490,7 +496,7 @@ class WallpaperScheduleWidget extends StatelessWidget {
                       Text(
                         subject.name,
                         style: const TextStyle(
-                          fontSize: 10,
+                          fontSize: 9.5,
                           fontWeight: FontWeight.w700,
                           color: Colors.white,
                         ),
@@ -541,9 +547,9 @@ class WallpaperScheduleWidget extends StatelessWidget {
                 // Time Range
                 if (subject.timeRange?.isNotEmpty == true)
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2.5),
+                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                     decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.05),
+                      color: Colors.white.withValues(alpha: 0.06),
                       borderRadius: BorderRadius.circular(4),
                     ),
                     child: Text(

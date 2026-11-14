@@ -44,7 +44,7 @@ class _ScheduleExportScreenState extends State<ScheduleExportScreen>
   Future<void> _handleShareWallpaper() async {
     setState(() => _isExporting = true);
     try {
-      final bytes = await ScheduleExportService.capturePng(_wallpaperKey, pixelRatio: 3.5);
+      final bytes = await ScheduleExportService.capturePng(_wallpaperKey, pixelRatio: 3.0);
       if (bytes != null && mounted) {
         await ScheduleExportService.shareWallpaper(bytes);
       } else if (mounted) {
@@ -66,7 +66,7 @@ class _ScheduleExportScreenState extends State<ScheduleExportScreen>
   Future<void> _handleSaveWallpaper() async {
     setState(() => _isExporting = true);
     try {
-      final bytes = await ScheduleExportService.capturePng(_wallpaperKey, pixelRatio: 3.5);
+      final bytes = await ScheduleExportService.capturePng(_wallpaperKey, pixelRatio: 3.0);
       if (bytes != null && mounted) {
         final file = await ScheduleExportService.savePngFile(bytes);
         if (mounted) {
@@ -304,14 +304,21 @@ class _ScheduleExportScreenState extends State<ScheduleExportScreen>
                 ),
               ),
               clipBehavior: Clip.antiAlias,
-              child: RepaintBoundary(
-                key: _wallpaperKey,
-                child: WallpaperScheduleWidget(
-                  profile: profile,
-                  subjects: subjects,
-                  is24HourFormat: is24Hour,
-                  showLecturer: _showLecturerOnWallpaper,
-                  layoutMode: _wallpaperLayoutMode,
+              child: FittedBox(
+                fit: BoxFit.contain,
+                child: RepaintBoundary(
+                  key: _wallpaperKey,
+                  child: SizedBox(
+                    width: 360,
+                    height: 640,
+                    child: WallpaperScheduleWidget(
+                      profile: profile,
+                      subjects: subjects,
+                      is24HourFormat: is24Hour,
+                      showLecturer: _showLecturerOnWallpaper,
+                      layoutMode: _wallpaperLayoutMode,
+                    ),
+                  ),
                 ),
               ),
             ),
