@@ -1,10 +1,14 @@
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:taskapp/models/task.dart';
 import 'package:taskapp/models/subtask.dart';
 import 'package:taskapp/models/subject.dart';
+import 'package:taskapp/models/user_profile.dart';
 import 'package:taskapp/models/attendance_record.dart';
 import 'package:taskapp/widgets/timetable_matrix_view.dart';
 import 'package:taskapp/screens/calendar_screen.dart';
+import 'package:taskapp/services/schedule_export_service.dart';
+import 'package:taskapp/widgets/wallpaper_schedule_widget.dart';
 
 void main() {
   test('TaskItem progress and urgency calculations', () {
@@ -297,5 +301,119 @@ void main() {
     final dtAfternoon = DateTime(2026, 11, 13, 16, 45);
     expect(CalendarTimeHelper.formatDateTime(dtAfternoon, true), '16:45');
     expect(CalendarTimeHelper.formatDateTime(dtAfternoon, false), '4:45 PM');
+  });
+
+  test('ScheduleExportService day name mapping and PDF generation', () async {
+    // 1. Day name mapping
+    expect(ScheduleExportService.getDayName(1), 'Senin');
+    expect(ScheduleExportService.getDayName(2), 'Selasa');
+    expect(ScheduleExportService.getDayName(3), 'Rabu');
+    expect(ScheduleExportService.getDayName(4), 'Kamis');
+    expect(ScheduleExportService.getDayName(5), 'Jumat');
+    expect(ScheduleExportService.getDayName(6), 'Sabtu');
+    expect(ScheduleExportService.getDayName(7), 'Minggu');
+    expect(ScheduleExportService.getDayName(null), 'Lainnya');
+    expect(ScheduleExportService.getDayName(0), 'Lainnya');
+
+    // 2. Generate PDF document bytes
+    final profile = UserProfile(
+      name: 'Budi Santoso',
+      campus: 'Universitas Indonesia',
+      studyProgram: 'Ilmu Komputer',
+      semester: 4,
+    );
+
+    final subjects = [
+      Subject(
+        id: 'sub-algo',
+        name: 'Algoritma & Struktur Data',
+        creditHours: 4,
+        dayOfWeek: 1, // Senin
+        timeRange: '08:00 - 10:30',
+        room: 'Lab 2',
+        lecturer: 'Dr. Hendra',
+      ),
+      Subject(
+        id: 'sub-db',
+        name: 'Basis Data',
+        creditHours: 3,
+        dayOfWeek: 2, // Selasa
+        timeRange: '13:00 - 15:30',
+        room: 'R.304',
+        lecturer: 'Prof. Sri',
+      ),
+    ];
+
+    final tasks = [
+      TaskItem(
+        id: 'task-1',
+        title: 'Tugas Bab 3 Binary Tree',
+        dueDate: DateTime(2026, 11, 20, 23, 59),
+        priority: TaskPriority.high,
+        subjectId: 'sub-algo',
+      ),
+      TaskItem(
+        id: 'task-2',
+        title: 'Desain ERD Toko Buku',
+        dueDate: DateTime(2026, 11, 22, 17, 0),
+        priority: TaskPriority.medium,
+        subjectId: 'sub-db',
+      ),
+    ];
+
+    final pdfBytes = await ScheduleExportService.generateStudySummaryPdf(
+      profile: profile,
+      subjects: subjects,
+      tasks: tasks,
+    );
+
+    expect(pdfBytes, isNotEmpty);
+    // Standard PDF signature starts with '%PDF'
+    final pdfHeader = String.fromCharCodes(pdfBytes.sublist(0, 4));
+    expect(pdfHeader, '%PDF');
+  });
+
+  testWidgets('WallpaperScheduleWidget renders student info and subjects', (tester) async {
+    final profile = UserProfile(
+      name: 'Siti Aminah',
+      campus: 'Institut Teknologi Bandung',
+      studyProgram: 'Teknik Elektro',
+      semester: 6,
+    );
+
+    final subjects = [
+      Subject(
+        id: 'sub-el-1',
+        name: 'Sinyal & Sistem',
+        creditHours: 3,
+        dayOfWeek: 1, // Senin
+        timeRange: '07:00 - 09:30',
+        room: 'Lab Elektro',
+      ),
+    ];
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: Center(
+            child: SizedBox(
+              width: 360,
+              height: 640,
+              child: WallpaperScheduleWidget(
+                profile: profile,
+                subjects: subjects,
+                showLecturer: true,
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+
+    expect(find.text('Siti Aminah'), findsOneWidget);
+    expect(find.text('SMT 6'), findsOneWidget);
+    expect(find.text('3 SKS'), findsNWidgets(2)); // Card header and subject item
+    expect(find.text('Sinyal & Sistem'), findsOneWidget);
+    expect(find.text('SENIN'), findsOneWidget);
   });
 }

@@ -5,6 +5,7 @@ import '../providers/settings_provider.dart';
 import '../providers/task_provider.dart';
 import '../providers/subject_provider.dart';
 import '../services/storage_service.dart';
+import 'schedule_export_screen.dart';
 import '../utils/app_theme.dart';
 
 /// Modern Editorial Profile & Settings Screen
@@ -168,6 +169,39 @@ class _ProfileSettingsScreenState extends State<ProfileSettingsScreen> {
             ),
 
             const SizedBox(height: 28),
+            Divider(color: borderCol),
+            const SizedBox(height: 16),
+
+            // Visual Export Section
+            Text(
+              'EKSPOR VISUAL & DOKUMEN CETAK',
+              style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, letterSpacing: 1.1, color: textSecondary),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              'Buat Wallpaper Jadwal Kuliah HP (9:16) beresolusi tinggi atau unduh Dokumen Ringkasan Studi (PDF A4) lengkap dengan checklist tugas.',
+              style: TextStyle(fontSize: 12, color: textSecondary, height: 1.3),
+            ),
+            const SizedBox(height: 10),
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                style: OutlinedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
+                  side: BorderSide(color: borderCol),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                ),
+                icon: const Icon(Icons.share_outlined, size: 16),
+                label: const Text('Buka Studio Ekspor Jadwal (Wallpaper & PDF)', style: TextStyle(fontSize: 12.5)),
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const ScheduleExportScreen()),
+                  );
+                },
+              ),
+            ),
+            const SizedBox(height: 24),
             Divider(color: borderCol),
             const SizedBox(height: 16),
 

@@ -6,6 +6,7 @@ import '../providers/task_provider.dart';
 import '../widgets/add_subject_dialog.dart';
 import '../widgets/timetable_matrix_view.dart';
 import 'subject_detail_screen.dart';
+import 'schedule_export_screen.dart';
 import '../utils/app_theme.dart';
 
 /// Modern Editorial Subjects Screen with List & Timetable Matrix Views
@@ -49,7 +50,18 @@ class _SubjectsScreenState extends State<SubjectsScreen> {
               style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w600, color: textPrimary),
             ),
           ),
-          if (subjects.isNotEmpty)
+          if (subjects.isNotEmpty) ...[
+            IconButton(
+              visualDensity: VisualDensity.compact,
+              icon: const Icon(Icons.share_outlined, size: 20),
+              tooltip: 'Ekspor Wallpaper & PDF',
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const ScheduleExportScreen()),
+                );
+              },
+            ),
             IconButton(
               visualDensity: VisualDensity.compact,
               icon: Icon(
@@ -61,6 +73,7 @@ class _SubjectsScreenState extends State<SubjectsScreen> {
                 setState(() => _selectedView = _selectedView == 0 ? 1 : 0);
               },
             ),
+          ],
           IconButton(
             visualDensity: VisualDensity.compact,
             icon: const Icon(Icons.add, size: 22),

@@ -10,6 +10,7 @@ import '../widgets/task_card.dart';
 import '../widgets/add_task_modal.dart';
 import '../widgets/task_detail_modal.dart';
 import '../screens/subject_detail_screen.dart';
+import '../screens/schedule_export_screen.dart';
 import '../utils/app_theme.dart';
 
 /// Helper class for 24-hour and 12-hour AM/PM time formatting
@@ -249,6 +250,17 @@ class _CalendarScreenState extends State<CalendarScreen> {
       appBar: AppBar(
         title: const Text('Kalender & Jadwal'),
         actions: [
+          IconButton(
+            visualDensity: VisualDensity.compact,
+            icon: const Icon(Icons.share_outlined, size: 20),
+            tooltip: 'Ekspor Wallpaper & PDF',
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const ScheduleExportScreen()),
+              );
+            },
+          ),
           TextButton(
             onPressed: () {
               final currentToday = _normalizeDate(DateTime.now());
