@@ -218,12 +218,14 @@ class _ProfileSettingsScreenState extends State<ProfileSettingsScreen> {
               style: TextStyle(fontSize: 12, color: textSecondary, height: 1.3),
             ),
             const SizedBox(height: 10),
-            Container(
-              decoration: BoxDecoration(
-                color: Theme.of(context).cardTheme.color,
+            Material(
+              color: Theme.of(context).cardTheme.color,
+              borderRadius: BorderRadius.circular(8),
+              shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: borderCol, width: 0.8),
+                side: BorderSide(color: borderCol, width: 0.8),
               ),
+              clipBehavior: Clip.antiAlias,
               child: Column(
                 children: [
                   SwitchListTile(

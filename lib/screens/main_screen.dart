@@ -86,6 +86,7 @@ class _MainScreenState extends State<MainScreen> {
       ),
       // Tactile, Non-Obtrusive Floating Add Button
       floatingActionButton: FloatingActionButton(
+        heroTag: 'main_fab',
         elevation: 2,
         highlightElevation: 4,
         mini: false,
