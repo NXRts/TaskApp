@@ -314,11 +314,32 @@ class _ProfileSettingsScreenState extends State<ProfileSettingsScreen> {
                                 icon: const Icon(Icons.notifications_active_outlined, size: 14),
                                 label: const Text('Tes H-1', style: TextStyle(fontSize: 11)),
                                 onPressed: () async {
-                                  await TaskReminderService.instance.showTestNotification(isUrgent: false);
+                                  final success = await TaskReminderService.instance.showTestNotification(isUrgent: false);
                                   if (context.mounted) {
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      const SnackBar(content: Text('Notifikasi uji coba H-1 dikirimkan dengan suara alarm!')),
-                                    );
+                                    if (success) {
+                                      ScaffoldMessenger.of(context).showSnackBar(
+                                        const SnackBar(
+                                          content: Text('Notifikasi uji coba H-1 dikirimkan ke panel notifikasi sistem!'),
+                                          backgroundColor: Color(0xFF16A34A),
+                                          behavior: SnackBarBehavior.floating,
+                                        ),
+                                      );
+                                    } else {
+                                      ScaffoldMessenger.of(context).showSnackBar(
+                                        SnackBar(
+                                          content: const Text('Izin notifikasi dinonaktifkan di sistem HP Anda.'),
+                                          backgroundColor: const Color(0xFFDC2626),
+                                          behavior: SnackBarBehavior.floating,
+                                          action: SnackBarAction(
+                                            label: 'Setelan',
+                                            textColor: Colors.white,
+                                            onPressed: () {
+                                              TaskReminderService.openAppNotificationSettings();
+                                            },
+                                          ),
+                                        ),
+                                      );
+                                    }
                                   }
                                 },
                               ),
@@ -331,11 +352,32 @@ class _ProfileSettingsScreenState extends State<ProfileSettingsScreen> {
                                 icon: const Icon(Icons.warning_amber_rounded, size: 14),
                                 label: const Text('Tes H-3 Jam', style: TextStyle(fontSize: 11)),
                                 onPressed: () async {
-                                  await TaskReminderService.instance.showTestNotification(isUrgent: true);
+                                  final success = await TaskReminderService.instance.showTestNotification(isUrgent: true);
                                   if (context.mounted) {
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      const SnackBar(content: Text('Notifikasi uji coba H-3 jam dikirimkan dengan suara alarm!')),
-                                    );
+                                    if (success) {
+                                      ScaffoldMessenger.of(context).showSnackBar(
+                                        const SnackBar(
+                                          content: Text('Notifikasi darurat H-3 jam dikirimkan ke panel notifikasi sistem!'),
+                                          backgroundColor: Color(0xFF16A34A),
+                                          behavior: SnackBarBehavior.floating,
+                                        ),
+                                      );
+                                    } else {
+                                      ScaffoldMessenger.of(context).showSnackBar(
+                                        SnackBar(
+                                          content: const Text('Izin notifikasi dinonaktifkan di sistem HP Anda.'),
+                                          backgroundColor: const Color(0xFFDC2626),
+                                          behavior: SnackBarBehavior.floating,
+                                          action: SnackBarAction(
+                                            label: 'Setelan',
+                                            textColor: Colors.white,
+                                            onPressed: () {
+                                              TaskReminderService.openAppNotificationSettings();
+                                            },
+                                          ),
+                                        ),
+                                      );
+                                    }
                                   }
                                 },
                               ),

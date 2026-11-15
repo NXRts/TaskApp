@@ -426,7 +426,25 @@ class TaskReminderService {
   }
 
   /// Kirim notifikasi uji coba langsung untuk memastikan notifikasi bekerja di HP / sistem pengguna
-  Future<void> showTestNotification({bool isUrgent = false}) async {
+  Future<bool> showTestNotification({bool isUrgent = false}) async {
+    if (!_isInitialized) {
+      await init();
+    }
+
+    // 0. Periksa & minta izin notifikasi sistem pada Android
+    if (!kIsWeb && Platform.isAndroid) {
+      final androidImpl = notificationsPlugin
+          .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>();
+      final areEnabled = await androidImpl?.areNotificationsEnabled();
+      if (areEnabled == false) {
+        final granted = await androidImpl?.requestNotificationsPermission();
+        if (granted != true) {
+          debugPrint('Notification permission is not granted on Android');
+          return false;
+        }
+      }
+    }
+
     final title = isUrgent ? '⚠️ 3 Jam Menjelang Deadline' : '⏰ Pengingat Tugas Besok';
     final body = isUrgent
         ? 'Contoh: Batas waktu tugas "Praktikum Sistem Operasi" pukul 23:59 hari ini!'
@@ -438,6 +456,7 @@ class TaskReminderService {
     } catch (_) {}
 
     // 2. Kirim notifikasi resmi sistem operasi native (muncul di luar aplikasi / panel kontrol HP)
+    bool shown = false;
     try {
       final details = _buildNotificationDetails(isUrgent: isUrgent);
       await notificationsPlugin.show(
@@ -446,6 +465,7 @@ class TaskReminderService {
         body,
         details,
       );
+      shown = true;
     } catch (e) {
       debugPrint('Error showing test reminder system notification: $e');
     }
@@ -463,8 +483,11 @@ class TaskReminderService {
           title,
           body,
         ]);
+        shown = true;
       } catch (_) {}
     }
+
+    return shown;
   }
 }
 
