@@ -12,6 +12,21 @@ import '../models/task.dart';
 import 'pomodoro_alert_service.dart';
 import 'storage_service.dart';
 
+/// Hasil pengujian pengiriman notifikasi sistem
+class NotificationTestResult {
+  final bool success;
+  final String message;
+  final String? errorDetail;
+  final bool isPermissionDenied;
+
+  const NotificationTestResult({
+    required this.success,
+    required this.message,
+    this.errorDetail,
+    this.isPermissionDenied = false,
+  });
+}
+
 /// Service untuk menjadwalkan notifikasi pengingat batas waktu (deadline) tugas
 /// secara otomatis (H-1 Pukul 19:00 dan H-3 Jam sebelum deadline).
 class TaskReminderService {
@@ -31,7 +46,7 @@ class TaskReminderService {
 
   bool _isInitialized = false;
 
-  static const String channelId = 'task_deadline_alarms_v2';
+  static const String channelId = 'task_deadline_alarms_v3';
   static const String channelName = 'Pengingat Deadline Tugas';
   static const String channelDescription =
       'Notifikasi pengingat H-1 dan H-3 jam sebelum deadline tugas akademik';
@@ -93,22 +108,21 @@ class TaskReminderService {
         await androidImpl?.requestNotificationsPermission();
         await androidImpl?.requestExactAlarmsPermission();
 
-        // Buat Android Notification Channel dengan suara raw dan prioritas tertinggi
-        final androidChannel = AndroidNotificationChannel(
+        // Buat Android Notification Channel dengan prioritas tertinggi dan getaran
+        const androidChannel = AndroidNotificationChannel(
           channelId,
           channelName,
           description: channelDescription,
           importance: Importance.max,
           playSound: true,
-          sound: const RawResourceAndroidNotificationSound('task_alarm'),
           enableVibration: true,
-          vibrationPattern: Int64List.fromList([0, 500, 250, 500]),
-          audioAttributesUsage: AudioAttributesUsage.alarm,
+          showBadge: true,
         );
         await androidImpl?.createNotificationChannel(androidChannel);
 
-        // Bersihkan channel lama jika ada agar tidak bentrok
+        // Bersihkan channel versi lama jika ada agar konfigurasi mutakhir diterapkan
         try {
+          await androidImpl?.deleteNotificationChannel('task_deadline_alarms_v2');
           await androidImpl?.deleteNotificationChannel('task_deadline_channel');
         } catch (_) {}
       }
@@ -160,11 +174,8 @@ class TaskReminderService {
       importance: Importance.max,
       priority: Priority.max,
       playSound: true,
-      sound: const RawResourceAndroidNotificationSound('task_alarm'),
-      audioAttributesUsage: AudioAttributesUsage.alarm,
-      category: isUrgent ? AndroidNotificationCategory.alarm : AndroidNotificationCategory.reminder,
       enableVibration: true,
-      vibrationPattern: Int64List.fromList([0, 500, 250, 500]),
+      icon: 'app_icon',
       visibility: NotificationVisibility.public,
       ticker: 'Pengingat Deadline Tugas',
       color: const Color(0xFF2563EB), // Brand cobalt
@@ -426,12 +437,12 @@ class TaskReminderService {
   }
 
   /// Kirim notifikasi uji coba langsung untuk memastikan notifikasi bekerja di HP / sistem pengguna
-  Future<bool> showTestNotification({bool isUrgent = false}) async {
+  Future<NotificationTestResult> showTestNotification({bool isUrgent = false}) async {
     if (!_isInitialized) {
       await init();
     }
 
-    // 0. Periksa & minta izin notifikasi sistem pada Android
+    // 0. Periksa izin notifikasi sistem pada Android
     if (!kIsWeb && Platform.isAndroid) {
       final androidImpl = notificationsPlugin
           .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>();
@@ -440,7 +451,11 @@ class TaskReminderService {
         final granted = await androidImpl?.requestNotificationsPermission();
         if (granted != true) {
           debugPrint('Notification permission is not granted on Android');
-          return false;
+          return const NotificationTestResult(
+            success: false,
+            message: 'Izin notifikasi dinonaktifkan di sistem HP Anda.',
+            isPermissionDenied: true,
+          );
         }
       }
     }
@@ -457,6 +472,7 @@ class TaskReminderService {
 
     // 2. Kirim notifikasi resmi sistem operasi native (muncul di luar aplikasi / panel kontrol HP)
     bool shown = false;
+    String? errorDetail;
     try {
       final details = _buildNotificationDetails(isUrgent: isUrgent);
       await notificationsPlugin.show(
@@ -468,6 +484,38 @@ class TaskReminderService {
       shown = true;
     } catch (e) {
       debugPrint('Error showing test reminder system notification: $e');
+      errorDetail = e.toString();
+      // Fallback: coba kirim notifikasi standar tanpa parameter tambahan
+      try {
+        const fallbackDetails = NotificationDetails(
+          android: AndroidNotificationDetails(
+            channelId,
+            channelName,
+            channelDescription: channelDescription,
+            importance: Importance.max,
+            priority: Priority.high,
+            playSound: true,
+            enableVibration: true,
+            icon: 'app_icon',
+          ),
+          linux: LinuxNotificationDetails(
+            urgency: LinuxNotificationUrgency.normal,
+            timeout: LinuxNotificationTimeout(5000),
+            defaultActionName: 'Buka TaskApp',
+          ),
+        );
+        await notificationsPlugin.show(
+          isUrgent ? 999 : 998,
+          title,
+          body,
+          fallbackDetails,
+        );
+        shown = true;
+        errorDetail = null;
+      } catch (e2) {
+        debugPrint('Fallback notification also failed: $e2');
+        errorDetail = e2.toString();
+      }
     }
 
     // 3. Khusus Linux Desktop, panggil juga notify-send dengan timeout 5 detik agar otomatis menghilang
@@ -487,7 +535,20 @@ class TaskReminderService {
       } catch (_) {}
     }
 
-    return shown;
+    if (shown) {
+      return NotificationTestResult(
+        success: true,
+        message: isUrgent
+            ? 'Notifikasi darurat H-3 jam dikirimkan ke panel kontrol sistem!'
+            : 'Notifikasi uji coba H-1 dikirimkan ke panel kontrol sistem!',
+      );
+    } else {
+      return NotificationTestResult(
+        success: false,
+        message: 'Gagal mengirim notifikasi: ${errorDetail ?? "Kesalahan tidak diketahui"}',
+        errorDetail: errorDetail,
+      );
+    }
   }
 }
 
