@@ -24,7 +24,7 @@ class TaskReminderService {
 
   bool _isInitialized = false;
 
-  static const String channelId = 'task_deadline_channel';
+  static const String channelId = 'task_deadline_alarms_v2';
   static const String channelName = 'Pengingat Deadline Tugas';
   static const String channelDescription =
       'Notifikasi pengingat H-1 dan H-3 jam sebelum deadline tugas akademik';
@@ -85,6 +85,25 @@ class TaskReminderService {
             .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>();
         await androidImpl?.requestNotificationsPermission();
         await androidImpl?.requestExactAlarmsPermission();
+
+        // Buat Android Notification Channel dengan suara raw dan prioritas tertinggi
+        final androidChannel = AndroidNotificationChannel(
+          channelId,
+          channelName,
+          description: channelDescription,
+          importance: Importance.max,
+          playSound: true,
+          sound: const RawResourceAndroidNotificationSound('task_alarm'),
+          enableVibration: true,
+          vibrationPattern: Int64List.fromList([0, 500, 250, 500]),
+          audioAttributesUsage: AudioAttributesUsage.alarm,
+        );
+        await androidImpl?.createNotificationChannel(androidChannel);
+
+        // Bersihkan channel lama jika ada agar tidak bentrok
+        try {
+          await androidImpl?.deleteNotificationChannel('task_deadline_channel');
+        } catch (_) {}
       }
 
       _isInitialized = true;
@@ -118,10 +137,14 @@ class TaskReminderService {
       channelId,
       channelName,
       channelDescription: channelDescription,
-      importance: isUrgent ? Importance.max : Importance.high,
-      priority: isUrgent ? Priority.max : Priority.high,
+      importance: Importance.max,
+      priority: Priority.max,
       playSound: true,
+      sound: const RawResourceAndroidNotificationSound('task_alarm'),
+      audioAttributesUsage: AudioAttributesUsage.alarm,
+      category: isUrgent ? AndroidNotificationCategory.alarm : AndroidNotificationCategory.reminder,
       enableVibration: true,
+      vibrationPattern: Int64List.fromList([0, 500, 250, 500]),
       color: const Color(0xFF2563EB), // Brand cobalt
       icon: '@mipmap/ic_launcher',
     );
@@ -130,6 +153,7 @@ class TaskReminderService {
       presentAlert: true,
       presentBadge: true,
       presentSound: true,
+      sound: 'task_alarm.mp3',
     );
 
     return NotificationDetails(
@@ -219,7 +243,7 @@ class TaskReminderService {
           body,
           tzTime,
           details,
-          androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+          androidScheduleMode: AndroidScheduleMode.alarmClock,
           uiLocalNotificationDateInterpretation:
               UILocalNotificationDateInterpretation.absoluteTime,
         );
@@ -228,7 +252,7 @@ class TaskReminderService {
           // Unit test headless environment without native notification channels
           return;
         }
-        // Fallback jika exact alarm permission tidak diberikan oleh OS
+        // Fallback jika mode alarmClock ditolak, gunakan exactAllowWhileIdle
         try {
           await notificationsPlugin.zonedSchedule(
             id,
@@ -236,11 +260,25 @@ class TaskReminderService {
             body,
             tzTime,
             details,
-            androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
+            androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
             uiLocalNotificationDateInterpretation:
                 UILocalNotificationDateInterpretation.absoluteTime,
           );
-        } catch (_) {}
+        } catch (_) {
+          // Fallback terakhir: inexactAllowWhileIdle
+          try {
+            await notificationsPlugin.zonedSchedule(
+              id,
+              title,
+              body,
+              tzTime,
+              details,
+              androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
+              uiLocalNotificationDateInterpretation:
+                  UILocalNotificationDateInterpretation.absoluteTime,
+            );
+          } catch (_) {}
+        }
       }
     } catch (e) {
       if (e is Error && e.toString().contains('_instance')) return;

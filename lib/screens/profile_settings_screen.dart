@@ -316,7 +316,7 @@ class _ProfileSettingsScreenState extends State<ProfileSettingsScreen> {
                                   await TaskReminderService.instance.showTestNotification(isUrgent: false);
                                   if (context.mounted) {
                                     ScaffoldMessenger.of(context).showSnackBar(
-                                      const SnackBar(content: Text('Notifikasi uji coba H-1 dikirimkan!')),
+                                      const SnackBar(content: Text('Notifikasi uji coba H-1 dikirimkan dengan suara alarm!')),
                                     );
                                   }
                                 },
@@ -333,7 +333,7 @@ class _ProfileSettingsScreenState extends State<ProfileSettingsScreen> {
                                   await TaskReminderService.instance.showTestNotification(isUrgent: true);
                                   if (context.mounted) {
                                     ScaffoldMessenger.of(context).showSnackBar(
-                                      const SnackBar(content: Text('Notifikasi uji coba H-3 jam dikirimkan!')),
+                                      const SnackBar(content: Text('Notifikasi uji coba H-3 jam dikirimkan dengan suara alarm!')),
                                     );
                                   }
                                 },
@@ -341,6 +341,40 @@ class _ProfileSettingsScreenState extends State<ProfileSettingsScreen> {
                             ],
                           ),
                         ],
+                      ),
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.only(left: 14, right: 14, bottom: 12),
+                      child: Container(
+                        padding: const EdgeInsets.all(10),
+                        decoration: BoxDecoration(
+                          color: isDark ? const Color(0xFF1E293B).withValues(alpha: 0.6) : const Color(0xFFF1F5F9),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(
+                            color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0),
+                          ),
+                        ),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Icon(
+                              Icons.info_outline_rounded,
+                              size: 16,
+                              color: isDark ? AppTheme.darkAccent : AppTheme.brandCobalt,
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                'Agar alarm bersuara saat aplikasi ditutup (terutama di Xiaomi/MIUI/HyperOS, Samsung, & Oppo), pastikan izin "Mulai Otomatis" (Autostart) aktif dan pilih "Tidak ada pembatasan" pada Penghemat Baterai di Pengaturan HP Anda.',
+                                style: TextStyle(
+                                  fontSize: 10.5,
+                                  height: 1.4,
+                                  color: textSecondary,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
                   ],
