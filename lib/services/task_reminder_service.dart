@@ -180,7 +180,8 @@ class TaskReminderService {
     );
 
     const linuxDetails = LinuxNotificationDetails(
-      urgency: LinuxNotificationUrgency.critical,
+      urgency: LinuxNotificationUrgency.normal,
+      timeout: LinuxNotificationTimeout(5000),
       defaultActionName: 'Buka TaskApp',
     );
 
@@ -449,12 +450,14 @@ class TaskReminderService {
       debugPrint('Error showing test reminder system notification: $e');
     }
 
-    // 3. Khusus Linux Desktop, panggil juga notify-send agar langsung muncul di panel KDE/GNOME luar jendela
+    // 3. Khusus Linux Desktop, panggil juga notify-send dengan timeout 5 detik agar otomatis menghilang
     if (!kIsWeb && Platform.isLinux) {
       try {
         await Process.run('notify-send', [
+          '-t',
+          '5000',
           '-u',
-          'critical',
+          'normal',
           '-a',
           'TaskApp',
           title,
