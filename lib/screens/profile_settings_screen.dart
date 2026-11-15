@@ -220,7 +220,6 @@ class _ProfileSettingsScreenState extends State<ProfileSettingsScreen> {
             const SizedBox(height: 10),
             Material(
               color: Theme.of(context).cardTheme.color,
-              borderRadius: BorderRadius.circular(8),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(8),
                 side: BorderSide(color: borderCol, width: 0.8),
