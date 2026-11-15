@@ -9,6 +9,7 @@ import 'package:intl/intl.dart';
 import 'package:timezone/data/latest_all.dart' as tz;
 import 'package:timezone/timezone.dart' as tz;
 import '../models/task.dart';
+import 'pomodoro_alert_service.dart';
 import 'storage_service.dart';
 
 /// Service untuk menjadwalkan notifikasi pengingat batas waktu (deadline) tugas
@@ -178,10 +179,17 @@ class TaskReminderService {
       sound: 'task_alarm.mp3',
     );
 
+    const linuxDetails = LinuxNotificationDetails(
+      urgency: LinuxNotificationUrgency.normal,
+      timeout: LinuxNotificationTimeout(5000),
+      defaultActionName: 'Buka TaskApp',
+    );
+
     return NotificationDetails(
       android: androidDetails,
       iOS: darwinDetails,
       macOS: darwinDetails,
+      linux: linuxDetails,
     );
   }
 
@@ -401,9 +409,15 @@ class TaskReminderService {
   AudioPlayer? _testAudioPlayer;
   AudioPlayer get testAudioPlayer => _testAudioPlayer ??= AudioPlayer();
 
-  /// Memutar bunyi lonceng alarm secara langsung melalui audioplayer
+  /// Memutar bunyi lonceng alarm secara langsung melalui audioplayer atau audio native
   Future<void> _playDirectAlarmSound() async {
     try {
+      if (!kIsWeb && Platform.isLinux) {
+        // Pada Linux Desktop gunakan pemutar audio native sistem (pw-play / aplay / paplay)
+        // untuk mencegah galat GStreamer plugin missing
+        await PomodoroAlertService.instance.playAlertSound(isBreak: false);
+        return;
+      }
       await testAudioPlayer.stop();
       await testAudioPlayer.play(AssetSource('sounds/focus_complete.wav'));
     } catch (e) {
@@ -411,30 +425,19 @@ class TaskReminderService {
     }
   }
 
-  /// Kirim notifikasi uji coba langsung untuk memastikan notifikasi bekerja di HP pengguna
+  /// Kirim notifikasi uji coba langsung untuk memastikan notifikasi bekerja di HP / sistem pengguna
   Future<void> showTestNotification({bool isUrgent = false}) async {
     final title = isUrgent ? '⚠️ 3 Jam Menjelang Deadline' : '⏰ Pengingat Tugas Besok';
     final body = isUrgent
         ? 'Contoh: Batas waktu tugas "Praktikum Sistem Operasi" pukul 23:59 hari ini!'
         : 'Contoh: Tugas "Algoritma Pemrograman" jatuh tempo besok pukul 19:00.';
 
-    // 1. Tampilkan floating banner mengambang di atas layar aplikasi secara instan
-    try {
-      showInAppFloatingBanner(
-        title: title,
-        body: body,
-        isUrgent: isUrgent,
-      );
-    } catch (e) {
-      debugPrint('Error showing in-app floating banner: $e');
-    }
-
-    // 2. Putar bunyi alarm secara langsung di HP pengguna
+    // 1. Putar bunyi alarm secara langsung di HP / PC pengguna
     try {
       await _playDirectAlarmSound();
     } catch (_) {}
 
-    // 3. Kirim notifikasi sistem Android
+    // 2. Kirim notifikasi resmi sistem operasi native (muncul di luar aplikasi / panel kontrol HP)
     try {
       final details = _buildNotificationDetails(isUrgent: isUrgent);
       await notificationsPlugin.show(
@@ -445,6 +448,22 @@ class TaskReminderService {
       );
     } catch (e) {
       debugPrint('Error showing test reminder system notification: $e');
+    }
+
+    // 3. Khusus Linux Desktop, panggil juga notify-send dengan timeout 5 detik agar otomatis menghilang
+    if (!kIsWeb && Platform.isLinux) {
+      try {
+        await Process.run('notify-send', [
+          '-t',
+          '5000',
+          '-u',
+          'normal',
+          '-a',
+          'TaskApp',
+          title,
+          body,
+        ]);
+      } catch (_) {}
     }
   }
 }

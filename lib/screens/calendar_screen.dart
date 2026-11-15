@@ -487,6 +487,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
         ],
       ),
       floatingActionButton: FloatingActionButton(
+        heroTag: 'calendar_fab',
         onPressed: () {
           showModalBottomSheet(
             context: context,
