@@ -67,6 +67,7 @@ class TaskApp extends StatelessWidget {
 
     return MaterialApp(
       title: 'TaskApp',
+      navigatorKey: TaskReminderService.navigatorKey,
       debugShowCheckedModeBanner: false,
       scrollBehavior: const AppScrollBehavior(),
       theme: AppTheme.lightTheme,

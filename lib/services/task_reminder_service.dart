@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_timezone/flutter_timezone.dart';
 import 'package:intl/intl.dart';
@@ -17,6 +18,10 @@ class TaskReminderService {
   static TaskReminderService get instance => _instance;
 
   TaskReminderService._internal();
+
+  /// Global Navigator Key untuk menampilkan floating in-app banner
+  static final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
+  static const MethodChannel _settingsChannel = MethodChannel('com.taskapp.taskapp/settings');
 
   FlutterLocalNotificationsPlugin? _notificationsPlugin;
   FlutterLocalNotificationsPlugin get notificationsPlugin =>
@@ -131,6 +136,19 @@ class TaskReminderService {
     return (hash * 2) + (type == 0 ? 0 : 1);
   }
 
+  /// Membuka halaman pengaturan notifikasi aplikasi di sistem Android
+  static Future<bool> openAppNotificationSettings() async {
+    if (!kIsWeb && Platform.isAndroid) {
+      try {
+        final result = await _settingsChannel.invokeMethod<bool>('openNotificationSettings');
+        return result ?? false;
+      } catch (e) {
+        debugPrint('Error opening notification settings: $e');
+      }
+    }
+    return false;
+  }
+
   /// Detail konfigurasi notifikasi Android & iOS
   NotificationDetails _buildNotificationDetails({bool isUrgent = false}) {
     final androidDetails = AndroidNotificationDetails(
@@ -145,14 +163,18 @@ class TaskReminderService {
       category: isUrgent ? AndroidNotificationCategory.alarm : AndroidNotificationCategory.reminder,
       enableVibration: true,
       vibrationPattern: Int64List.fromList([0, 500, 250, 500]),
+      visibility: NotificationVisibility.public,
+      ticker: 'Pengingat Deadline Tugas',
       color: const Color(0xFF2563EB), // Brand cobalt
       icon: '@mipmap/ic_launcher',
     );
 
     const darwinDetails = DarwinNotificationDetails(
       presentAlert: true,
-      presentBadge: true,
+      presentBanner: true,
       presentSound: true,
+      presentBadge: true,
+      presentList: true,
       sound: 'task_alarm.mp3',
     );
 
@@ -328,20 +350,269 @@ class TaskReminderService {
     }
   }
 
+  static OverlayEntry? _activeBannerEntry;
+
+  /// Menampilkan banner notifikasi mengambang (floating banner) di bagian atas layar
+  /// saat aplikasi sedang terbuka / aktif di latar depan
+  static void showInAppFloatingBanner({
+    required String title,
+    required String body,
+    bool isUrgent = false,
+    Duration duration = const Duration(seconds: 4),
+  }) {
+    final overlayState = navigatorKey.currentState?.overlay;
+    if (overlayState == null) return;
+
+    // Hapus banner aktif jika ada sebelumnya
+    _activeBannerEntry?.remove();
+    _activeBannerEntry = null;
+
+    late OverlayEntry entry;
+    entry = OverlayEntry(
+      builder: (context) {
+        final isDark = Theme.of(context).brightness == Brightness.dark;
+        return _FloatingBannerWidget(
+          title: title,
+          body: body,
+          isUrgent: isUrgent,
+          isDark: isDark,
+          onDismiss: () {
+            if (_activeBannerEntry == entry) {
+              entry.remove();
+              _activeBannerEntry = null;
+            }
+          },
+        );
+      },
+    );
+
+    _activeBannerEntry = entry;
+    overlayState.insert(entry);
+
+    // Otomatis hilangkan setelah durasi tertentu
+    Future.delayed(duration, () {
+      if (_activeBannerEntry == entry) {
+        entry.remove();
+        _activeBannerEntry = null;
+      }
+    });
+  }
+
   /// Kirim notifikasi uji coba langsung untuk memastikan notifikasi bekerja di HP pengguna
   Future<void> showTestNotification({bool isUrgent = false}) async {
     try {
       final details = _buildNotificationDetails(isUrgent: isUrgent);
+      final title = isUrgent ? '⚠️ 3 Jam Menjelang Deadline' : '⏰ Pengingat Tugas Besok';
+      final body = isUrgent
+          ? 'Contoh: Batas waktu tugas "Praktikum Sistem Operasi" pukul 23:59 hari ini!'
+          : 'Contoh: Tugas "Algoritma Pemrograman" jatuh tempo besok pukul 19:00.';
+
       await notificationsPlugin.show(
         isUrgent ? 999 : 998,
-        isUrgent ? '⚠️ Uji Coba: 3 Jam Menjelang Deadline' : '⏰ Uji Coba: Pengingat Tugas Besok',
-        isUrgent
-            ? 'Ini contoh notifikasi darurat H-3 jam batas pengumpulan tugas akademik.'
-            : 'Ini contoh notifikasi H-1 pada pukul 19:00 sebelum deadline tugas.',
+        title,
+        body,
         details,
+      );
+
+      // Tampilkan floating banner mengambang di atas layar jika aplikasi sedang dibuka
+      showInAppFloatingBanner(
+        title: title,
+        body: body,
+        isUrgent: isUrgent,
       );
     } catch (e) {
       debugPrint('Error showing test reminder notification: $e');
     }
+  }
+}
+
+/// Widget banner mengambang (floating banner) dengan animasi slide & fade dari atas layar
+class _FloatingBannerWidget extends StatefulWidget {
+  final String title;
+  final String body;
+  final bool isUrgent;
+  final bool isDark;
+  final VoidCallback onDismiss;
+
+  const _FloatingBannerWidget({
+    required this.title,
+    required this.body,
+    required this.isUrgent,
+    required this.isDark,
+    required this.onDismiss,
+  });
+
+  @override
+  State<_FloatingBannerWidget> createState() => _FloatingBannerWidgetState();
+}
+
+class _FloatingBannerWidgetState extends State<_FloatingBannerWidget>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  late Animation<Offset> _offsetAnimation;
+  late Animation<double> _fadeAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 320),
+    );
+    _offsetAnimation = Tween<Offset>(
+      begin: const Offset(0.0, -1.0),
+      end: Offset.zero,
+    ).animate(CurvedAnimation(
+      parent: _controller,
+      curve: Curves.easeOutCubic,
+    ));
+    _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(_controller);
+    _controller.forward();
+  }
+
+  void _dismiss() async {
+    if (mounted) {
+      await _controller.reverse();
+    }
+    widget.onDismiss();
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final topPadding = MediaQuery.of(context).padding.top;
+    final bgCol = widget.isDark ? const Color(0xFF1E293B) : Colors.white;
+    final borderCol = widget.isUrgent
+        ? Colors.amber.shade700
+        : (widget.isDark ? const Color(0xFF3B82F6) : const Color(0xFF2563EB));
+    final iconCol = widget.isUrgent
+        ? const Color(0xFFD97706)
+        : (widget.isDark ? const Color(0xFF60A5FA) : const Color(0xFF2563EB));
+    final textCol = widget.isDark ? Colors.white : const Color(0xFF0F172A);
+    final subTextCol = widget.isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B);
+
+    return Positioned(
+      top: topPadding + 10,
+      left: 14,
+      right: 14,
+      child: SlideTransition(
+        position: _offsetAnimation,
+        child: FadeTransition(
+          opacity: _fadeAnimation,
+          child: GestureDetector(
+            onTap: _dismiss,
+            onVerticalDragUpdate: (details) {
+              if (details.primaryDelta != null && details.primaryDelta! < -4) {
+                _dismiss();
+              }
+            },
+            child: Material(
+              color: Colors.transparent,
+              elevation: 8,
+              shadowColor: Colors.black.withValues(alpha: 0.35),
+              borderRadius: BorderRadius.circular(14),
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                decoration: BoxDecoration(
+                  color: bgCol,
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(color: borderCol.withValues(alpha: 0.6), width: 1.5),
+                ),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: iconCol.withValues(alpha: 0.15),
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(
+                        widget.isUrgent
+                            ? Icons.warning_amber_rounded
+                            : Icons.notifications_active_rounded,
+                        color: iconCol,
+                        size: 20,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Row(
+                            children: [
+                              Expanded(
+                                child: Text(
+                                  widget.title,
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.w700,
+                                    fontSize: 13,
+                                    color: textCol,
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                              const SizedBox(width: 4),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                decoration: BoxDecoration(
+                                  color: iconCol.withValues(alpha: 0.12),
+                                  borderRadius: BorderRadius.circular(4),
+                                ),
+                                child: Text(
+                                  widget.isUrgent ? 'DARURAT' : 'PENGINGAT',
+                                  style: TextStyle(
+                                    fontSize: 9,
+                                    fontWeight: FontWeight.bold,
+                                    color: iconCol,
+                                    letterSpacing: 0.5,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 3),
+                          Text(
+                            widget.body,
+                            style: TextStyle(
+                              fontSize: 11.5,
+                              color: subTextCol,
+                              height: 1.3,
+                            ),
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    InkWell(
+                      onTap: _dismiss,
+                      borderRadius: BorderRadius.circular(12),
+                      child: Padding(
+                        padding: const EdgeInsets.all(4),
+                        child: Icon(
+                          Icons.close_rounded,
+                          size: 16,
+                          color: subTextCol,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
   }
 }

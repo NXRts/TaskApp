@@ -346,31 +346,74 @@ class _ProfileSettingsScreenState extends State<ProfileSettingsScreen> {
                     Padding(
                       padding: const EdgeInsets.only(left: 14, right: 14, bottom: 12),
                       child: Container(
-                        padding: const EdgeInsets.all(10),
+                        padding: const EdgeInsets.all(12),
                         decoration: BoxDecoration(
                           color: isDark ? const Color(0xFF1E293B).withValues(alpha: 0.6) : const Color(0xFFF1F5F9),
-                          borderRadius: BorderRadius.circular(8),
+                          borderRadius: BorderRadius.circular(10),
                           border: Border.all(
                             color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0),
                           ),
                         ),
-                        child: Row(
+                        child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Icon(
-                              Icons.info_outline_rounded,
-                              size: 16,
-                              color: isDark ? AppTheme.darkAccent : AppTheme.brandCobalt,
-                            ),
-                            const SizedBox(width: 8),
-                            Expanded(
-                              child: Text(
-                                'Agar alarm bersuara saat aplikasi ditutup (terutama di Xiaomi/MIUI/HyperOS, Samsung, & Oppo), pastikan izin "Mulai Otomatis" (Autostart) aktif dan pilih "Tidak ada pembatasan" pada Penghemat Baterai di Pengaturan HP Anda.',
-                                style: TextStyle(
-                                  fontSize: 10.5,
-                                  height: 1.4,
-                                  color: textSecondary,
+                            Row(
+                              children: [
+                                Icon(
+                                  Icons.layers_outlined,
+                                  size: 16,
+                                  color: isDark ? AppTheme.darkAccent : AppTheme.brandCobalt,
                                 ),
+                                const SizedBox(width: 8),
+                                Text(
+                                  'Notifikasi Mengambang (Floating Banner):',
+                                  style: TextStyle(
+                                    fontSize: 11.5,
+                                    fontWeight: FontWeight.w600,
+                                    color: textPrimary,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 6),
+                            Text(
+                              'Agar notifikasi melayang di atas layar HP (terutama di Xiaomi MIUI/HyperOS, Samsung, & Oppo), buka setelan sistem lalu aktifkan toggle "Notifikasi Mengambang" dan "Mulai Otomatis".',
+                              style: TextStyle(
+                                fontSize: 10.5,
+                                height: 1.4,
+                                color: textSecondary,
+                              ),
+                            ),
+                            const SizedBox(height: 10),
+                            SizedBox(
+                              width: double.infinity,
+                              child: OutlinedButton.icon(
+                                style: OutlinedButton.styleFrom(
+                                  visualDensity: VisualDensity.compact,
+                                  padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
+                                  side: BorderSide(
+                                    color: isDark ? AppTheme.darkAccent : AppTheme.brandCobalt,
+                                  ),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                ),
+                                icon: Icon(
+                                  Icons.open_in_new_rounded,
+                                  size: 14,
+                                  color: isDark ? AppTheme.darkAccent : AppTheme.brandCobalt,
+                                ),
+                                label: Text(
+                                  'Buka Setelan Notifikasi HP',
+                                  style: TextStyle(
+                                    fontSize: 11.5,
+                                    fontWeight: FontWeight.w600,
+                                    color: isDark ? AppTheme.darkAccent : AppTheme.brandCobalt,
+                                  ),
+                                ),
+                                onPressed: () async {
+                                  await TaskReminderService.openAppNotificationSettings();
+                                },
                               ),
                             ),
                           ],
