@@ -15,6 +15,12 @@
         android:icon="@mipmap/ic_launcher"
         android:roundIcon="@mipmap/ic_launcher_round"
         android:requestLegacyExternalStorage="true">
+        <meta-data
+            android:name="com.taskapp.notification_icon"
+            android:resource="@drawable/app_icon" />
+        <meta-data
+            android:name="com.taskapp.notification_icon_status"
+            android:resource="@drawable/ic_notification" />
         <receiver android:exported="false" android:name="com.dexterous.flutterlocalnotifications.ScheduledNotificationReceiver" />
         <receiver android:exported="false" android:name="com.dexterous.flutterlocalnotifications.ScheduledNotificationBootReceiver">
             <intent-filter>

@@ -11,8 +11,19 @@ import io.flutter.plugin.common.MethodChannel
 class MainActivity : FlutterActivity() {
     private val SETTINGS_CHANNEL = "com.taskapp.taskapp/settings"
 
+    // Direct static references so R8 and AAPT2 never strip notification resources in release builds
+    private fun keepNotificationResources() {
+        val icon = R.drawable.app_icon
+        val notif = R.drawable.ic_notification
+        val sound = R.raw.task_alarm
+        if (icon == 0 || notif == 0 || sound == 0) {
+            println("Notification resources kept")
+        }
+    }
+
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
+        keepNotificationResources()
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, SETTINGS_CHANNEL).setMethodCallHandler { call, result ->
             if (call.method == "openNotificationSettings") {
                 try {
