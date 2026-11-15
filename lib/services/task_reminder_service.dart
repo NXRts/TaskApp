@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -65,7 +66,7 @@ class TaskReminderService {
       }
 
       // 2. Inisialisasi Plugin Local Notifications
-      const androidSettings = AndroidInitializationSettings('@mipmap/ic_launcher');
+      const androidSettings = AndroidInitializationSettings('app_icon');
       const darwinSettings = DarwinInitializationSettings(
         requestAlertPermission: true,
         requestBadgePermission: true,
@@ -166,7 +167,6 @@ class TaskReminderService {
       visibility: NotificationVisibility.public,
       ticker: 'Pengingat Deadline Tugas',
       color: const Color(0xFF2563EB), // Brand cobalt
-      icon: '@mipmap/ic_launcher',
     );
 
     const darwinDetails = DarwinNotificationDetails(
@@ -398,30 +398,53 @@ class TaskReminderService {
     });
   }
 
+  AudioPlayer? _testAudioPlayer;
+  AudioPlayer get testAudioPlayer => _testAudioPlayer ??= AudioPlayer();
+
+  /// Memutar bunyi lonceng alarm secara langsung melalui audioplayer
+  Future<void> _playDirectAlarmSound() async {
+    try {
+      await testAudioPlayer.stop();
+      await testAudioPlayer.play(AssetSource('sounds/focus_complete.wav'));
+    } catch (e) {
+      debugPrint('Error playing direct alarm sound: $e');
+    }
+  }
+
   /// Kirim notifikasi uji coba langsung untuk memastikan notifikasi bekerja di HP pengguna
   Future<void> showTestNotification({bool isUrgent = false}) async {
+    final title = isUrgent ? '⚠️ 3 Jam Menjelang Deadline' : '⏰ Pengingat Tugas Besok';
+    final body = isUrgent
+        ? 'Contoh: Batas waktu tugas "Praktikum Sistem Operasi" pukul 23:59 hari ini!'
+        : 'Contoh: Tugas "Algoritma Pemrograman" jatuh tempo besok pukul 19:00.';
+
+    // 1. Tampilkan floating banner mengambang di atas layar aplikasi secara instan
     try {
-      final details = _buildNotificationDetails(isUrgent: isUrgent);
-      final title = isUrgent ? '⚠️ 3 Jam Menjelang Deadline' : '⏰ Pengingat Tugas Besok';
-      final body = isUrgent
-          ? 'Contoh: Batas waktu tugas "Praktikum Sistem Operasi" pukul 23:59 hari ini!'
-          : 'Contoh: Tugas "Algoritma Pemrograman" jatuh tempo besok pukul 19:00.';
-
-      await notificationsPlugin.show(
-        isUrgent ? 999 : 998,
-        title,
-        body,
-        details,
-      );
-
-      // Tampilkan floating banner mengambang di atas layar jika aplikasi sedang dibuka
       showInAppFloatingBanner(
         title: title,
         body: body,
         isUrgent: isUrgent,
       );
     } catch (e) {
-      debugPrint('Error showing test reminder notification: $e');
+      debugPrint('Error showing in-app floating banner: $e');
+    }
+
+    // 2. Putar bunyi alarm secara langsung di HP pengguna
+    try {
+      await _playDirectAlarmSound();
+    } catch (_) {}
+
+    // 3. Kirim notifikasi sistem Android
+    try {
+      final details = _buildNotificationDetails(isUrgent: isUrgent);
+      await notificationsPlugin.show(
+        isUrgent ? 999 : 998,
+        title,
+        body,
+        details,
+      );
+    } catch (e) {
+      debugPrint('Error showing test reminder system notification: $e');
     }
   }
 }

@@ -32,7 +32,7 @@ class PomodoroAlertService {
       await audioPlayer.setReleaseMode(ReleaseMode.stop);
 
       // 2. Inisialisasi Local Notifications
-      const androidSettings = AndroidInitializationSettings('@mipmap/ic_launcher');
+      const androidSettings = AndroidInitializationSettings('app_icon');
       const darwinSettings = DarwinInitializationSettings(
         requestAlertPermission: true,
         requestBadgePermission: true,
@@ -165,7 +165,6 @@ class PomodoroAlertService {
       priority: Priority.high,
       playSound: true,
       enableVibration: true,
-      icon: '@mipmap/ic_launcher',
     );
 
     const darwinDetails = DarwinNotificationDetails(
