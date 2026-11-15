@@ -23,6 +23,25 @@ class SettingsProvider with ChangeNotifier {
   int get completedPomodoroSessions => _storageService.getCompletedPomodoroSessions();
   int get totalFocusMinutes => completedPomodoroSessions * 25;
 
+  bool get taskRemindersEnabled => _storageService.getTaskRemindersEnabled();
+  bool get reminderH1Enabled => _storageService.getReminderH1Enabled();
+  bool get reminderH3HoursEnabled => _storageService.getReminderH3HoursEnabled();
+
+  Future<void> setTaskRemindersEnabled(bool enabled) async {
+    await _storageService.setTaskRemindersEnabled(enabled);
+    notifyListeners();
+  }
+
+  Future<void> setReminderH1Enabled(bool enabled) async {
+    await _storageService.setReminderH1Enabled(enabled);
+    notifyListeners();
+  }
+
+  Future<void> setReminderH3HoursEnabled(bool enabled) async {
+    await _storageService.setReminderH3HoursEnabled(enabled);
+    notifyListeners();
+  }
+
   Future<void> recordCompletedSession() async {
     await _storageService.incrementPomodoroSession();
     notifyListeners();

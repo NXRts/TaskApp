@@ -156,6 +156,31 @@ class StorageService {
     await _settingsBox.put('completed_pomodoro_sessions', current + 1);
   }
 
+  // --- TASK DEADLINE REMINDERS PREFERENCES ---
+  bool getTaskRemindersEnabled() {
+    return _settingsBox.get('task_reminders_enabled', defaultValue: true) as bool;
+  }
+
+  Future<void> setTaskRemindersEnabled(bool enabled) async {
+    await _settingsBox.put('task_reminders_enabled', enabled);
+  }
+
+  bool getReminderH1Enabled() {
+    return _settingsBox.get('reminder_h1_enabled', defaultValue: true) as bool;
+  }
+
+  Future<void> setReminderH1Enabled(bool enabled) async {
+    await _settingsBox.put('reminder_h1_enabled', enabled);
+  }
+
+  bool getReminderH3HoursEnabled() {
+    return _settingsBox.get('reminder_h3_hours_enabled', defaultValue: true) as bool;
+  }
+
+  Future<void> setReminderH3HoursEnabled(bool enabled) async {
+    await _settingsBox.put('reminder_h3_hours_enabled', enabled);
+  }
+
   static dynamic _deepConvertToJsonCompatible(dynamic value) {
     if (value is Map) {
       return value.map<String, dynamic>(

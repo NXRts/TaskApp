@@ -8,6 +8,7 @@ import 'package:taskapp/models/attendance_record.dart';
 import 'package:taskapp/widgets/timetable_matrix_view.dart';
 import 'package:taskapp/screens/calendar_screen.dart';
 import 'package:taskapp/services/schedule_export_service.dart';
+import 'package:taskapp/services/task_reminder_service.dart';
 import 'package:taskapp/widgets/wallpaper_schedule_widget.dart';
 
 void main() {
@@ -391,6 +392,45 @@ void main() {
     expect(localResult.isSuccess, isTrue);
     expect(localResult.isGallery, isFalse);
     expect(localResult.filePath, isNotNull);
+  });
+
+  test('TaskReminderService calculates exact H-1 and H-3 reminder times and unique IDs', () {
+    // 1. Waktu H-1 (sehari sebelumnya pukul 19:00)
+    final due1 = DateTime(2026, 11, 20, 23, 59); // Jumat malam
+    final h1_1 = TaskReminderService.calculateH1ReminderTime(due1);
+    expect(h1_1.year, 2026);
+    expect(h1_1.month, 11);
+    expect(h1_1.day, 19);
+    expect(h1_1.hour, 19);
+    expect(h1_1.minute, 0);
+
+    // Kasus tanggal 1 awal bulan
+    final due2 = DateTime(2026, 12, 1, 9, 30);
+    final h1_2 = TaskReminderService.calculateH1ReminderTime(due2);
+    expect(h1_2.year, 2026);
+    expect(h1_2.month, 11);
+    expect(h1_2.day, 30);
+    expect(h1_2.hour, 19);
+    expect(h1_2.minute, 0);
+
+    // 2. Waktu H-3 Jam (tepat 3 jam sebelum deadline)
+    final h3_1 = TaskReminderService.calculateH3HoursReminderTime(due1);
+    expect(h3_1, DateTime(2026, 11, 20, 20, 59));
+
+    final dueMorning = DateTime(2026, 11, 21, 10, 0);
+    final h3Morning = TaskReminderService.calculateH3HoursReminderTime(dueMorning);
+    expect(h3Morning, DateTime(2026, 11, 21, 7, 0));
+
+    // 3. ID Notifikasi Deterministik
+    final idH1 = TaskReminderService.getNotificationId('task-abc', 0);
+    final idH3 = TaskReminderService.getNotificationId('task-abc', 1);
+    expect(idH1, isNot(idH3));
+    expect(idH1 >= 0, isTrue);
+    expect(idH3 >= 0, isTrue);
+
+    // Konsistensi ID
+    expect(TaskReminderService.getNotificationId('task-abc', 0), idH1);
+    expect(TaskReminderService.getNotificationId('task-abc', 1), idH3);
   });
 
   testWidgets('WallpaperScheduleWidget renders student info and subjects', (tester) async {
