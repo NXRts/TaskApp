@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'services/storage_service.dart';
 import 'services/pomodoro_alert_service.dart';
+import 'services/task_reminder_service.dart';
 import 'providers/task_provider.dart';
 import 'providers/subject_provider.dart';
 import 'providers/settings_provider.dart';
@@ -32,6 +33,9 @@ void main() async {
 
   // Initialize Pomodoro audio and local notification service
   await PomodoroAlertService.instance.init();
+
+  // Initialize task deadline reminders
+  await TaskReminderService.instance.init();
 
   runApp(
     MultiProvider(

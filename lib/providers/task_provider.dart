@@ -3,6 +3,7 @@ import 'package:uuid/uuid.dart';
 import '../models/task.dart';
 import '../models/subtask.dart';
 import '../services/storage_service.dart';
+import '../services/task_reminder_service.dart';
 
 enum TaskFilterStatus { all, today, upcoming, overdue, completed }
 
@@ -160,10 +161,30 @@ class TaskProvider with ChangeNotifier {
     }).toList();
   }
 
+  String? _getSubjectName(String? subjectId) {
+    if (subjectId == null) return null;
+    final subjects = _storageService.getSubjects();
+    try {
+      return subjects.firstWhere((s) => s.id == subjectId).name;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Future<void> syncReminders() async {
+    final subjects = _storageService.getSubjects();
+    final subjectMap = {for (var s in subjects) s.id: s.name};
+    await TaskReminderService.instance.syncAllTaskReminders(_tasks, subjectMap);
+  }
+
   // --- CRUD ACTIONS ---
   Future<void> addTask(TaskItem task) async {
     _tasks.add(task);
     await _storageService.saveTask(task);
+    await TaskReminderService.instance.scheduleTaskReminders(
+      task,
+      subjectName: _getSubjectName(task.subjectId),
+    );
     loadTasks();
   }
 
@@ -172,6 +193,10 @@ class TaskProvider with ChangeNotifier {
     if (index != -1) {
       _tasks[index] = task;
       await _storageService.saveTask(task);
+      await TaskReminderService.instance.scheduleTaskReminders(
+        task,
+        subjectName: _getSubjectName(task.subjectId),
+      );
       loadTasks();
     }
   }
@@ -179,6 +204,7 @@ class TaskProvider with ChangeNotifier {
   Future<void> deleteTask(String id) async {
     _tasks.removeWhere((t) => t.id == id);
     await _storageService.deleteTask(id);
+    await TaskReminderService.instance.cancelTaskReminders(id);
     notifyListeners();
   }
 
@@ -195,6 +221,12 @@ class TaskProvider with ChangeNotifier {
         for (var sub in task.subtasks) {
           sub.isCompleted = true;
         }
+        await TaskReminderService.instance.cancelTaskReminders(id);
+      } else {
+        await TaskReminderService.instance.scheduleTaskReminders(
+          task,
+          subjectName: _getSubjectName(task.subjectId),
+        );
       }
 
       await _storageService.saveTask(task);

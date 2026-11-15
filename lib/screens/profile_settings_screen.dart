@@ -5,6 +5,7 @@ import '../providers/settings_provider.dart';
 import '../providers/task_provider.dart';
 import '../providers/subject_provider.dart';
 import '../services/storage_service.dart';
+import '../services/task_reminder_service.dart';
 import 'schedule_export_screen.dart';
 import '../utils/app_theme.dart';
 
@@ -60,6 +61,7 @@ class _ProfileSettingsScreenState extends State<ProfileSettingsScreen> {
     final textPrimary = isDark ? AppTheme.darkTextPrimary : AppTheme.lightTextPrimary;
     final textSecondary = isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary;
     final borderCol = isDark ? AppTheme.darkBorder : AppTheme.lightBorder;
+    final settingsProvider = Provider.of<SettingsProvider>(context);
 
     return Scaffold(
       appBar: AppBar(
@@ -199,6 +201,150 @@ class _ProfileSettingsScreenState extends State<ProfileSettingsScreen> {
                     MaterialPageRoute(builder: (_) => const ScheduleExportScreen()),
                   );
                 },
+              ),
+            ),
+            const SizedBox(height: 24),
+            Divider(color: borderCol),
+            const SizedBox(height: 16),
+
+            // Notification & Smart Reminders Section
+            Text(
+              'NOTIFIKASI & PENGINGAT DEADLINE CERDAS',
+              style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, letterSpacing: 1.1, color: textSecondary),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              'Jadwalkan alarm pengingat otomatis di ponsel agar tidak melewatkan batas pengumpulan tugas akademik.',
+              style: TextStyle(fontSize: 12, color: textSecondary, height: 1.3),
+            ),
+            const SizedBox(height: 10),
+            Container(
+              decoration: BoxDecoration(
+                color: Theme.of(context).cardTheme.color,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: borderCol, width: 0.8),
+              ),
+              child: Column(
+                children: [
+                  SwitchListTile(
+                    title: Text(
+                      'Aktifkan Pengingat Deadline',
+                      style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: textPrimary),
+                    ),
+                    subtitle: Text(
+                      'Bunyikan alarm dan notifikasi sistem untuk tugas yang belum selesai',
+                      style: TextStyle(fontSize: 11.5, color: textSecondary),
+                    ),
+                    value: settingsProvider.taskRemindersEnabled,
+                    activeColor: isDark ? AppTheme.darkAccent : AppTheme.brandCobalt,
+                    onChanged: (val) async {
+                      await settingsProvider.setTaskRemindersEnabled(val);
+                      if (context.mounted) {
+                        final taskProv = Provider.of<TaskProvider>(context, listen: false);
+                        await taskProv.syncReminders();
+                      }
+                    },
+                  ),
+                  if (settingsProvider.taskRemindersEnabled) ...[
+                    Divider(color: borderCol.withValues(alpha: 0.5), height: 1),
+                    CheckboxListTile(
+                      title: Text(
+                        '🔔 Pengingat H-1 Hari (Pukul 19:00)',
+                        style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w500, color: textPrimary),
+                      ),
+                      subtitle: Text(
+                        'Pengingat malam hari sebelum hari H batas pengumpulan tugas',
+                        style: TextStyle(fontSize: 11, color: textSecondary),
+                      ),
+                      value: settingsProvider.reminderH1Enabled,
+                      activeColor: isDark ? AppTheme.darkAccent : AppTheme.brandCobalt,
+                      controlAffinity: ListTileControlAffinity.trailing,
+                      onChanged: (val) async {
+                        if (val != null) {
+                          await settingsProvider.setReminderH1Enabled(val);
+                          if (context.mounted) {
+                            final taskProv = Provider.of<TaskProvider>(context, listen: false);
+                            await taskProv.syncReminders();
+                          }
+                        }
+                      },
+                    ),
+                    Divider(color: borderCol.withValues(alpha: 0.5), height: 1),
+                    CheckboxListTile(
+                      title: Text(
+                        '⚠️ Pengingat Darurat H-3 Jam',
+                        style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w500, color: textPrimary),
+                      ),
+                      subtitle: Text(
+                        'Peringatan mendesak tepat 3 jam sebelum batas akhir pengumpulan',
+                        style: TextStyle(fontSize: 11, color: textSecondary),
+                      ),
+                      value: settingsProvider.reminderH3HoursEnabled,
+                      activeColor: isDark ? AppTheme.darkAccent : AppTheme.brandCobalt,
+                      controlAffinity: ListTileControlAffinity.trailing,
+                      onChanged: (val) async {
+                        if (val != null) {
+                          await settingsProvider.setReminderH3HoursEnabled(val);
+                          if (context.mounted) {
+                            final taskProv = Provider.of<TaskProvider>(context, listen: false);
+                            await taskProv.syncReminders();
+                          }
+                        }
+                      },
+                    ),
+                    Divider(color: borderCol.withValues(alpha: 0.5), height: 1),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            'Uji Coba Alarm:',
+                            style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w500, color: textSecondary),
+                          ),
+                          Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              TextButton.icon(
+                                style: TextButton.styleFrom(
+                                  visualDensity: VisualDensity.compact,
+                                  padding: const EdgeInsets.symmetric(horizontal: 8),
+                                ),
+                                icon: const Icon(Icons.notifications_active_outlined, size: 14),
+                                label: const Text('Tes H-1', style: TextStyle(fontSize: 11)),
+                                onPressed: () async {
+                                  await TaskReminderService.instance.showTestNotification(isUrgent: false);
+                                  if (context.mounted) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(content: Text('Notifikasi uji coba H-1 dikirimkan!')),
+                                    );
+                                  }
+                                },
+                              ),
+                              const SizedBox(width: 4),
+                              TextButton.icon(
+                                style: TextButton.styleFrom(
+                                  visualDensity: VisualDensity.compact,
+                                  padding: const EdgeInsets.symmetric(horizontal: 8),
+                                ),
+                                icon: const Icon(Icons.warning_amber_rounded, size: 14),
+                                label: const Text('Tes H-3 Jam', style: TextStyle(fontSize: 11)),
+                                onPressed: () async {
+                                  await TaskReminderService.instance.showTestNotification(isUrgent: true);
+                                  if (context.mounted) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(content: Text('Notifikasi uji coba H-3 jam dikirimkan!')),
+                                    );
+                                  }
+                                },
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ],
               ),
             ),
             const SizedBox(height: 24),
