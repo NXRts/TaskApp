@@ -181,6 +181,14 @@ class StorageService {
     await _settingsBox.put('reminder_h3_hours_enabled', enabled);
   }
 
+  bool getReminderH30MinutesEnabled() {
+    return _settingsBox.get('reminder_h30_minutes_enabled', defaultValue: true) as bool;
+  }
+
+  Future<void> setReminderH30MinutesEnabled(bool enabled) async {
+    await _settingsBox.put('reminder_h30_minutes_enabled', enabled);
+  }
+
   static dynamic _deepConvertToJsonCompatible(dynamic value) {
     if (value is Map) {
       return value.map<String, dynamic>(

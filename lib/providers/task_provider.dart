@@ -21,6 +21,7 @@ class TaskProvider with ChangeNotifier {
 
   TaskProvider(this._storageService) {
     loadTasks();
+    syncReminders();
   }
 
   List<TaskItem> get allTasks => _tasks;

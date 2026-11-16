@@ -144,12 +144,18 @@ class TaskReminderService {
     return dueDate.subtract(const Duration(hours: 3));
   }
 
+  /// Menghitung waktu pengingat kritis H-30 Menit sebelum deadline
+  static DateTime calculateH30MinutesReminderTime(DateTime dueDate) {
+    return dueDate.subtract(const Duration(minutes: 30));
+  }
+
   /// Menghasilkan Notification ID unik dan deterministik untuk tiap jenis alarm tugas
   /// type 0 = H-1 Hari (19:00)
   /// type 1 = H-3 Jam Darurat
+  /// type 2 = H-30 Menit Kritis
   static int getNotificationId(String taskId, int type) {
-    final hash = taskId.hashCode.abs() % 100000000;
-    return (hash * 2) + (type == 0 ? 0 : 1);
+    final hash = taskId.hashCode.abs() % 10000000;
+    return (hash * 3) + type;
   }
 
   /// Membuka halaman pengaturan notifikasi aplikasi di sistem Android
@@ -262,6 +268,25 @@ class TaskReminderService {
     } else {
       await _safeCancel(h3Id);
     }
+
+    // 3. Jadwalkan Pengingat Kritis H-30 Menit (Tepat 30 menit sebelum deadline)
+    final h30mId = getNotificationId(task.id, 2);
+    if (storage.getReminderH30MinutesEnabled()) {
+      final h30mTime = calculateH30MinutesReminderTime(task.dueDate);
+      if (h30mTime.isAfter(now)) {
+        await _scheduleSingleZonedNotification(
+          id: h30mId,
+          title: '🚨 30 Menit Menjelang Deadline: ${task.title}',
+          body: 'Segera kumpulkan! Waktu tersisa 30 menit lagi untuk tugas "${task.title}"$matkulInfo.',
+          scheduledTime: h30mTime,
+          isUrgent: true,
+        );
+      } else {
+        await _safeCancel(h30mId);
+      }
+    } else {
+      await _safeCancel(h30mId);
+    }
   }
 
   /// Jadwalkan notifikasi menggunakan zonedSchedule dengan fallback yang tangguh
@@ -327,10 +352,11 @@ class TaskReminderService {
     }
   }
 
-  /// Batalkan kedua pengingat untuk tugas tertentu
+  /// Batalkan ketiga pengingat untuk tugas tertentu
   Future<void> cancelTaskReminders(String taskId) async {
     await _safeCancel(getNotificationId(taskId, 0));
     await _safeCancel(getNotificationId(taskId, 1));
+    await _safeCancel(getNotificationId(taskId, 2));
   }
 
   Future<void> _safeCancel(int id) async {
@@ -437,10 +463,18 @@ class TaskReminderService {
   }
 
   /// Kirim notifikasi uji coba langsung untuk memastikan notifikasi bekerja di HP / sistem pengguna
-  Future<NotificationTestResult> showTestNotification({bool isUrgent = false}) async {
+  /// type 0: H-1 Hari
+  /// type 1: H-3 Jam
+  /// type 2: H-30 Menit
+  Future<NotificationTestResult> showTestNotification({
+    int type = 0,
+    bool? isUrgent,
+  }) async {
     if (!_isInitialized) {
       await init();
     }
+
+    final effectiveType = isUrgent != null ? (isUrgent ? 1 : 0) : type;
 
     // 0. Periksa izin notifikasi sistem pada Android
     if (!kIsWeb && Platform.isAndroid) {
@@ -460,10 +494,26 @@ class TaskReminderService {
       }
     }
 
-    final title = isUrgent ? '⚠️ 3 Jam Menjelang Deadline' : '⏰ Pengingat Tugas Besok';
-    final body = isUrgent
-        ? 'Contoh: Batas waktu tugas "Praktikum Sistem Operasi" pukul 23:59 hari ini!'
-        : 'Contoh: Tugas "Algoritma Pemrograman" jatuh tempo besok pukul 19:00.';
+    final String title;
+    final String body;
+    final bool urgent;
+    final int notifId;
+    if (effectiveType == 2) {
+      title = '🚨 30 Menit Menjelang Deadline';
+      body = 'Contoh: Segera kumpulkan! Waktu tersisa 30 menit lagi untuk tugas "Praktikum Sistem Operasi".';
+      urgent = true;
+      notifId = 997;
+    } else if (effectiveType == 1) {
+      title = '⚠️ 3 Jam Menjelang Deadline';
+      body = 'Contoh: Batas waktu tugas "Praktikum Sistem Operasi" pukul 23:59 hari ini!';
+      urgent = true;
+      notifId = 999;
+    } else {
+      title = '⏰ Pengingat Tugas Besok';
+      body = 'Contoh: Tugas "Algoritma Pemrograman" jatuh tempo besok pukul 19:00.';
+      urgent = false;
+      notifId = 998;
+    }
 
     // 1. Putar bunyi alarm secara langsung di HP / PC pengguna
     try {
@@ -474,9 +524,9 @@ class TaskReminderService {
     bool shown = false;
     String? errorDetail;
     try {
-      final details = _buildNotificationDetails(isUrgent: isUrgent);
+      final details = _buildNotificationDetails(isUrgent: urgent);
       await notificationsPlugin.show(
-        isUrgent ? 999 : 998,
+        notifId,
         title,
         body,
         details,
@@ -505,7 +555,7 @@ class TaskReminderService {
           ),
         );
         await notificationsPlugin.show(
-          isUrgent ? 999 : 998,
+          notifId,
           title,
           body,
           fallbackDetails,
@@ -536,11 +586,12 @@ class TaskReminderService {
     }
 
     if (shown) {
+      final label = effectiveType == 2
+          ? 'H-30 menit'
+          : (effectiveType == 1 ? 'H-3 jam' : 'H-1');
       return NotificationTestResult(
         success: true,
-        message: isUrgent
-            ? 'Notifikasi darurat H-3 jam dikirimkan ke panel kontrol sistem!'
-            : 'Notifikasi uji coba H-1 dikirimkan ke panel kontrol sistem!',
+        message: 'Notifikasi uji coba $label dikirimkan ke panel kontrol sistem!',
       );
     } else {
       return NotificationTestResult(

@@ -421,16 +421,25 @@ void main() {
     final h3Morning = TaskReminderService.calculateH3HoursReminderTime(dueMorning);
     expect(h3Morning, DateTime(2026, 11, 21, 7, 0));
 
-    // 3. ID Notifikasi Deterministik
+    // 3. Waktu H-30 Menit (tepat 30 menit sebelum deadline)
+    final h30m_1 = TaskReminderService.calculateH30MinutesReminderTime(due1);
+    expect(h30m_1, DateTime(2026, 11, 20, 23, 29));
+
+    // 4. ID Notifikasi Deterministik
     final idH1 = TaskReminderService.getNotificationId('task-abc', 0);
     final idH3 = TaskReminderService.getNotificationId('task-abc', 1);
+    final idH30m = TaskReminderService.getNotificationId('task-abc', 2);
     expect(idH1, isNot(idH3));
+    expect(idH1, isNot(idH30m));
+    expect(idH3, isNot(idH30m));
     expect(idH1 >= 0, isTrue);
     expect(idH3 >= 0, isTrue);
+    expect(idH30m >= 0, isTrue);
 
     // Konsistensi ID
     expect(TaskReminderService.getNotificationId('task-abc', 0), idH1);
     expect(TaskReminderService.getNotificationId('task-abc', 1), idH3);
+    expect(TaskReminderService.getNotificationId('task-abc', 2), idH30m);
   });
 
   testWidgets('WallpaperScheduleWidget renders student info and subjects', (tester) async {

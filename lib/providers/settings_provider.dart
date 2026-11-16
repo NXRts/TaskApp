@@ -26,6 +26,7 @@ class SettingsProvider with ChangeNotifier {
   bool get taskRemindersEnabled => _storageService.getTaskRemindersEnabled();
   bool get reminderH1Enabled => _storageService.getReminderH1Enabled();
   bool get reminderH3HoursEnabled => _storageService.getReminderH3HoursEnabled();
+  bool get reminderH30MinutesEnabled => _storageService.getReminderH30MinutesEnabled();
 
   Future<void> setTaskRemindersEnabled(bool enabled) async {
     await _storageService.setTaskRemindersEnabled(enabled);
@@ -39,6 +40,11 @@ class SettingsProvider with ChangeNotifier {
 
   Future<void> setReminderH3HoursEnabled(bool enabled) async {
     await _storageService.setReminderH3HoursEnabled(enabled);
+    notifyListeners();
+  }
+
+  Future<void> setReminderH30MinutesEnabled(bool enabled) async {
+    await _storageService.setReminderH30MinutesEnabled(enabled);
     notifyListeners();
   }
 

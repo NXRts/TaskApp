@@ -294,6 +294,29 @@ class _ProfileSettingsScreenState extends State<ProfileSettingsScreen> {
                       },
                     ),
                     Divider(color: borderCol.withValues(alpha: 0.5), height: 1),
+                    CheckboxListTile(
+                      title: Text(
+                        '🚨 Pengingat Kritis H-30 Menit',
+                        style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w500, color: textPrimary),
+                      ),
+                      subtitle: Text(
+                        'Peringatan darurat terakhir tepat 30 menit sebelum batas akhir pengumpulan',
+                        style: TextStyle(fontSize: 11, color: textSecondary),
+                      ),
+                      value: settingsProvider.reminderH30MinutesEnabled,
+                      activeColor: isDark ? AppTheme.darkAccent : AppTheme.brandCobalt,
+                      controlAffinity: ListTileControlAffinity.trailing,
+                      onChanged: (val) async {
+                        if (val != null) {
+                          await settingsProvider.setReminderH30MinutesEnabled(val);
+                          if (context.mounted) {
+                            final taskProv = Provider.of<TaskProvider>(context, listen: false);
+                            await taskProv.syncReminders();
+                          }
+                        }
+                      },
+                    ),
+                    Divider(color: borderCol.withValues(alpha: 0.5), height: 1),
                     Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                       child: Row(
@@ -303,18 +326,18 @@ class _ProfileSettingsScreenState extends State<ProfileSettingsScreen> {
                             'Uji Coba Alarm:',
                             style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w500, color: textSecondary),
                           ),
-                          Row(
-                            mainAxisSize: MainAxisSize.min,
+                          Wrap(
+                            spacing: 4,
                             children: [
                               TextButton.icon(
                                 style: TextButton.styleFrom(
                                   visualDensity: VisualDensity.compact,
-                                  padding: const EdgeInsets.symmetric(horizontal: 8),
+                                  padding: const EdgeInsets.symmetric(horizontal: 6),
                                 ),
-                                icon: const Icon(Icons.notifications_active_outlined, size: 14),
-                                label: const Text('Tes H-1', style: TextStyle(fontSize: 11)),
+                                icon: const Icon(Icons.notifications_active_outlined, size: 13),
+                                label: const Text('Tes H-1', style: TextStyle(fontSize: 10.5)),
                                 onPressed: () async {
-                                  final result = await TaskReminderService.instance.showTestNotification(isUrgent: false);
+                                  final result = await TaskReminderService.instance.showTestNotification(type: 0);
                                   if (context.mounted) {
                                     ScaffoldMessenger.of(context).showSnackBar(
                                       SnackBar(
@@ -336,16 +359,45 @@ class _ProfileSettingsScreenState extends State<ProfileSettingsScreen> {
                                   }
                                 },
                               ),
-                              const SizedBox(width: 4),
                               TextButton.icon(
                                 style: TextButton.styleFrom(
                                   visualDensity: VisualDensity.compact,
-                                  padding: const EdgeInsets.symmetric(horizontal: 8),
+                                  padding: const EdgeInsets.symmetric(horizontal: 6),
                                 ),
-                                icon: const Icon(Icons.warning_amber_rounded, size: 14),
-                                label: const Text('Tes H-3 Jam', style: TextStyle(fontSize: 11)),
+                                icon: const Icon(Icons.warning_amber_rounded, size: 13),
+                                label: const Text('Tes H-3 Jam', style: TextStyle(fontSize: 10.5)),
                                 onPressed: () async {
-                                  final result = await TaskReminderService.instance.showTestNotification(isUrgent: true);
+                                  final result = await TaskReminderService.instance.showTestNotification(type: 1);
+                                  if (context.mounted) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(
+                                        content: Text(result.message),
+                                        backgroundColor: result.success ? const Color(0xFF16A34A) : const Color(0xFFDC2626),
+                                        behavior: SnackBarBehavior.floating,
+                                        duration: Duration(seconds: result.success ? 4 : 6),
+                                        action: result.isPermissionDenied
+                                            ? SnackBarAction(
+                                                label: 'Setelan',
+                                                textColor: Colors.white,
+                                                onPressed: () {
+                                                  TaskReminderService.openAppNotificationSettings();
+                                                },
+                                              )
+                                            : null,
+                                      ),
+                                    );
+                                  }
+                                },
+                              ),
+                              TextButton.icon(
+                                style: TextButton.styleFrom(
+                                  visualDensity: VisualDensity.compact,
+                                  padding: const EdgeInsets.symmetric(horizontal: 6),
+                                ),
+                                icon: const Icon(Icons.alarm_on_rounded, size: 13),
+                                label: const Text('Tes H-30m', style: TextStyle(fontSize: 10.5)),
+                                onPressed: () async {
+                                  final result = await TaskReminderService.instance.showTestNotification(type: 2);
                                   if (context.mounted) {
                                     ScaffoldMessenger.of(context).showSnackBar(
                                       SnackBar(

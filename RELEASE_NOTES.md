@@ -1,31 +1,31 @@
-# TaskApp v2.3.8 — Fix Resource Shrinking & Guaranteed Native Notification Delivery
+# TaskApp v2.3.9 — Pengingat Kritis Deadline H-30 Menit & Sinkronisasi Otomatis
 
-> **TaskApp v2.3.8** mengatasi tuntas galat `PlatformException(invalid_icon)` yang disebabkan oleh proses *Resource Shrinking & Optimization* pada kompilasi rilis Android Gradle Plugin (AGP). Aset notifikasi kini dilindungi secara permanen di tabel sumber daya sistem (`resources.arsc`) melalui deklarasi manifes, aturan retensi R8/AAPT2 (`keep.xml`), dan penonaktifan *resource shrinking*.
+> **TaskApp v2.3.9** menghadirkan fitur **Pengingat Kritis H-30 Menit** untuk tugas-tugas dengan deadline yang sangat dekat atau saat waktu pengumpulan sudah mendesak. Pembaruan ini juga menyertakan fitur **Auto-Sync Reminders saat Startup**, memastikan seluruh jadwal alarm tugas aktif yang belum selesai otomatis terdaftar ulang ke sistem Android saat aplikasi dibuka.
 >
 > Pembaruan ini ditandatangani dengan **Keystore Resmi Permanen** yang sama, sehingga Anda dapat **langsung mengunduh dan menekan "Update" tanpa perlu menghapus aplikasi dan seluruh data Anda tetap aman 100%**.
 
 ---
 
-## ✨ Apa yang Baru di Versi 2.3.8 (Changelog)
+## ✨ Apa yang Baru di Versi 2.3.9 (Changelog)
 
-### 1. 🛡️ Solusi Tuntas Galat `invalid_icon` pada Berkas Rilis APK
-- **Akar Masalah Teridentifikasi & Teratasi**: Pada versi rilis (`flutter build apk --release`), Android Gradle Plugin (AGP) secara otomatis membuang (*strip*) sumber daya gambar yang tidak dipanggil secara eksplisit di berkas Java/Manifes dari tabel `resources.arsc`. Akibatnya fungsi `context.getResources().getIdentifier("app_icon", "drawable", ...)` menghasilkan nilai `0`.
-- **Perlindungan Aset Permanen**:
-  - Menambahkan deklarasi `<meta-data android:resource="@drawable/app_icon" />` di `AndroidManifest.xml`.
-  - Mendaftarkan aturan retensi AAPT2 `res/raw/keep.xml` (`tools:keep="@drawable/app_icon,@drawable/ic_notification,@raw/task_alarm"`).
-  - Menetapkan `isShrinkResources = false` dan `isMinifyEnabled = false` pada konfigurasi build rilis Gradle.
-  - Memastikan `app_icon`, `ic_notification`, dan `task_alarm` hadir 100% di tabel biner `resources.arsc` pada APK rilis.
+### 1. 🚨 Pengingat Kritis Deadline H-30 Menit
+- **Alarm Kritis 30 Menit Sebelum Deadline**: Menyediakan peringatan mendesak tepat 30 menit sebelum batas waktu pengumpulan tugas berakhir.
+- **Dukungan Penuh Tugas Jangka Pendek**: Tugas yang baru dibuat dengan deadline singkat (misalnya 35 menit lagi) kini dijamin dapat memicu alarm karena alarm H-30 menit dijadwalkan di masa depan (5 menit setelah pembuatan tugas).
+- **Pengaturan & Uji Coba Mandiri**: Dilengkapi dengan toggle pengaktifan di halaman **Profil & Pengaturan** serta tombol pengujian **"Tes H-30m"** untuk memverifikasi suara dan notifikasi mengambang seketika.
+
+### 2. 🔄 Auto-Sync Jadwal Alarm saat Startup
+- **Sinkronisasi Otomatis**: Saat aplikasi dibuka, `TaskProvider` secara otomatis memanggil `syncReminders()` untuk memindai seluruh tugas yang belum selesai dan mendaftarkan alarm H-1, H-3 Jam, serta H-30 Menit ke sistem Android AlarmManager.
 
 ---
 
 ## 📲 Panduan Instalasi & Pembaruan
 
-1. Unduh berkas **`TaskApp-v2.3.8.apk`** dari daftar **Assets** di halaman rilis.
+1. Unduh berkas **`TaskApp-v2.3.9.apk`** dari daftar **Assets** di halaman rilis.
 2. Buka berkas APK dan tekan tombol **"Update"**.
-3. Buka **Profil & Pengaturan** -> tekan **"Tes H-1"** atau **"Tes H-3 Jam"**. Notifikasi resmi akan langsung melayang di atas layar dan menetap di bilah status / panel kontrol HP Anda tanpa ada galat!
+3. Buka **Profil & Pengaturan**, aktifkan toggle **"🚨 Pengingat Kritis H-30 Menit"**, dan uji coba dengan tombol **"Tes H-30m"**.
 
 ---
 
 ### 📦 Berkas Unduhan
-- **`TaskApp-v2.3.8.apk`** — Berkas rilis resmi mandiri siap pasang di semua ponsel Android (Android 7.0 / API 24 ke atas).
+- **`TaskApp-v2.3.9.apk`** — Berkas rilis resmi mandiri siap pasang di semua ponsel Android (Android 7.0 / API 24 ke atas).
 - **`app-release.apk`** — Berkas biner rilis Flutter standar.
