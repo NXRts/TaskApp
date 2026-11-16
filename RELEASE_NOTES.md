@@ -16,6 +16,9 @@
 ### 2. 🔄 Auto-Sync Jadwal Alarm saat Startup
 - **Sinkronisasi Otomatis**: Saat aplikasi dibuka, `TaskProvider` secara otomatis memanggil `syncReminders()` untuk memindai seluruh tugas yang belum selesai dan mendaftarkan alarm H-1, H-3 Jam, serta H-30 Menit ke sistem Android AlarmManager.
 
+### 3. 🖥️ Dukungan Precision Timer untuk Linux Desktop & Foreground
+- **In-Memory Precision Scheduler**: Menambahkan penjadwal timer presisi di memori untuk desktop (Linux/Windows) dan saat aplikasi aktif di latar depan, memastikan notifikasi alarm berdering tepat waktu tanpa tergantung pada background daemon sistem operasi.
+
 ---
 
 ## 📲 Panduan Instalasi & Pembaruan
