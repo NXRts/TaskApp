@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/foundation.dart';
@@ -289,7 +290,14 @@ class TaskReminderService {
     }
   }
 
-  /// Jadwalkan notifikasi menggunakan zonedSchedule dengan fallback yang tangguh
+  /// Map timer aktif untuk penjadwalan presisi di lingkungan Desktop (Linux/Windows)
+  /// dan pemantauan aktif saat aplikasi sedang berjalan.
+  static final Map<int, Timer> _activeTimers = {};
+
+  static int get activeTimersCount => _activeTimers.length;
+
+  /// Jadwalkan notifikasi menggunakan in-memory timer (untuk Desktop Linux/Windows & Foreground)
+  /// serta zonedSchedule untuk Android/iOS/macOS
   Future<void> _scheduleSingleZonedNotification({
     required int id,
     required String title,
@@ -297,28 +305,33 @@ class TaskReminderService {
     required DateTime scheduledTime,
     required bool isUrgent,
   }) async {
-    try {
-      ensureTimeZonesInitialized();
-      final tzTime = tz.TZDateTime.from(scheduledTime, tz.local);
-      final details = _buildNotificationDetails(isUrgent: isUrgent);
+    // 1. Kelola In-Memory Timer (selalu aktif untuk Desktop Linux/Windows & saat aplikasi aktif)
+    _activeTimers[id]?.cancel();
+    _activeTimers.remove(id);
 
-      try {
-        await notificationsPlugin.zonedSchedule(
-          id,
-          title,
-          body,
-          tzTime,
-          details,
-          androidScheduleMode: AndroidScheduleMode.alarmClock,
-          uiLocalNotificationDateInterpretation:
-              UILocalNotificationDateInterpretation.absoluteTime,
+    final now = DateTime.now();
+    final duration = scheduledTime.difference(now);
+    if (!duration.isNegative) {
+      _activeTimers[id] = Timer(duration, () async {
+        _activeTimers.remove(id);
+        await _triggerReminderNotification(
+          id: id,
+          title: title,
+          body: body,
+          isUrgent: isUrgent,
         );
-      } catch (e) {
-        if (e is Error && e.toString().contains('_instance')) {
-          // Unit test headless environment without native notification channels
-          return;
-        }
-        // Fallback jika mode alarmClock ditolak, gunakan exactAllowWhileIdle
+      });
+      debugPrint('TaskReminderService: Timer didaftarkan untuk ID $id, akan berbunyi dalam ${duration.inSeconds} detik (pada $scheduledTime)');
+    }
+
+    // 2. Jika di Android / iOS / macOS, daftarkan juga ke sistem AlarmManager native
+    // agar dapat membangunkan perangkat meskipun aplikasi ditutup total
+    if (!kIsWeb && (Platform.isAndroid || Platform.isIOS || Platform.isMacOS)) {
+      try {
+        ensureTimeZonesInitialized();
+        final tzTime = tz.TZDateTime.from(scheduledTime, tz.local);
+        final details = _buildNotificationDetails(isUrgent: isUrgent);
+
         try {
           await notificationsPlugin.zonedSchedule(
             id,
@@ -326,12 +339,16 @@ class TaskReminderService {
             body,
             tzTime,
             details,
-            androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+            androidScheduleMode: AndroidScheduleMode.alarmClock,
             uiLocalNotificationDateInterpretation:
                 UILocalNotificationDateInterpretation.absoluteTime,
           );
-        } catch (_) {
-          // Fallback terakhir: inexactAllowWhileIdle
+        } catch (e) {
+          if (e is Error && e.toString().contains('_instance')) {
+            // Unit test headless environment without native notification channels
+            return;
+          }
+          // Fallback jika mode alarmClock ditolak, gunakan exactAllowWhileIdle
           try {
             await notificationsPlugin.zonedSchedule(
               id,
@@ -339,17 +356,75 @@ class TaskReminderService {
               body,
               tzTime,
               details,
-              androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
+              androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
               uiLocalNotificationDateInterpretation:
                   UILocalNotificationDateInterpretation.absoluteTime,
             );
-          } catch (_) {}
+          } catch (_) {
+            // Fallback terakhir: inexactAllowWhileIdle
+            try {
+              await notificationsPlugin.zonedSchedule(
+                id,
+                title,
+                body,
+                tzTime,
+                details,
+                androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
+                uiLocalNotificationDateInterpretation:
+                    UILocalNotificationDateInterpretation.absoluteTime,
+              );
+            } catch (_) {}
+          }
         }
+      } catch (e) {
+        if (e is Error && e.toString().contains('_instance')) return;
+        debugPrint('Error scheduling task reminder notification (id: $id): $e');
       }
-    } catch (e) {
-      if (e is Error && e.toString().contains('_instance')) return;
-      debugPrint('Error scheduling task reminder notification (id: $id): $e');
     }
+  }
+
+  /// Memicu eksekusi notifikasi alarm deadline secara langsung (suara + libnotify OS + in-app banner)
+  Future<void> _triggerReminderNotification({
+    required int id,
+    required String title,
+    required String body,
+    required bool isUrgent,
+  }) async {
+    // 1. Bunyikan alarm suara native sistem
+    try {
+      await _playDirectAlarmSound();
+    } catch (_) {}
+
+    // 2. Kirim notifikasi sistem operasi (bekerja di Linux desktop via libnotify dan Android)
+    try {
+      final details = _buildNotificationDetails(isUrgent: isUrgent);
+      await notificationsPlugin.show(id, title, body, details);
+    } catch (e) {
+      debugPrint('Error showing reminder notification via show(): $e');
+    }
+
+    // 3. Khusus Linux Desktop, panggil notify-send dengan auto-dismiss 5 detik
+    if (!kIsWeb && Platform.isLinux) {
+      try {
+        await Process.run('notify-send', [
+          '-t',
+          '5000',
+          '-u',
+          isUrgent ? 'critical' : 'normal',
+          '-a',
+          'TaskApp',
+          title,
+          body,
+        ]);
+      } catch (_) {}
+    }
+
+    // 4. Tampilkan banner mengambang (floating banner) di atas layar aplikasi
+    showInAppFloatingBanner(
+      title: title,
+      body: body,
+      isUrgent: isUrgent,
+    );
   }
 
   /// Batalkan ketiga pengingat untuk tugas tertentu
@@ -360,9 +435,13 @@ class TaskReminderService {
   }
 
   Future<void> _safeCancel(int id) async {
+    _activeTimers[id]?.cancel();
+    _activeTimers.remove(id);
     try {
       await notificationsPlugin.cancel(id);
-    } catch (_) {}
+    } catch (e) {
+      if (e is Error && e.toString().contains('_instance')) return;
+    }
   }
 
   /// Sinkronkan dan perbarui seluruh alarm untuk daftar tugas yang ada
@@ -388,9 +467,14 @@ class TaskReminderService {
 
   /// Batalkan seluruh alarm tugas
   Future<void> cancelAllReminders() async {
+    for (final timer in _activeTimers.values) {
+      timer.cancel();
+    }
+    _activeTimers.clear();
     try {
       await notificationsPlugin.cancelAll();
     } catch (e) {
+      if (e is Error && e.toString().contains('_instance')) return;
       debugPrint('Error canceling all reminders: $e');
     }
   }

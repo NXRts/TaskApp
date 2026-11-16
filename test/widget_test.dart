@@ -394,7 +394,7 @@ void main() {
     expect(localResult.filePath, isNotNull);
   });
 
-  test('TaskReminderService calculates exact H-1 and H-3 reminder times and unique IDs', () {
+  test('TaskReminderService calculates exact H-1 and H-3 reminder times and unique IDs', () async {
     // 1. Waktu H-1 (sehari sebelumnya pukul 19:00)
     final due1 = DateTime(2026, 11, 20, 23, 59); // Jumat malam
     final h1_1 = TaskReminderService.calculateH1ReminderTime(due1);
@@ -440,6 +440,11 @@ void main() {
     expect(TaskReminderService.getNotificationId('task-abc', 0), idH1);
     expect(TaskReminderService.getNotificationId('task-abc', 1), idH3);
     expect(TaskReminderService.getNotificationId('task-abc', 2), idH30m);
+
+    // Test pembatalan timer
+    await TaskReminderService.instance.cancelTaskReminders('task-abc');
+    await TaskReminderService.instance.cancelAllReminders();
+    expect(TaskReminderService.activeTimersCount, 0);
   });
 
   testWidgets('WallpaperScheduleWidget renders student info and subjects', (tester) async {
