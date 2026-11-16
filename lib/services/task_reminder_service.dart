@@ -47,10 +47,10 @@ class TaskReminderService {
 
   bool _isInitialized = false;
 
-  static const String channelId = 'task_deadline_alarms_v3';
-  static const String channelName = 'Pengingat Deadline Tugas';
+  static const String channelId = 'task_deadline_alarms_v5';
+  static const String channelName = 'Pengingat Deadline Tugas (Alarm & Suara)';
   static const String channelDescription =
-      'Notifikasi pengingat H-1 dan H-3 jam sebelum deadline tugas akademik';
+      'Notifikasi pengingat batas waktu tugas akademik dengan audio alarm keras';
 
   static bool _timeZonesInitialized = false;
 
@@ -102,30 +102,36 @@ class TaskReminderService {
 
       await notificationsPlugin.initialize(initSettings);
 
-      // 3. Permintaan izin notifikasi & alarm presisi untuk Android 13+ & 14+
+      // 3. Permintaan izin notifikasi, alarm presisi, dan full-screen intent untuk Android 13+ & 14+
       if (!kIsWeb && Platform.isAndroid) {
         final androidImpl = notificationsPlugin
             .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>();
         await androidImpl?.requestNotificationsPermission();
         await androidImpl?.requestExactAlarmsPermission();
+        await androidImpl?.requestFullScreenIntentPermission();
 
-        // Buat Android Notification Channel dengan prioritas tertinggi dan getaran
-        const androidChannel = AndroidNotificationChannel(
+        // Bersihkan channel versi lama jika ada agar konfigurasi mutakhir diterapkan
+        try {
+          await androidImpl?.deleteNotificationChannel('task_deadline_alarms_v4');
+          await androidImpl?.deleteNotificationChannel('task_deadline_alarms_v3');
+          await androidImpl?.deleteNotificationChannel('task_deadline_alarms_v2');
+          await androidImpl?.deleteNotificationChannel('task_deadline_channel');
+        } catch (_) {}
+
+        // Buat Android Notification Channel dengan prioritas tertinggi, suara alarm keras, dan getaran
+        final androidChannel = AndroidNotificationChannel(
           channelId,
           channelName,
           description: channelDescription,
           importance: Importance.max,
           playSound: true,
+          sound: const RawResourceAndroidNotificationSound('task_alarm'),
+          audioAttributesUsage: AudioAttributesUsage.alarm,
           enableVibration: true,
+          vibrationPattern: Int64List.fromList([0, 1000, 500, 1000, 500, 1000]),
           showBadge: true,
         );
         await androidImpl?.createNotificationChannel(androidChannel);
-
-        // Bersihkan channel versi lama jika ada agar konfigurasi mutakhir diterapkan
-        try {
-          await androidImpl?.deleteNotificationChannel('task_deadline_alarms_v2');
-          await androidImpl?.deleteNotificationChannel('task_deadline_channel');
-        } catch (_) {}
       }
 
       _isInitialized = true;
@@ -172,6 +178,20 @@ class TaskReminderService {
     return false;
   }
 
+  /// Membuka dialog pengecualian penghemat baterai (Battery Optimization) agar alarm tetap
+  /// berbunyi saat layar HP mati / aplikasi ditutup total
+  static Future<bool> openBatteryOptimizationSettings() async {
+    if (!kIsWeb && Platform.isAndroid) {
+      try {
+        final result = await _settingsChannel.invokeMethod<bool>('requestIgnoreBatteryOptimizations');
+        return result ?? false;
+      } catch (e) {
+        debugPrint('Error opening battery optimization settings: $e');
+      }
+    }
+    return false;
+  }
+
   /// Detail konfigurasi notifikasi Android & iOS
   NotificationDetails _buildNotificationDetails({bool isUrgent = false}) {
     final androidDetails = AndroidNotificationDetails(
@@ -181,9 +201,14 @@ class TaskReminderService {
       importance: Importance.max,
       priority: Priority.max,
       playSound: true,
+      sound: const RawResourceAndroidNotificationSound('task_alarm'),
+      audioAttributesUsage: AudioAttributesUsage.alarm,
       enableVibration: true,
+      vibrationPattern: Int64List.fromList([0, 1000, 500, 1000, 500, 1000]),
       icon: 'app_icon',
       visibility: NotificationVisibility.public,
+      category: AndroidNotificationCategory.alarm,
+      fullScreenIntent: true,
       ticker: 'Pengingat Deadline Tugas',
       color: const Color(0xFF2563EB), // Brand cobalt
     );
@@ -621,7 +646,7 @@ class TaskReminderService {
       errorDetail = e.toString();
       // Fallback: coba kirim notifikasi standar tanpa parameter tambahan
       try {
-        const fallbackDetails = NotificationDetails(
+        final fallbackDetails = NotificationDetails(
           android: AndroidNotificationDetails(
             channelId,
             channelName,
@@ -629,10 +654,14 @@ class TaskReminderService {
             importance: Importance.max,
             priority: Priority.high,
             playSound: true,
+            sound: const RawResourceAndroidNotificationSound('task_alarm'),
+            audioAttributesUsage: AudioAttributesUsage.alarm,
             enableVibration: true,
             icon: 'app_icon',
+            category: AndroidNotificationCategory.alarm,
+            fullScreenIntent: true,
           ),
-          linux: LinuxNotificationDetails(
+          linux: const LinuxNotificationDetails(
             urgency: LinuxNotificationUrgency.normal,
             timeout: LinuxNotificationTimeout(5000),
             defaultActionName: 'Buka TaskApp',

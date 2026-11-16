@@ -441,13 +441,13 @@ class _ProfileSettingsScreenState extends State<ProfileSettingsScreen> {
                             Row(
                               children: [
                                 Icon(
-                                  Icons.layers_outlined,
+                                  Icons.notifications_active_outlined,
                                   size: 16,
                                   color: isDark ? AppTheme.darkAccent : AppTheme.brandCobalt,
                                 ),
                                 const SizedBox(width: 8),
                                 Text(
-                                  'Notifikasi Mengambang (Floating Banner):',
+                                  'Panduan Alarm & Layar Mati (Lock Screen):',
                                   style: TextStyle(
                                     fontSize: 11.5,
                                     fontWeight: FontWeight.w600,
@@ -458,44 +458,78 @@ class _ProfileSettingsScreenState extends State<ProfileSettingsScreen> {
                             ),
                             const SizedBox(height: 6),
                             Text(
-                              'Agar notifikasi melayang di atas layar HP (terutama di Xiaomi MIUI/HyperOS, Samsung, & Oppo), buka setelan sistem lalu aktifkan toggle "Notifikasi Mengambang" dan "Mulai Otomatis".',
+                              'Agar alarm berdering nyaring saat HP mati/terkunci dan aplikasi ditutup (terutama di Xiaomi MIUI/HyperOS, Samsung, & Oppo):\n• Notifikasi: aktifkan "Notifikasi Layar Kunci", "Notifikasi Mengambang", & "Suara".\n• Penghemat Baterai: pilih "Tidak ada pembatasan" agar sistem tidak menghentikan alarm.',
                               style: TextStyle(
                                 fontSize: 10.5,
-                                height: 1.4,
+                                height: 1.45,
                                 color: textSecondary,
                               ),
                             ),
                             const SizedBox(height: 10),
-                            SizedBox(
-                              width: double.infinity,
-                              child: OutlinedButton.icon(
-                                style: OutlinedButton.styleFrom(
-                                  visualDensity: VisualDensity.compact,
-                                  padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
-                                  side: BorderSide(
-                                    color: isDark ? AppTheme.darkAccent : AppTheme.brandCobalt,
-                                  ),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(8),
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: OutlinedButton.icon(
+                                    style: OutlinedButton.styleFrom(
+                                      visualDensity: VisualDensity.compact,
+                                      padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 8),
+                                      side: BorderSide(
+                                        color: isDark ? AppTheme.darkAccent : AppTheme.brandCobalt,
+                                      ),
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(8),
+                                      ),
+                                    ),
+                                    icon: Icon(
+                                      Icons.open_in_new_rounded,
+                                      size: 13,
+                                      color: isDark ? AppTheme.darkAccent : AppTheme.brandCobalt,
+                                    ),
+                                    label: Text(
+                                      'Setelan Notifikasi',
+                                      style: TextStyle(
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.w600,
+                                        color: isDark ? AppTheme.darkAccent : AppTheme.brandCobalt,
+                                      ),
+                                    ),
+                                    onPressed: () async {
+                                      await TaskReminderService.openAppNotificationSettings();
+                                    },
                                   ),
                                 ),
-                                icon: Icon(
-                                  Icons.open_in_new_rounded,
-                                  size: 14,
-                                  color: isDark ? AppTheme.darkAccent : AppTheme.brandCobalt,
-                                ),
-                                label: Text(
-                                  'Buka Setelan Notifikasi HP',
-                                  style: TextStyle(
-                                    fontSize: 11.5,
-                                    fontWeight: FontWeight.w600,
-                                    color: isDark ? AppTheme.darkAccent : AppTheme.brandCobalt,
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: OutlinedButton.icon(
+                                    style: OutlinedButton.styleFrom(
+                                      visualDensity: VisualDensity.compact,
+                                      padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 8),
+                                      side: BorderSide(
+                                        color: isDark ? AppTheme.darkAccent : AppTheme.brandCobalt,
+                                      ),
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(8),
+                                      ),
+                                    ),
+                                    icon: Icon(
+                                      Icons.battery_charging_full_rounded,
+                                      size: 13,
+                                      color: isDark ? AppTheme.darkAccent : AppTheme.brandCobalt,
+                                    ),
+                                    label: Text(
+                                      'Abaikan Hemat Baterai',
+                                      style: TextStyle(
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.w600,
+                                        color: isDark ? AppTheme.darkAccent : AppTheme.brandCobalt,
+                                      ),
+                                    ),
+                                    onPressed: () async {
+                                      await TaskReminderService.openBatteryOptimizationSettings();
+                                    },
                                   ),
                                 ),
-                                onPressed: () async {
-                                  await TaskReminderService.openAppNotificationSettings();
-                                },
-                              ),
+                              ],
                             ),
                           ],
                         ),
