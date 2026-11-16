@@ -47,10 +47,10 @@ class TaskReminderService {
 
   bool _isInitialized = false;
 
-  static const String channelId = 'task_deadline_alarms_v5';
-  static const String channelName = 'Pengingat Deadline Tugas (Alarm & Suara)';
+  static const String channelId = 'task_deadline_alarms_v6';
+  static const String channelName = 'Pengingat Deadline Tugas';
   static const String channelDescription =
-      'Notifikasi pengingat batas waktu tugas akademik dengan audio alarm keras';
+      'Notifikasi pengingat batas waktu tugas akademik dengan audio alarm';
 
   static bool _timeZonesInitialized = false;
 
@@ -102,16 +102,16 @@ class TaskReminderService {
 
       await notificationsPlugin.initialize(initSettings);
 
-      // 3. Permintaan izin notifikasi, alarm presisi, dan full-screen intent untuk Android 13+ & 14+
+      // 3. Permintaan izin notifikasi & alarm presisi untuk Android 13+ & 14+
       if (!kIsWeb && Platform.isAndroid) {
         final androidImpl = notificationsPlugin
             .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>();
         await androidImpl?.requestNotificationsPermission();
         await androidImpl?.requestExactAlarmsPermission();
-        await androidImpl?.requestFullScreenIntentPermission();
 
         // Bersihkan channel versi lama jika ada agar konfigurasi mutakhir diterapkan
         try {
+          await androidImpl?.deleteNotificationChannel('task_deadline_alarms_v5');
           await androidImpl?.deleteNotificationChannel('task_deadline_alarms_v4');
           await androidImpl?.deleteNotificationChannel('task_deadline_alarms_v3');
           await androidImpl?.deleteNotificationChannel('task_deadline_alarms_v2');
@@ -207,8 +207,8 @@ class TaskReminderService {
       vibrationPattern: Int64List.fromList([0, 1000, 500, 1000, 500, 1000]),
       icon: 'app_icon',
       visibility: NotificationVisibility.public,
-      category: AndroidNotificationCategory.alarm,
-      fullScreenIntent: true,
+      category: AndroidNotificationCategory.reminder,
+      fullScreenIntent: false,
       ticker: 'Pengingat Deadline Tugas',
       color: const Color(0xFF2563EB), // Brand cobalt
     );
@@ -658,8 +658,8 @@ class TaskReminderService {
             audioAttributesUsage: AudioAttributesUsage.alarm,
             enableVibration: true,
             icon: 'app_icon',
-            category: AndroidNotificationCategory.alarm,
-            fullScreenIntent: true,
+            category: AndroidNotificationCategory.reminder,
+            fullScreenIntent: false,
           ),
           linux: const LinuxNotificationDetails(
             urgency: LinuxNotificationUrgency.normal,
