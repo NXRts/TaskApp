@@ -92,6 +92,10 @@ void main() {
     final settingsMap = settings.toMap();
     final restoredSettings = FinanceSettings.fromMap(settingsMap);
     expect(restoredSettings.monthlyAllowanceDate, 25);
+
+    // 6. FinanceCategory short names
+    expect(FinanceCategory.expenseCategories.first.shortName, 'Makan');
+    expect(FinanceCategory.incomeCategories.first.shortName, 'Ortu');
   });
 
   test('FinanceProvider handles wallets, transactions, safe-to-spend, envelopes, and loans', () async {

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 class FinanceCategory {
   final String key;
   final String name;
+  final String shortName;
   final String type; // 'income' or 'expense'
   final IconData icon;
   final int colorValue;
@@ -11,6 +12,7 @@ class FinanceCategory {
   const FinanceCategory({
     required this.key,
     required this.name,
+    required this.shortName,
     required this.type,
     required this.icon,
     required this.colorValue,
@@ -22,6 +24,7 @@ class FinanceCategory {
     FinanceCategory(
       key: 'parent_allowance',
       name: 'Kiriman Orang Tua',
+      shortName: 'Ortu',
       type: 'income',
       icon: Icons.volunteer_activism_outlined,
       colorValue: 0xFF10B981, // Emerald
@@ -29,6 +32,7 @@ class FinanceCategory {
     FinanceCategory(
       key: 'scholarship',
       name: 'Beasiswa Kuliah',
+      shortName: 'Beasiswa',
       type: 'income',
       icon: Icons.school_outlined,
       colorValue: 0xFF3B82F6, // Blue
@@ -36,6 +40,7 @@ class FinanceCategory {
     FinanceCategory(
       key: 'internship_salary',
       name: 'Gaji Magang / Part-Time',
+      shortName: 'Gaji Magang',
       type: 'income',
       icon: Icons.work_outline,
       colorValue: 0xFF8B5CF6, // Purple
@@ -43,6 +48,7 @@ class FinanceCategory {
     FinanceCategory(
       key: 'freelance',
       name: 'Joki Tugas / Freelance',
+      shortName: 'Freelance',
       type: 'income',
       icon: Icons.laptop_mac_outlined,
       colorValue: 0xFF06B6D4, // Cyan
@@ -50,6 +56,7 @@ class FinanceCategory {
     FinanceCategory(
       key: 'award',
       name: 'Hadiah Lomba / Prestasi',
+      shortName: 'Lomba',
       type: 'income',
       icon: Icons.emoji_events_outlined,
       colorValue: 0xFFF59E0B, // Amber
@@ -57,6 +64,7 @@ class FinanceCategory {
     FinanceCategory(
       key: 'other_income',
       name: 'Pemasukan Lainnya',
+      shortName: 'Lainnya',
       type: 'income',
       icon: Icons.add_circle_outline,
       colorValue: 0xFF64748B, // Slate
@@ -66,6 +74,7 @@ class FinanceCategory {
     FinanceCategory(
       key: 'food_daily',
       name: 'Makan & Minum Harian',
+      shortName: 'Makan',
       type: 'expense',
       icon: Icons.restaurant,
       colorValue: 0xFFEF4444, // Red
@@ -74,6 +83,7 @@ class FinanceCategory {
     FinanceCategory(
       key: 'kos_rent',
       name: 'Bayar Sewa Kos / Kontrakan',
+      shortName: 'Kosan',
       type: 'expense',
       icon: Icons.home_outlined,
       colorValue: 0xFF6366F1, // Indigo
@@ -82,6 +92,7 @@ class FinanceCategory {
     FinanceCategory(
       key: 'kos_electricity',
       name: 'Token Listrik Kos',
+      shortName: 'Listrik',
       type: 'expense',
       icon: Icons.bolt_outlined,
       colorValue: 0xFFF59E0B, // Amber
@@ -90,6 +101,7 @@ class FinanceCategory {
     FinanceCategory(
       key: 'laundry_water',
       name: 'Galon Air & Laundry',
+      shortName: 'Laundry',
       type: 'expense',
       icon: Icons.local_laundry_service_outlined,
       colorValue: 0xFF0EA5E9, // Sky
@@ -98,6 +110,7 @@ class FinanceCategory {
     FinanceCategory(
       key: 'transport',
       name: 'Bensin & Transportasi',
+      shortName: 'Bensin',
       type: 'expense',
       icon: Icons.two_wheeler_outlined,
       colorValue: 0xFF84CC16, // Lime
@@ -107,6 +120,7 @@ class FinanceCategory {
     FinanceCategory(
       key: 'print_academic',
       name: 'Print, Fotokopi & ATK',
+      shortName: 'Print/ATK',
       type: 'expense',
       icon: Icons.print_outlined,
       colorValue: 0xFF3B82F6, // Cobalt
@@ -115,6 +129,7 @@ class FinanceCategory {
     FinanceCategory(
       key: 'books_academic',
       name: 'Buku & Diktat Materi',
+      shortName: 'Buku',
       type: 'expense',
       icon: Icons.menu_book_outlined,
       colorValue: 0xFF0284C7, // Blue-dark
@@ -123,6 +138,7 @@ class FinanceCategory {
     FinanceCategory(
       key: 'class_dues',
       name: 'Kas Kelas / Himpunan',
+      shortName: 'Kas Kelas',
       type: 'expense',
       icon: Icons.groups_outlined,
       colorValue: 0xFF64748B, // Slate
@@ -131,6 +147,7 @@ class FinanceCategory {
     FinanceCategory(
       key: 'ukt_tuition',
       name: 'Biaya UKT / SPP Kuliah',
+      shortName: 'UKT/SPP',
       type: 'expense',
       icon: Icons.account_balance_outlined,
       colorValue: 0xFF4F46E5, // Indigo
@@ -140,6 +157,7 @@ class FinanceCategory {
     FinanceCategory(
       key: 'coffee_social',
       name: 'Ngopi & Nongkrong Nugas',
+      shortName: 'Ngopi',
       type: 'expense',
       icon: Icons.local_cafe_outlined,
       colorValue: 0xFFA855F7, // Purple
@@ -148,6 +166,7 @@ class FinanceCategory {
     FinanceCategory(
       key: 'entertainment',
       name: 'Hiburan, Bioskop & Game',
+      shortName: 'Hiburan',
       type: 'expense',
       icon: Icons.sports_esports_outlined,
       colorValue: 0xFFEC4899, // Pink
@@ -156,6 +175,7 @@ class FinanceCategory {
     FinanceCategory(
       key: 'online_shopping',
       name: 'Belanja Online & Paket',
+      shortName: 'Belanja',
       type: 'expense',
       icon: Icons.shopping_bag_outlined,
       colorValue: 0xFFF97316, // Orange
@@ -163,6 +183,7 @@ class FinanceCategory {
     FinanceCategory(
       key: 'other_expense',
       name: 'Pengeluaran Lainnya',
+      shortName: 'Lainnya',
       type: 'expense',
       icon: Icons.remove_circle_outline,
       colorValue: 0xFF64748B, // Slate
@@ -176,6 +197,7 @@ class FinanceCategory {
       return FinanceCategory(
         key: key,
         name: key.replaceAll('_', ' ').toUpperCase(),
+        shortName: key.replaceAll('_', ' ').toUpperCase(),
         type: defaultType,
         icon: defaultType == 'income'
             ? Icons.add_circle_outline

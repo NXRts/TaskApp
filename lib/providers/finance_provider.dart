@@ -86,22 +86,15 @@ class FinanceProvider with ChangeNotifier {
   double get netCashFlow => monthlyIncome - monthlyExpense;
 
   // --- SAFE-TO-SPEND TODAY (KALKULATOR UANG HARIAN AMAN) ---
-  int get daysUntilNextAllowance {
+  /// Sisa hari di bulan kalender berjalan (otomatis tanpa perlu setelan manual)
+  int get daysRemainingInMonth {
     final now = DateTime.now();
-    final targetDay = _settings.monthlyAllowanceDate;
-
-    if (now.day < targetDay) {
-      return targetDay - now.day;
-    } else if (now.day == targetDay) {
-      // Hari transfer berikutnya adalah bulan depan
-      final daysInCurrentMonth = DateTime(now.year, now.month + 1, 0).day;
-      return daysInCurrentMonth;
-    } else {
-      final daysInCurrentMonth = DateTime(now.year, now.month + 1, 0).day;
-      final remainingThisMonth = daysInCurrentMonth - now.day;
-      return remainingThisMonth + targetDay;
-    }
+    final daysInCurrentMonth = DateTime(now.year, now.month + 1, 0).day;
+    final remaining = daysInCurrentMonth - now.day + 1;
+    return remaining > 0 ? remaining : 1;
   }
+
+  int get daysUntilNextAllowance => daysRemainingInMonth;
 
   /// Saldo bebas (Saldo total dikurangi sisa anggaran amplop tetap seperti Kos & Tagihan)
   double get freeBalance {
@@ -125,7 +118,7 @@ class FinanceProvider with ChangeNotifier {
   }
 
   double get safeToSpendToday {
-    final days = daysUntilNextAllowance;
+    final days = daysRemainingInMonth;
     if (days <= 0) return freeBalance;
     final daily = freeBalance / days;
     return daily > 0 ? daily : 0.0;

@@ -9,7 +9,6 @@ import '../widgets/add_transaction_modal.dart';
 import '../widgets/add_loan_dialog.dart';
 import '../widgets/edit_envelope_dialog.dart';
 import '../widgets/adjust_wallet_dialog.dart';
-import '../widgets/finance_settings_dialog.dart';
 
 class FinanceScreen extends StatefulWidget {
   const FinanceScreen({super.key});
@@ -108,17 +107,28 @@ class _FinanceScreenState extends State<FinanceScreen> {
                         ),
                       ],
                     ),
-                    // Tombol Konfigurasi Tanggal Kiriman Ortu
-                    IconButton(
-                      icon: Icon(Icons.tune_outlined,
-                          size: 20, color: textMuted),
-                      tooltip: 'Atur Tanggal Kiriman Bulanan',
-                      onPressed: () {
-                        showDialog(
-                          context: context,
-                          builder: (_) => const FinanceSettingsDialog(),
-                        );
-                      },
+                    ElevatedButton.icon(
+                      onPressed: () => _openAddTransactionModal(context),
+                      icon: const Icon(Icons.add, size: 16),
+                      label: const Text(
+                        'Catat',
+                        style: TextStyle(
+                          fontSize: 12.5,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: isDark
+                            ? AppTheme.darkAccent
+                            : AppTheme.brandCobalt,
+                        foregroundColor: Colors.white,
+                        elevation: 0,
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 14, vertical: 8),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                      ),
                     ),
                   ],
                 ),
@@ -200,8 +210,23 @@ class _FinanceScreenState extends State<FinanceScreen> {
     final dailyBudget = finance.safeToSpendToday;
     final spentToday = finance.spentToday;
     final remainingToday = finance.remainingToday;
-    final daysRemaining = finance.daysUntilNextAllowance;
-    final targetDate = finance.settings.monthlyAllowanceDate;
+    final daysRemaining = finance.daysRemainingInMonth;
+
+    const indonesianMonths = [
+      'Januari',
+      'Februari',
+      'Maret',
+      'April',
+      'Mei',
+      'Juni',
+      'Juli',
+      'Agustus',
+      'September',
+      'Oktober',
+      'November',
+      'Desember'
+    ];
+    final currentMonthName = indonesianMonths[DateTime.now().month - 1];
 
     double progress = 0.0;
     if (status == 'neutral') {
@@ -257,13 +282,28 @@ class _FinanceScreenState extends State<FinanceScreen> {
                   color: isDark ? AppTheme.darkSurface : AppTheme.lightBg,
                   borderRadius: BorderRadius.circular(6),
                 ),
-                child: Text(
-                  '$daysRemaining hari menuju tgl $targetDate',
-                  style: TextStyle(
-                    fontSize: 10.5,
-                    fontWeight: FontWeight.w600,
-                    color: isDark ? AppTheme.darkTextMuted : AppTheme.lightTextSecondary,
-                  ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      Icons.calendar_month_outlined,
+                      size: 11,
+                      color: isDark
+                          ? AppTheme.darkTextMuted
+                          : AppTheme.lightTextSecondary,
+                    ),
+                    const SizedBox(width: 4),
+                    Text(
+                      '$daysRemaining hari tersisa di $currentMonthName',
+                      style: TextStyle(
+                        fontSize: 10.5,
+                        fontWeight: FontWeight.w600,
+                        color: isDark
+                            ? AppTheme.darkTextMuted
+                            : AppTheme.lightTextSecondary,
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ],
@@ -494,33 +534,44 @@ class _FinanceScreenState extends State<FinanceScreen> {
 
     return Container(
       decoration: BoxDecoration(
-        color: isDark ? AppTheme.darkSurfaceElevated : AppTheme.lightBg,
-        borderRadius: BorderRadius.circular(12),
+        color: isDark ? const Color(0xFF13161C) : const Color(0xFFEFF2F6),
+        borderRadius: BorderRadius.circular(13),
         border: Border.all(color: borderCol, width: 0.8),
       ),
-      padding: const EdgeInsets.all(3),
+      padding: const EdgeInsets.all(4),
       child: Row(
         children: List.generate(tabs.length, (i) {
           final isSelected = _activeTab == i;
           return Expanded(
             child: InkWell(
               onTap: () => setState(() => _activeTab = i),
-              borderRadius: BorderRadius.circular(9),
-              child: Container(
+              borderRadius: BorderRadius.circular(10),
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 140),
                 padding: const EdgeInsets.symmetric(vertical: 8),
                 decoration: BoxDecoration(
                   color: isSelected
                       ? (isDark
-                          ? AppTheme.darkSurface
-                          : AppTheme.lightSurface)
+                          ? const Color(0xFF222631)
+                          : Colors.white)
                       : Colors.transparent,
-                  borderRadius: BorderRadius.circular(9),
+                  borderRadius: BorderRadius.circular(10),
+                  border: isSelected
+                      ? Border.all(
+                          color: isDark
+                              ? AppTheme.darkAccent.withValues(alpha: 0.5)
+                              : AppTheme.brandCobalt.withValues(alpha: 0.35),
+                          width: 1.0,
+                        )
+                      : null,
                   boxShadow: isSelected
                       ? [
                           BoxShadow(
-                            color: Colors.black.withValues(alpha: 0.05),
-                            blurRadius: 4,
-                            offset: const Offset(0, 1),
+                            color: isDark
+                                ? Colors.black.withValues(alpha: 0.35)
+                                : Colors.black.withValues(alpha: 0.08),
+                            blurRadius: 5,
+                            offset: const Offset(0, 2),
                           ),
                         ]
                       : null,
@@ -530,28 +581,28 @@ class _FinanceScreenState extends State<FinanceScreen> {
                   children: [
                     Icon(
                       tabs[i]['icon'] as IconData,
-                      size: 13,
+                      size: 14,
                       color: isSelected
                           ? (isDark
                               ? AppTheme.darkAccent
-                              : AppTheme.lightAccent)
+                              : AppTheme.brandCobalt)
                           : (isDark
-                              ? AppTheme.darkTextMuted
+                              ? const Color(0xFF8E95A5)
                               : AppTheme.lightTextMuted),
                     ),
-                    const SizedBox(width: 4),
+                    const SizedBox(width: 5),
                     Text(
                       tabs[i]['label'] as String,
                       style: TextStyle(
-                        fontSize: 11,
+                        fontSize: 11.5,
                         fontWeight:
                             isSelected ? FontWeight.w700 : FontWeight.w500,
                         color: isSelected
                             ? (isDark
-                                ? AppTheme.darkTextPrimary
+                                ? Colors.white
                                 : AppTheme.lightTextPrimary)
                             : (isDark
-                                ? AppTheme.darkTextMuted
+                                ? const Color(0xFF8E95A5)
                                 : AppTheme.lightTextMuted),
                       ),
                     ),
@@ -1528,6 +1579,15 @@ class _FinanceScreenState extends State<FinanceScreen> {
           ),
         ),
       ),
+    );
+  }
+
+  void _openAddTransactionModal(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => const AddTransactionModal(),
     );
   }
 }

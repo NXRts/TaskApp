@@ -187,442 +187,505 @@ class _AddTransactionModalState extends State<AddTransactionModal> {
 
     final wallets = context.watch<FinanceProvider>().wallets;
 
-    return Container(
-      decoration: BoxDecoration(
-        color: bgCol,
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
-        border: Border(
-          top: BorderSide(color: borderCol, width: 1),
+    return SafeArea(
+      top: false,
+      child: Container(
+        decoration: BoxDecoration(
+          color: bgCol,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+          border: Border(
+            top: BorderSide(color: borderCol, width: 1),
+          ),
         ),
-      ),
-      padding: EdgeInsets.only(
-        bottom: MediaQuery.of(context).viewInsets.bottom + 20,
-        left: 20,
-        right: 20,
-        top: 14,
-      ),
-      child: SingleChildScrollView(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Drag Handle
-            Center(
-              child: Container(
-                width: 40,
-                height: 4,
-                margin: const EdgeInsets.only(bottom: 16),
-                decoration: BoxDecoration(
-                  color: isDark ? Colors.white24 : Colors.black12,
-                  borderRadius: BorderRadius.circular(2),
+        padding: EdgeInsets.only(
+          bottom: MediaQuery.of(context).viewInsets.bottom + 16,
+          left: 18,
+          right: 18,
+          top: 12,
+        ),
+        child: SingleChildScrollView(
+          physics: const BouncingScrollPhysics(),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Drag Handle
+              Center(
+                child: Container(
+                  width: 36,
+                  height: 4,
+                  margin: const EdgeInsets.only(bottom: 12),
+                  decoration: BoxDecoration(
+                    color: isDark ? Colors.white24 : Colors.black12,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
                 ),
               ),
-            ),
 
-            // Header & Type Switcher (Pengeluaran vs Pemasukan)
-            Row(
-              children: [
-                Expanded(
-                  child: Text(
+              // Header: Judul & Tombol Tutup
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
                     widget.initialTransaction != null
                         ? 'Edit Transaksi'
-                        : 'Catat Finansial',
+                        : (isExpense
+                            ? 'Tambah Pengeluaran'
+                            : 'Tambah Pemasukan'),
                     style: TextStyle(
-                      fontSize: 18,
+                      fontSize: 17,
                       fontWeight: FontWeight.w700,
                       color: textPrim,
                       letterSpacing: -0.3,
                     ),
                   ),
-                ),
-                Container(
-                  decoration: BoxDecoration(
-                    color: isDark ? AppTheme.darkSurfaceElevated : AppTheme.lightBg,
-                    borderRadius: BorderRadius.circular(10),
-                    border: Border.all(color: borderCol, width: 0.8),
-                  ),
-                  padding: const EdgeInsets.all(3),
-                  child: Row(
-                    children: [
-                      _buildTypeToggle(
-                        label: 'Pengeluaran',
-                        isSelected: isExpense,
-                        activeColor: AppTheme.urgentRose,
-                        onTap: () => _onTypeChanged('expense'),
-                      ),
-                      _buildTypeToggle(
-                        label: 'Pemasukan',
-                        isSelected: !isExpense,
-                        activeColor: AppTheme.successSage,
-                        onTap: () => _onTypeChanged('income'),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 18),
-
-            // Amount Input Card
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-              decoration: BoxDecoration(
-                color: isDark ? AppTheme.darkSurfaceElevated : AppTheme.lightBg,
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(
-                  color: themeAccent.withValues(alpha: 0.3),
-                  width: 1.2,
-                ),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        isExpense ? 'NOMINAL PENGELUARAN' : 'NOMINAL PEMASUKAN',
-                        style: TextStyle(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w600,
-                          letterSpacing: 0.8,
-                          color: themeAccent,
-                        ),
-                      ),
-                      if (_amount > 0)
-                        InkWell(
-                          onTap: _clearAmount,
-                          child: Text(
-                            'Reset',
-                            style: TextStyle(
-                              fontSize: 11,
-                              fontWeight: FontWeight.w500,
-                              color: textMuted,
-                            ),
-                          ),
-                        ),
-                    ],
-                  ),
-                  const SizedBox(height: 6),
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.center,
-                    children: [
-                      Text(
-                        'Rp ',
-                        style: TextStyle(
-                          fontSize: 26,
-                          fontWeight: FontWeight.w700,
-                          color: themeAccent,
-                        ),
-                      ),
-                      Expanded(
-                        child: TextField(
-                          controller: _amountController,
-                          keyboardType: TextInputType.number,
-                          autofocus: widget.initialTransaction == null,
-                          style: TextStyle(
-                            fontSize: 26,
-                            fontWeight: FontWeight.w700,
-                            color: textPrim,
-                            letterSpacing: -0.5,
-                          ),
-                          decoration: InputDecoration(
-                            border: InputBorder.none,
-                            hintText: '0',
-                            hintStyle: TextStyle(
-                              color: textMuted.withValues(alpha: 0.5),
-                              fontSize: 26,
-                            ),
-                            isDense: true,
-                            contentPadding: EdgeInsets.zero,
-                          ),
-                          onChanged: _onAmountChanged,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 10),
-
-                  // Quick Preset Chips (+5k, +10k, +20k, +50k, +100k)
-                  SingleChildScrollView(
-                    scrollDirection: Axis.horizontal,
-                    child: Row(
-                      children: [
-                        _buildPresetChip('+5k', 5000),
-                        const SizedBox(width: 6),
-                        _buildPresetChip('+10k', 10000),
-                        const SizedBox(width: 6),
-                        _buildPresetChip('+20k', 20000),
-                        const SizedBox(width: 6),
-                        _buildPresetChip('+50k', 50000),
-                        const SizedBox(width: 6),
-                        _buildPresetChip('+100k', 100000),
-                      ],
-                    ),
+                  IconButton(
+                    onPressed: () => Navigator.pop(context),
+                    icon: Icon(Icons.close, size: 20, color: textMuted),
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(),
                   ),
                 ],
               ),
-            ),
-            const SizedBox(height: 16),
+              const SizedBox(height: 12),
 
-            // Pilihan Dompet / Kantong Saldo
-            Text(
-              'SUMBER KANTONG / DOMPET',
-              style: TextStyle(
-                fontSize: 11,
-                fontWeight: FontWeight.w600,
-                letterSpacing: 0.8,
-                color: textMuted,
+              // Switcher Pilihan: [ Pengeluaran ] / [ Pemasukan ]
+              Container(
+                width: double.infinity,
+                decoration: BoxDecoration(
+                  color: isDark ? AppTheme.darkSurfaceElevated : AppTheme.lightBg,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: borderCol, width: 0.8),
+                ),
+                padding: const EdgeInsets.all(3),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: InkWell(
+                        onTap: () => _onTypeChanged('expense'),
+                        borderRadius: BorderRadius.circular(9),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(vertical: 9),
+                          decoration: BoxDecoration(
+                            color: isExpense
+                                ? AppTheme.urgentRose
+                                : Colors.transparent,
+                            borderRadius: BorderRadius.circular(9),
+                          ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(
+                                Icons.arrow_downward_rounded,
+                                size: 14,
+                                color: isExpense ? Colors.white : textMuted,
+                              ),
+                              const SizedBox(width: 6),
+                              Text(
+                                'Pengeluaran',
+                                style: TextStyle(
+                                  fontSize: 12.5,
+                                  fontWeight: isExpense
+                                      ? FontWeight.w700
+                                      : FontWeight.w500,
+                                  color: isExpense ? Colors.white : textMuted,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                    Expanded(
+                      child: InkWell(
+                        onTap: () => _onTypeChanged('income'),
+                        borderRadius: BorderRadius.circular(9),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(vertical: 9),
+                          decoration: BoxDecoration(
+                            color: !isExpense
+                                ? AppTheme.successSage
+                                : Colors.transparent,
+                            borderRadius: BorderRadius.circular(9),
+                          ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(
+                                Icons.arrow_upward_rounded,
+                                size: 14,
+                                color: !isExpense ? Colors.white : textMuted,
+                              ),
+                              const SizedBox(width: 6),
+                              Text(
+                                'Pemasukan',
+                                style: TextStyle(
+                                  fontSize: 12.5,
+                                  fontWeight: !isExpense
+                                      ? FontWeight.w700
+                                      : FontWeight.w500,
+                                  color: !isExpense ? Colors.white : textMuted,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
               ),
-            ),
-            const SizedBox(height: 8),
-            SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: Row(
-                children: wallets.map((w) {
+              const SizedBox(height: 14),
+
+              // Nominal Card
+              Container(
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: isDark ? AppTheme.darkSurfaceElevated : AppTheme.lightBg,
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(
+                    color: themeAccent.withValues(alpha: 0.35),
+                    width: 1.2,
+                  ),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          isExpense ? 'NOMINAL PENGELUARAN' : 'NOMINAL PEMASUKAN',
+                          style: TextStyle(
+                            fontSize: 10.5,
+                            fontWeight: FontWeight.w700,
+                            letterSpacing: 0.8,
+                            color: themeAccent,
+                          ),
+                        ),
+                        if (_amount > 0)
+                          InkWell(
+                            onTap: _clearAmount,
+                            child: Text(
+                              'Reset',
+                              style: TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w500,
+                                color: textMuted,
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
+                    const SizedBox(height: 6),
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        Text(
+                          'Rp ',
+                          style: TextStyle(
+                            fontSize: 24,
+                            fontWeight: FontWeight.w700,
+                            color: themeAccent,
+                          ),
+                        ),
+                        Expanded(
+                          child: TextField(
+                            controller: _amountController,
+                            keyboardType: TextInputType.number,
+                            autofocus: widget.initialTransaction == null,
+                            style: TextStyle(
+                              fontSize: 24,
+                              fontWeight: FontWeight.w700,
+                              color: textPrim,
+                              letterSpacing: -0.5,
+                            ),
+                            decoration: InputDecoration(
+                              border: InputBorder.none,
+                              hintText: '0',
+                              hintStyle: TextStyle(
+                                color: textMuted.withValues(alpha: 0.4),
+                                fontSize: 24,
+                              ),
+                              isDense: true,
+                              contentPadding: EdgeInsets.zero,
+                            ),
+                            onChanged: _onAmountChanged,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 10),
+
+                    // Quick Preset Chips (+5k, +10k, +20k, +50k, +100k)
+                    SingleChildScrollView(
+                      scrollDirection: Axis.horizontal,
+                      child: Row(
+                        children: [
+                          _buildPresetChip('+5k', 5000),
+                          const SizedBox(width: 6),
+                          _buildPresetChip('+10k', 10000),
+                          const SizedBox(width: 6),
+                          _buildPresetChip('+20k', 20000),
+                          const SizedBox(width: 6),
+                          _buildPresetChip('+50k', 50000),
+                          const SizedBox(width: 6),
+                          _buildPresetChip('+100k', 100000),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 14),
+
+              // Pilihan Dompet (3 Kolom Seimbang Tanpa Terpotong)
+              Text(
+                'SUMBER DOMPET',
+                style: TextStyle(
+                  fontSize: 10.5,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: 0.8,
+                  color: textMuted,
+                ),
+              ),
+              const SizedBox(height: 6),
+              Row(
+                children: wallets.take(3).map((w) {
                   final isSelected = _walletId == w.id;
                   IconData icon = Icons.payments_outlined;
                   if (w.iconKey == 'bank') icon = Icons.account_balance_outlined;
                   if (w.iconKey == 'ewallet') icon = Icons.smartphone_outlined;
 
-                  return Padding(
-                    padding: const EdgeInsets.only(right: 8),
-                    child: InkWell(
-                      onTap: () => setState(() => _walletId = w.id),
-                      borderRadius: BorderRadius.circular(10),
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 12, vertical: 8),
-                        decoration: BoxDecoration(
-                          color: isSelected
-                              ? (isDark
-                                  ? AppTheme.darkAccent.withValues(alpha: 0.2)
-                                  : AppTheme.lightAccent.withValues(alpha: 0.08))
-                              : (isDark
-                                  ? AppTheme.darkSurfaceElevated
-                                  : AppTheme.lightBg),
-                          borderRadius: BorderRadius.circular(10),
-                          border: Border.all(
+                  final isLast = w.id == wallets.take(3).last.id;
+
+                  return Expanded(
+                    child: Padding(
+                      padding: EdgeInsets.only(right: isLast ? 0 : 8),
+                      child: InkWell(
+                        onTap: () => setState(() => _walletId = w.id),
+                        borderRadius: BorderRadius.circular(10),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 8, vertical: 8),
+                          decoration: BoxDecoration(
                             color: isSelected
                                 ? (isDark
-                                    ? AppTheme.darkAccent
-                                    : AppTheme.lightAccent)
-                                : borderCol,
-                            width: isSelected ? 1.4 : 0.8,
-                          ),
-                        ),
-                        child: Row(
-                          children: [
-                            Icon(
-                              icon,
-                              size: 15,
+                                    ? AppTheme.darkAccent.withValues(alpha: 0.2)
+                                    : AppTheme.brandCobalt.withValues(alpha: 0.1))
+                                : (isDark
+                                    ? AppTheme.darkSurfaceElevated
+                                    : AppTheme.lightBg),
+                            borderRadius: BorderRadius.circular(10),
+                            border: Border.all(
                               color: isSelected
                                   ? (isDark
                                       ? AppTheme.darkAccent
-                                      : AppTheme.lightAccent)
-                                  : textMuted,
+                                      : AppTheme.brandCobalt)
+                                  : borderCol,
+                              width: isSelected ? 1.4 : 0.8,
                             ),
-                            const SizedBox(width: 6),
-                            Text(
-                              w.name,
-                              style: TextStyle(
-                                fontSize: 12,
-                                fontWeight: isSelected
-                                    ? FontWeight.w600
-                                    : FontWeight.w500,
-                                color: isSelected ? textPrim : textMuted,
+                          ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(
+                                icon,
+                                size: 14,
+                                color: isSelected
+                                    ? (isDark
+                                        ? AppTheme.darkAccent
+                                        : AppTheme.brandCobalt)
+                                    : textMuted,
                               ),
-                            ),
-                          ],
+                              const SizedBox(width: 5),
+                              Text(
+                                w.id == 'cash'
+                                    ? 'Tunai'
+                                    : (w.id == 'bank' ? 'Bank' : 'E-Wallet'),
+                                style: TextStyle(
+                                  fontSize: 11.5,
+                                  fontWeight: isSelected
+                                      ? FontWeight.w700
+                                      : FontWeight.w500,
+                                  color: isSelected ? textPrim : textMuted,
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
                       ),
                     ),
                   );
                 }).toList(),
               ),
-            ),
-            const SizedBox(height: 16),
+              const SizedBox(height: 14),
 
-            // Pilihan Kategori Mahasiswa
-            Text(
-              'KATEGORI ${isExpense ? 'PENGELUARAN' : 'PEMASUKAN'}',
-              style: TextStyle(
-                fontSize: 11,
-                fontWeight: FontWeight.w600,
-                letterSpacing: 0.8,
-                color: textMuted,
+              // Pilihan Kategori: Grid 3 Kolom Rapi (Bukan Deretan Vertikal Raksasa!)
+              Text(
+                'KATEGORI ${isExpense ? 'PENGELUARAN' : 'PEMASUKAN'}',
+                style: TextStyle(
+                  fontSize: 10.5,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: 0.8,
+                  color: textMuted,
+                ),
               ),
-            ),
-            const SizedBox(height: 8),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: availableCategories.map((c) {
-                final isSelected = _categoryKey == c.key;
-                return InkWell(
-                  onTap: () => setState(() => _categoryKey = c.key),
-                  borderRadius: BorderRadius.circular(10),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 11, vertical: 7),
-                    decoration: BoxDecoration(
-                      color: isSelected
-                          ? Color(c.colorValue).withValues(alpha: 0.15)
-                          : (isDark
-                              ? AppTheme.darkSurfaceElevated
-                              : AppTheme.lightBg),
-                      borderRadius: BorderRadius.circular(10),
-                      border: Border.all(
+              const SizedBox(height: 8),
+
+              // Grid Kategori 3 Kolom Kompak
+              GridView.builder(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                itemCount: availableCategories.length,
+                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: 3,
+                  mainAxisSpacing: 8,
+                  crossAxisSpacing: 8,
+                  childAspectRatio: 2.3, // Kompak & Proporsional
+                ),
+                itemBuilder: (context, index) {
+                  final c = availableCategories[index];
+                  final isSelected = _categoryKey == c.key;
+                  final catColor = Color(c.colorValue);
+
+                  return InkWell(
+                    onTap: () => setState(() => _categoryKey = c.key),
+                    borderRadius: BorderRadius.circular(10),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 6),
+                      decoration: BoxDecoration(
                         color: isSelected
-                            ? Color(c.colorValue)
-                            : borderCol,
-                        width: isSelected ? 1.4 : 0.8,
+                            ? catColor.withValues(alpha: 0.16)
+                            : (isDark
+                                ? AppTheme.darkSurfaceElevated
+                                : AppTheme.lightBg),
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(
+                          color: isSelected
+                              ? catColor
+                              : borderCol,
+                          width: isSelected ? 1.4 : 0.8,
+                        ),
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(c.icon, size: 15, color: catColor),
+                          const SizedBox(width: 6),
+                          Flexible(
+                            child: Text(
+                              c.shortName,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                fontSize: 11,
+                                fontWeight: isSelected
+                                    ? FontWeight.w700
+                                    : FontWeight.w500,
+                                color: isSelected ? textPrim : textMuted,
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
                     ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(
-                          c.icon,
-                          size: 14,
-                          color: Color(c.colorValue),
+                  );
+                },
+              ),
+              const SizedBox(height: 14),
+
+              // Catatan / Keterangan & Tanggal
+              Row(
+                children: [
+                  Expanded(
+                    child: TextField(
+                      controller: _titleController,
+                      style: TextStyle(fontSize: 13, color: textPrim),
+                      decoration: InputDecoration(
+                        hintText: 'Keterangan (misal: Nasi Padang)',
+                        hintStyle: TextStyle(fontSize: 12, color: textMuted),
+                        isDense: true,
+                        filled: true,
+                        fillColor: isDark
+                            ? AppTheme.darkSurfaceElevated
+                            : AppTheme.lightBg,
+                        contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 12, vertical: 11),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(10),
+                          borderSide: BorderSide(color: borderCol, width: 0.8),
                         ),
-                        const SizedBox(width: 6),
-                        Text(
-                          c.name,
-                          style: TextStyle(
-                            fontSize: 12,
-                            fontWeight: isSelected
-                                ? FontWeight.w600
-                                : FontWeight.w500,
-                            color: isSelected ? textPrim : textMuted,
-                          ),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(10),
+                          borderSide: BorderSide(color: borderCol, width: 0.8),
                         ),
-                      ],
+                      ),
                     ),
                   ),
-                );
-              }).toList(),
-            ),
-            const SizedBox(height: 16),
-
-            // Catatan / Deskripsi Transaksi & Tanggal
-            Row(
-              children: [
-                Expanded(
-                  child: TextField(
-                    controller: _titleController,
-                    style: TextStyle(fontSize: 13, color: textPrim),
-                    decoration: InputDecoration(
-                      hintText: 'Keterangan (misal: Nasi Padang + Es Teh)',
-                      hintStyle: TextStyle(fontSize: 12, color: textMuted),
-                      isDense: true,
-                      filled: true,
-                      fillColor: isDark
-                          ? AppTheme.darkSurfaceElevated
-                          : AppTheme.lightBg,
-                      contentPadding: const EdgeInsets.symmetric(
+                  const SizedBox(width: 8),
+                  InkWell(
+                    onTap: _pickDate,
+                    borderRadius: BorderRadius.circular(10),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
                           horizontal: 12, vertical: 11),
-                      border: OutlineInputBorder(
+                      decoration: BoxDecoration(
+                        color: isDark
+                            ? AppTheme.darkSurfaceElevated
+                            : AppTheme.lightBg,
                         borderRadius: BorderRadius.circular(10),
-                        borderSide: BorderSide(color: borderCol, width: 0.8),
+                        border: Border.all(color: borderCol, width: 0.8),
                       ),
-                      enabledBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(10),
-                        borderSide: BorderSide(color: borderCol, width: 0.8),
-                      ),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                InkWell(
-                  onTap: _pickDate,
-                  borderRadius: BorderRadius.circular(10),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 12, vertical: 11),
-                    decoration: BoxDecoration(
-                      color: isDark
-                          ? AppTheme.darkSurfaceElevated
-                          : AppTheme.lightBg,
-                      borderRadius: BorderRadius.circular(10),
-                      border: Border.all(color: borderCol, width: 0.8),
-                    ),
-                    child: Row(
-                      children: [
-                        Icon(Icons.calendar_today_outlined,
-                            size: 14, color: textMuted),
-                        const SizedBox(width: 6),
-                        Text(
-                          DateFormatter.formatShortDate(_date),
-                          style: TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w500,
-                            color: textPrim,
+                      child: Row(
+                        children: [
+                          Icon(Icons.calendar_today_outlined,
+                              size: 14, color: textMuted),
+                          const SizedBox(width: 6),
+                          Text(
+                            DateFormatter.formatShortDate(_date),
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w500,
+                              color: textPrim,
+                            ),
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
                   ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 20),
+                ],
+              ),
+              const SizedBox(height: 16),
 
-            // Tombol Simpan
-            SizedBox(
-              width: double.infinity,
-              height: 48,
-              child: ElevatedButton(
-                onPressed: _save,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: themeAccent,
-                  foregroundColor: Colors.white,
-                  elevation: 0,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
+              // Tombol Simpan
+              SizedBox(
+                width: double.infinity,
+                height: 48,
+                child: ElevatedButton(
+                  onPressed: _save,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: themeAccent,
+                    foregroundColor: Colors.white,
+                    elevation: 0,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
                   ),
-                ),
-                child: Text(
-                  widget.initialTransaction != null
-                      ? 'Simpan Perubahan'
-                      : (isExpense
-                          ? 'Simpan Pengeluaran'
-                          : 'Simpan Pemasukan'),
-                  style: const TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
+                  child: Text(
+                    widget.initialTransaction != null
+                        ? 'Simpan Perubahan'
+                        : (isExpense
+                            ? 'Simpan Pengeluaran'
+                            : 'Simpan Pemasukan'),
+                    style: const TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w700,
+                    ),
                   ),
                 ),
               ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildTypeToggle({
-    required String label,
-    required bool isSelected,
-    required Color activeColor,
-    required VoidCallback onTap,
-  }) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(8),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-        decoration: BoxDecoration(
-          color: isSelected ? activeColor : Colors.transparent,
-          borderRadius: BorderRadius.circular(8),
-        ),
-        child: Text(
-          label,
-          style: TextStyle(
-            fontSize: 11.5,
-            fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
-            color: isSelected ? Colors.white : Colors.grey,
+            ],
           ),
         ),
       ),
