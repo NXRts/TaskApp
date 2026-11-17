@@ -28,7 +28,10 @@ class FinanceHomeCard extends StatelessWidget {
     Color statusColor;
     String statusLabel;
 
-    if (status == 'safe') {
+    if (status == 'neutral') {
+      statusColor = isDark ? AppTheme.darkAccent : AppTheme.brandCobalt;
+      statusLabel = 'Siap';
+    } else if (status == 'safe') {
       statusColor = AppTheme.successSage;
       statusLabel = 'Aman';
     } else if (status == 'warning') {
