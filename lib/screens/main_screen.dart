@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 import 'home_screen.dart';
 import 'subjects_screen.dart';
 import 'calendar_screen.dart';
+import 'finance_screen.dart';
 import 'pomodoro_screen.dart';
 import '../widgets/add_task_modal.dart';
+import '../widgets/add_transaction_modal.dart';
 import '../utils/app_theme.dart';
 
 /// Modern Editorial Bottom Navigation Shell
@@ -21,6 +23,7 @@ class _MainScreenState extends State<MainScreen> {
     HomeScreen(),
     SubjectsScreen(),
     CalendarScreen(),
+    FinanceScreen(),
     PomodoroScreen(),
   ];
 
@@ -74,6 +77,13 @@ class _MainScreenState extends State<MainScreen> {
                 ),
                 _buildNavItem(
                   index: 3,
+                  icon: Icons.account_balance_wallet_outlined,
+                  label: 'Keuangan',
+                  activeCol: activeCol,
+                  inactiveCol: inactiveCol,
+                ),
+                _buildNavItem(
+                  index: 4,
                   icon: Icons.hourglass_empty_outlined,
                   label: 'Fokus',
                   activeCol: activeCol,
@@ -94,12 +104,21 @@ class _MainScreenState extends State<MainScreen> {
         foregroundColor: Colors.white,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
         onPressed: () {
-          showModalBottomSheet(
-            context: context,
-            isScrollControlled: true,
-            backgroundColor: Colors.transparent,
-            builder: (_) => const AddTaskModal(),
-          );
+          if (_currentIndex == 3) {
+            showModalBottomSheet(
+              context: context,
+              isScrollControlled: true,
+              backgroundColor: Colors.transparent,
+              builder: (_) => const AddTransactionModal(),
+            );
+          } else {
+            showModalBottomSheet(
+              context: context,
+              isScrollControlled: true,
+              backgroundColor: Colors.transparent,
+              builder: (_) => const AddTaskModal(),
+            );
+          }
         },
         child: const Icon(Icons.add, size: 24),
       ),

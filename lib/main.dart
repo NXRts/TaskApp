@@ -8,6 +8,7 @@ import 'services/task_reminder_service.dart';
 import 'providers/task_provider.dart';
 import 'providers/subject_provider.dart';
 import 'providers/settings_provider.dart';
+import 'providers/finance_provider.dart';
 import 'screens/main_screen.dart';
 import 'utils/app_theme.dart';
 
@@ -48,6 +49,9 @@ void main() async {
         ),
         ChangeNotifierProvider<TaskProvider>(
           create: (_) => TaskProvider(storageService),
+        ),
+        ChangeNotifierProvider<FinanceProvider>(
+          create: (_) => FinanceProvider(storageService),
         ),
       ],
       child: const TaskApp(),

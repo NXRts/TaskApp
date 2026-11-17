@@ -5,6 +5,7 @@ import '../models/task.dart';
 import '../providers/task_provider.dart';
 import '../providers/settings_provider.dart';
 import '../widgets/summary_card.dart';
+import '../widgets/finance_home_card.dart';
 import '../widgets/task_card.dart';
 import '../widgets/add_task_modal.dart';
 import 'profile_settings_screen.dart';
@@ -142,6 +143,11 @@ class _HomeScreenState extends State<HomeScreen> {
 
                     // Daily Overview
                     const SummaryCard(),
+
+                    const SizedBox(height: 10),
+
+                    // FinTrack Daily Safe-to-Spend
+                    const FinanceHomeCard(),
 
                     const SizedBox(height: 16),
 
