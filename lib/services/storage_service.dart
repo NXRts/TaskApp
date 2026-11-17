@@ -4,6 +4,11 @@ import 'package:hive_flutter/hive_flutter.dart';
 import '../models/task.dart';
 import '../models/subject.dart';
 import '../models/user_profile.dart';
+import '../models/finance_wallet.dart';
+import '../models/finance_transaction.dart';
+import '../models/finance_envelope.dart';
+import '../models/finance_loan.dart';
+import '../models/finance_settings.dart';
 
 class StorageService {
   static final StorageService _instance = StorageService._internal();
@@ -14,11 +19,17 @@ class StorageService {
   static const String tasksBoxName = 'tasks_box_v1';
   static const String subjectsBoxName = 'subjects_box_v1';
   static const String settingsBoxName = 'settings_box_v1';
+  static const String financeBoxName = 'finance_box_v1';
+  static const String financeTransactionsBoxName = 'finance_transactions_box_v1';
+  static const String financeLoansBoxName = 'finance_loans_box_v1';
   static const String keyHasSeeded = 'has_seeded_v1';
 
   late Box _tasksBox;
   late Box _subjectsBox;
   late Box _settingsBox;
+  late Box _financeBox;
+  late Box _financeTransactionsBox;
+  late Box _financeLoansBox;
 
   Future<void> init({String? customPath}) async {
     if (customPath != null) {
@@ -29,6 +40,9 @@ class StorageService {
     _tasksBox = await Hive.openBox(tasksBoxName);
     _subjectsBox = await Hive.openBox(subjectsBoxName);
     _settingsBox = await Hive.openBox(settingsBoxName);
+    _financeBox = await Hive.openBox(financeBoxName);
+    _financeTransactionsBox = await Hive.openBox(financeTransactionsBoxName);
+    _financeLoansBox = await Hive.openBox(financeLoansBoxName);
 
     // Hapus data dummy lama jika masih tersimpan di local storage
     const dummyTaskIds = ['task-1', 'task-2', 'task-3', 'task-4'];
@@ -43,6 +57,23 @@ class StorageService {
       if (_subjectsBox.containsKey(id)) {
         await _subjectsBox.delete(id);
       }
+    }
+
+    // Inisialisasi dompet dan amplop bawaan FinTrack jika belum ada
+    if (!_financeBox.containsKey('wallets')) {
+      final defaultWallets = FinanceWallet.defaultWallets();
+      await _financeBox.put(
+        'wallets',
+        defaultWallets.map((w) => w.toMap()).toList(),
+      );
+    }
+
+    if (!_financeBox.containsKey('envelopes')) {
+      final defaultEnvelopes = FinanceEnvelope.defaultEnvelopes();
+      await _financeBox.put(
+        'envelopes',
+        defaultEnvelopes.map((e) => e.toMap()).toList(),
+      );
     }
 
     await _settingsBox.put(keyHasSeeded, true);
@@ -189,6 +220,133 @@ class StorageService {
     await _settingsBox.put('reminder_h30_minutes_enabled', enabled);
   }
 
+  // --- FINTRACK: WALLETS ---
+  List<FinanceWallet> getFinanceWallets() {
+    try {
+      final val = _financeBox.get('wallets');
+      if (val is List) {
+        final list = <FinanceWallet>[];
+        for (final item in val) {
+          if (item is Map) {
+            list.add(FinanceWallet.fromMap(item));
+          }
+        }
+        if (list.isNotEmpty) return list;
+      }
+      return FinanceWallet.defaultWallets();
+    } catch (e) {
+      debugPrint('Error getting finance wallets: $e');
+      return FinanceWallet.defaultWallets();
+    }
+  }
+
+  Future<void> saveFinanceWallets(List<FinanceWallet> wallets) async {
+    await _financeBox.put('wallets', wallets.map((w) => w.toMap()).toList());
+  }
+
+  // --- FINTRACK: TRANSACTIONS ---
+  List<FinanceTransaction> getFinanceTransactions() {
+    try {
+      final list = <FinanceTransaction>[];
+      for (var key in _financeTransactionsBox.keys) {
+        final val = _financeTransactionsBox.get(key);
+        if (val is Map) {
+          list.add(FinanceTransaction.fromMap(val));
+        }
+      }
+      // Urutkan transaksi terbaru di atas
+      list.sort((a, b) => b.date.compareTo(a.date));
+      return list;
+    } catch (e) {
+      debugPrint('Error getting finance transactions: $e');
+      return [];
+    }
+  }
+
+  Future<void> saveFinanceTransaction(FinanceTransaction tx) async {
+    await _financeTransactionsBox.put(tx.id, tx.toMap());
+  }
+
+  Future<void> deleteFinanceTransaction(String id) async {
+    try {
+      await _financeTransactionsBox.delete(id);
+    } catch (e) {
+      debugPrint('Error deleting finance transaction: $e');
+    }
+  }
+
+  // --- FINTRACK: ENVELOPES (AMPLOP ANGGARAN) ---
+  List<FinanceEnvelope> getFinanceEnvelopes() {
+    try {
+      final val = _financeBox.get('envelopes');
+      if (val is List) {
+        final list = <FinanceEnvelope>[];
+        for (final item in val) {
+          if (item is Map) {
+            list.add(FinanceEnvelope.fromMap(item));
+          }
+        }
+        if (list.isNotEmpty) return list;
+      }
+      return FinanceEnvelope.defaultEnvelopes();
+    } catch (e) {
+      debugPrint('Error getting finance envelopes: $e');
+      return FinanceEnvelope.defaultEnvelopes();
+    }
+  }
+
+  Future<void> saveFinanceEnvelopes(List<FinanceEnvelope> envelopes) async {
+    await _financeBox.put('envelopes', envelopes.map((e) => e.toMap()).toList());
+  }
+
+  // --- FINTRACK: LOANS (SPLIT BILL & IOU TRACKER) ---
+  List<FinanceLoan> getFinanceLoans() {
+    try {
+      final list = <FinanceLoan>[];
+      for (var key in _financeLoansBox.keys) {
+        final val = _financeLoansBox.get(key);
+        if (val is Map) {
+          list.add(FinanceLoan.fromMap(val));
+        }
+      }
+      list.sort((a, b) => b.date.compareTo(a.date));
+      return list;
+    } catch (e) {
+      debugPrint('Error getting finance loans: $e');
+      return [];
+    }
+  }
+
+  Future<void> saveFinanceLoan(FinanceLoan loan) async {
+    await _financeLoansBox.put(loan.id, loan.toMap());
+  }
+
+  Future<void> deleteFinanceLoan(String id) async {
+    try {
+      await _financeLoansBox.delete(id);
+    } catch (e) {
+      debugPrint('Error deleting finance loan: $e');
+    }
+  }
+
+  // --- FINTRACK: SETTINGS ---
+  FinanceSettings getFinanceSettings() {
+    try {
+      final val = _financeBox.get('settings');
+      if (val is Map) {
+        return FinanceSettings.fromMap(val);
+      }
+      return FinanceSettings();
+    } catch (e) {
+      debugPrint('Error getting finance settings: $e');
+      return FinanceSettings();
+    }
+  }
+
+  Future<void> saveFinanceSettings(FinanceSettings settings) async {
+    await _financeBox.put('settings', settings.toMap());
+  }
+
   static dynamic _deepConvertToJsonCompatible(dynamic value) {
     if (value is Map) {
       return value.map<String, dynamic>(
@@ -221,13 +379,28 @@ class StorageService {
     rawSettings['completed_pomodoro_sessions'] = pomodoroSessions;
     rawSettings[keyHasSeeded] = true;
 
+    // FinTrack export
+    final wallets = getFinanceWallets();
+    final walletsList = wallets.map((w) => w.toMap()).toList();
+
+    final transactions = getFinanceTransactions();
+    final transactionsList = transactions.map((tx) => tx.toMap()).toList();
+
+    final envelopes = getFinanceEnvelopes();
+    final envelopesList = envelopes.map((e) => e.toMap()).toList();
+
+    final loans = getFinanceLoans();
+    final loansList = loans.map((l) => l.toMap()).toList();
+
+    final financeSettings = getFinanceSettings().toMap();
+
     final totalSubtasks = tasks.fold<int>(0, (sum, t) => sum + t.subtasks.length);
     final completedTasks = tasks.where((t) => t.isCompleted).length;
     final totalSks = subjects.fold<int>(0, (sum, s) => sum + s.creditHours);
 
     final data = <String, dynamic>{
       'app': 'TaskApp',
-      'version': 2,
+      'version': 3,
       'exportedAt': DateTime.now().toIso8601String(),
       'summary': {
         'subjects_count': subjectsList.length,
@@ -238,6 +411,10 @@ class StorageService {
         'subtasks_count': totalSubtasks,
         'completed_pomodoro_sessions': pomodoroSessions,
         'total_focus_minutes': pomodoroSessions * 25,
+        'finance_transactions_count': transactionsList.length,
+        'finance_wallets_count': walletsList.length,
+        'finance_envelopes_count': envelopesList.length,
+        'finance_active_loans_count': loans.where((l) => !l.isSettled).length,
       },
       'user_profile': profileMap,
       'settings': {
@@ -249,6 +426,11 @@ class StorageService {
       },
       'subjects': subjectsList,
       'tasks': tasksList,
+      'finance_wallets': walletsList,
+      'finance_transactions': transactionsList,
+      'finance_envelopes': envelopesList,
+      'finance_loans': loansList,
+      'finance_settings': financeSettings,
     };
 
     if (pretty) {
@@ -267,6 +449,7 @@ class StorageService {
           decoded.containsKey('user_profile') ||
           decoded.containsKey('settings') ||
           decoded.containsKey('is_dark_mode') ||
+          decoded.containsKey('finance_transactions') ||
           decoded.containsKey('completed_pomodoro_sessions');
       if (!hasKnownSection) return false;
 
@@ -335,6 +518,67 @@ class StorageService {
         );
       }
 
+      // 5. Pulihkan data FinTrack Mahasiswa
+      if (decoded.containsKey('finance_wallets') && decoded['finance_wallets'] is List) {
+        final wallets = <FinanceWallet>[];
+        for (var w in decoded['finance_wallets']) {
+          if (w is Map) {
+            wallets.add(FinanceWallet.fromMap(w));
+          }
+        }
+        if (wallets.isNotEmpty) {
+          await saveFinanceWallets(wallets);
+        }
+      }
+
+      if (decoded.containsKey('finance_transactions') &&
+          decoded['finance_transactions'] is List) {
+        await _financeTransactionsBox.clear();
+        for (var tx in decoded['finance_transactions']) {
+          if (tx is Map && tx['id'] != null) {
+            final normalizedTx = FinanceTransaction.fromMap(tx).toMap();
+            await _financeTransactionsBox.put(
+              normalizedTx['id'] as String,
+              normalizedTx,
+            );
+          }
+        }
+      }
+
+      if (decoded.containsKey('finance_envelopes') &&
+          decoded['finance_envelopes'] is List) {
+        final envelopes = <FinanceEnvelope>[];
+        for (var e in decoded['finance_envelopes']) {
+          if (e is Map) {
+            envelopes.add(FinanceEnvelope.fromMap(e));
+          }
+        }
+        if (envelopes.isNotEmpty) {
+          await saveFinanceEnvelopes(envelopes);
+        }
+      }
+
+      if (decoded.containsKey('finance_loans') &&
+          decoded['finance_loans'] is List) {
+        await _financeLoansBox.clear();
+        for (var l in decoded['finance_loans']) {
+          if (l is Map && l['id'] != null) {
+            final normalizedLoan = FinanceLoan.fromMap(l).toMap();
+            await _financeLoansBox.put(
+              normalizedLoan['id'] as String,
+              normalizedLoan,
+            );
+          }
+        }
+      }
+
+      if (decoded.containsKey('finance_settings') &&
+          decoded['finance_settings'] is Map) {
+        await saveFinanceSettings(
+          FinanceSettings.fromMap(decoded['finance_settings'] as Map),
+        );
+      }
+
       await _settingsBox.put(keyHasSeeded, true);
       return true;
     } catch (e) {
@@ -343,4 +587,3 @@ class StorageService {
     }
   }
 }
-
