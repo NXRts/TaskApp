@@ -19,7 +19,7 @@ class FinanceScreen extends StatefulWidget {
 }
 
 class _FinanceScreenState extends State<FinanceScreen> {
-  int _activeTab = 0; // 0: Transaksi, 1: Amplop, 2: Piutang (IOU), 3: Analisis
+  int _activeTab = 0; // 0: Transaksi, 1: Amplop, 2: Piutang, 3: Analisis
   String _txFilter = 'all'; // 'all', 'expense', 'income'
 
   final _currencyFormat = NumberFormat.currency(
@@ -49,7 +49,7 @@ class _FinanceScreenState extends State<FinanceScreen> {
             SliverToBoxAdapter(
               child: Padding(
                 padding:
-                    const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    const EdgeInsets.fromLTRB(16, 12, 12, 10),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
@@ -108,44 +108,17 @@ class _FinanceScreenState extends State<FinanceScreen> {
                         ),
                       ],
                     ),
-                    Row(
-                      children: [
-                        // Tombol Konfigurasi Tanggal Kiriman Ortu
-                        IconButton(
-                          icon: Icon(Icons.tune_outlined,
-                              size: 20, color: textMuted),
-                          tooltip: 'Konfigurasi Tanggal Kiriman',
-                          onPressed: () {
-                            showDialog(
-                              context: context,
-                              builder: (_) => const FinanceSettingsDialog(),
-                            );
-                          },
-                        ),
-                        const SizedBox(width: 4),
-                        // Tombol Tambah Transaksi Cepat
-                        ElevatedButton.icon(
-                          onPressed: () => _openAddTransactionModal(context),
-                          icon: const Icon(Icons.add, size: 16),
-                          label: const Text(
-                            'Catat',
-                            style: TextStyle(
-                                fontSize: 12.5, fontWeight: FontWeight.w600),
-                          ),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: isDark
-                                ? AppTheme.darkAccent
-                                : AppTheme.lightAccent,
-                            foregroundColor: Colors.white,
-                            elevation: 0,
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 12, vertical: 8),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(10),
-                            ),
-                          ),
-                        ),
-                      ],
+                    // Tombol Konfigurasi Tanggal Kiriman Ortu
+                    IconButton(
+                      icon: Icon(Icons.tune_outlined,
+                          size: 20, color: textMuted),
+                      tooltip: 'Atur Tanggal Kiriman Bulanan',
+                      onPressed: () {
+                        showDialog(
+                          context: context,
+                          builder: (_) => const FinanceSettingsDialog(),
+                        );
+                      },
                     ),
                   ],
                 ),
@@ -162,7 +135,7 @@ class _FinanceScreenState extends State<FinanceScreen> {
 
             const SliverToBoxAdapter(child: SizedBox(height: 14)),
 
-            // Multi-Dompet Horizontal Strip
+            // Multi-Dompet Strip (3 Kolom Seimbang Rapi)
             SliverToBoxAdapter(
               child: _buildWalletStrip(context, finance, isDark),
             ),
@@ -190,7 +163,8 @@ class _FinanceScreenState extends State<FinanceScreen> {
               _buildAnalyticsTab(context, finance, isDark),
             ],
 
-            const SliverToBoxAdapter(child: SizedBox(height: 80)),
+            // Ruang aman bawah agar tidak bertabrakan dengan FAB & Navigasi
+            const SliverToBoxAdapter(child: SizedBox(height: 100)),
           ],
         ),
       ),
@@ -205,7 +179,11 @@ class _FinanceScreenState extends State<FinanceScreen> {
     String statusTitle;
     IconData statusIcon;
 
-    if (status == 'safe') {
+    if (status == 'neutral') {
+      statusColor = isDark ? AppTheme.darkAccent : AppTheme.brandCobalt;
+      statusTitle = 'Saldo Belum Diatur';
+      statusIcon = Icons.account_balance_wallet_outlined;
+    } else if (status == 'safe') {
       statusColor = AppTheme.successSage;
       statusTitle = 'Belanja Harian Aman';
       statusIcon = Icons.check_circle_outline;
@@ -225,8 +203,15 @@ class _FinanceScreenState extends State<FinanceScreen> {
     final daysRemaining = finance.daysUntilNextAllowance;
     final targetDate = finance.settings.monthlyAllowanceDate;
 
-    double progress = dailyBudget > 0 ? (spentToday / dailyBudget) : 1.0;
-    if (progress > 1.0) progress = 1.0;
+    double progress = 0.0;
+    if (status == 'neutral') {
+      progress = 0.0;
+    } else if (dailyBudget > 0) {
+      progress = spentToday / dailyBudget;
+      if (progress > 1.0) progress = 1.0;
+    } else {
+      progress = 1.0;
+    }
 
     return Container(
       decoration: BoxDecoration(
@@ -326,40 +311,55 @@ class _FinanceScreenState extends State<FinanceScreen> {
               value: progress,
               minHeight: 6,
               backgroundColor: isDark ? Colors.white10 : Colors.black12,
-              valueColor: AlwaysStoppedAnimation<Color>(statusColor),
+              valueColor: AlwaysStoppedAnimation<Color>(
+                status == 'neutral'
+                    ? (isDark ? Colors.white24 : Colors.black26)
+                    : statusColor,
+              ),
             ),
           ),
           const SizedBox(height: 8),
 
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                'Terpakai: ${_currencyFormat.format(spentToday)}',
-                style: TextStyle(
-                  fontSize: 11.5,
-                  fontWeight: FontWeight.w500,
-                  color: isDark ? AppTheme.darkTextMuted : AppTheme.lightTextSecondary,
-                ),
+          if (status == 'neutral') ...[
+            Text(
+              'Ketuk dompet di bawah untuk menyetel saldo awal Anda',
+              style: TextStyle(
+                fontSize: 11.5,
+                fontWeight: FontWeight.w500,
+                color: isDark ? AppTheme.darkTextMuted : AppTheme.lightTextSecondary,
               ),
-              Text(
-                remainingToday >= 0
-                    ? 'Sisa: ${_currencyFormat.format(remainingToday)}'
-                    : 'Over: +${_currencyFormat.format(-remainingToday)}',
-                style: TextStyle(
-                  fontSize: 11.5,
-                  fontWeight: FontWeight.w600,
-                  color: remainingToday >= 0 ? statusColor : AppTheme.urgentRose,
+            ),
+          ] else ...[
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  'Terpakai: ${_currencyFormat.format(spentToday)}',
+                  style: TextStyle(
+                    fontSize: 11.5,
+                    fontWeight: FontWeight.w500,
+                    color: isDark ? AppTheme.darkTextMuted : AppTheme.lightTextSecondary,
+                  ),
                 ),
-              ),
-            ],
-          ),
+                Text(
+                  remainingToday >= 0
+                      ? 'Sisa: ${_currencyFormat.format(remainingToday)}'
+                      : 'Over: +${_currencyFormat.format(-remainingToday)}',
+                  style: TextStyle(
+                    fontSize: 11.5,
+                    fontWeight: FontWeight.w600,
+                    color: remainingToday >= 0 ? statusColor : AppTheme.urgentRose,
+                  ),
+                ),
+              ],
+            ),
+          ],
         ],
       ),
     );
   }
 
-  // --- MULTI-DOMPET HORIZONTAL STRIP ---
+  // --- MULTI-DOMPET STRIP (3 KOLOM SEIMBANG TANPA POTONGAN) ---
   Widget _buildWalletStrip(
       BuildContext context, FinanceProvider finance, bool isDark) {
     final wallets = finance.wallets;
@@ -399,94 +399,97 @@ class _FinanceScreenState extends State<FinanceScreen> {
           ),
         ),
         const SizedBox(height: 8),
-        SizedBox(
-          height: 72,
-          child: ListView.builder(
-            scrollDirection: Axis.horizontal,
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            itemCount: wallets.length,
-            itemBuilder: (context, index) {
-              final w = wallets[index];
+
+        // 3 Kolom Dompet Seimbang Proporsional
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          child: Row(
+            children: wallets.take(3).map((w) {
               final balance = finance.getWalletBalance(w.id);
 
               IconData icon = Icons.payments_outlined;
               if (w.iconKey == 'bank') icon = Icons.account_balance_outlined;
               if (w.iconKey == 'ewallet') icon = Icons.smartphone_outlined;
 
-              return Padding(
-                padding: const EdgeInsets.only(right: 10),
-                child: InkWell(
-                  onTap: () {
-                    showDialog(
-                      context: context,
-                      builder: (_) => AdjustWalletDialog(wallet: w),
-                    );
-                  },
-                  borderRadius: BorderRadius.circular(14),
-                  child: Container(
-                    width: 155,
-                    padding: const EdgeInsets.all(10),
-                    decoration: BoxDecoration(
-                      color: isDark
-                          ? AppTheme.darkSurfaceElevated
-                          : AppTheme.lightSurface,
-                      borderRadius: BorderRadius.circular(14),
-                      border: Border.all(color: borderCol, width: 0.8),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Row(
-                          children: [
-                            Icon(icon, size: 14, color: Color(w.colorValue)),
-                            const SizedBox(width: 6),
-                            Expanded(
-                              child: Text(
-                                w.name,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: TextStyle(
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.w500,
-                                  color: textMuted,
+              final isLast = w.id == wallets.take(3).last.id;
+
+              return Expanded(
+                child: Padding(
+                  padding: EdgeInsets.only(right: isLast ? 0 : 8),
+                  child: InkWell(
+                    onTap: () {
+                      showDialog(
+                        context: context,
+                        builder: (_) => AdjustWalletDialog(wallet: w),
+                      );
+                    },
+                    borderRadius: BorderRadius.circular(14),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 10, vertical: 10),
+                      decoration: BoxDecoration(
+                        color: isDark
+                            ? AppTheme.darkSurfaceElevated
+                            : AppTheme.lightSurface,
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(color: borderCol, width: 0.8),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Icon(icon, size: 14, color: Color(w.colorValue)),
+                              const SizedBox(width: 5),
+                              Expanded(
+                                child: Text(
+                                  w.id == 'cash'
+                                      ? 'Tunai'
+                                      : (w.id == 'bank' ? 'Bank' : 'E-Wallet'),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w600,
+                                    color: textMuted,
+                                  ),
                                 ),
                               ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          _currencyFormat.format(balance),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w700,
-                            color: textPrim,
+                            ],
                           ),
-                        ),
-                      ],
+                          const SizedBox(height: 6),
+                          Text(
+                            _currencyFormat.format(balance),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w700,
+                              color: textPrim,
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
                 ),
               );
-            },
+            }).toList(),
           ),
         ),
       ],
     );
   }
 
-  // --- TAB SWITCHER ---
+  // --- TAB SWITCHER (4 TAB SEIMBANG TANPA SESAK) ---
   Widget _buildTabSwitcher(bool isDark) {
     final borderCol = isDark ? AppTheme.darkBorder : AppTheme.lightBorder;
 
     final tabs = [
-      {'label': 'Arus Kas', 'icon': Icons.swap_vert_rounded},
+      {'label': 'Transaksi', 'icon': Icons.swap_vert_rounded},
       {'label': 'Amplop', 'icon': Icons.mail_outline},
       {'label': 'Piutang', 'icon': Icons.handshake_outlined},
-      {'label': 'Bocor Halus', 'icon': Icons.pie_chart_outline},
+      {'label': 'Analisis', 'icon': Icons.pie_chart_outline},
     ];
 
     return Container(
@@ -527,7 +530,7 @@ class _FinanceScreenState extends State<FinanceScreen> {
                   children: [
                     Icon(
                       tabs[i]['icon'] as IconData,
-                      size: 14,
+                      size: 13,
                       color: isSelected
                           ? (isDark
                               ? AppTheme.darkAccent
@@ -536,11 +539,11 @@ class _FinanceScreenState extends State<FinanceScreen> {
                               ? AppTheme.darkTextMuted
                               : AppTheme.lightTextMuted),
                     ),
-                    const SizedBox(width: 5),
+                    const SizedBox(width: 4),
                     Text(
                       tabs[i]['label'] as String,
                       style: TextStyle(
-                        fontSize: 11.5,
+                        fontSize: 11,
                         fontWeight:
                             isSelected ? FontWeight.w700 : FontWeight.w500,
                         color: isSelected
@@ -584,12 +587,12 @@ class _FinanceScreenState extends State<FinanceScreen> {
 
     return SliverMainAxisGroup(
       slivers: [
-        // Cash Flow Banner Bulan Ini
+        // Cash Flow Banner Bulan Ini (Rapi & Ringkas)
         SliverToBoxAdapter(
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16),
             child: Container(
-              padding: const EdgeInsets.all(12),
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
               decoration: BoxDecoration(
                 color: isDark
                     ? AppTheme.darkSurfaceElevated
@@ -603,15 +606,21 @@ class _FinanceScreenState extends State<FinanceScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text('Pemasukan Bln Ini',
-                            style: TextStyle(fontSize: 10.5, color: textMuted)),
+                        const Text(
+                          'Pemasukan',
+                          style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w600,
+                            color: AppTheme.successSage,
+                          ),
+                        ),
                         const SizedBox(height: 2),
                         Text(
                           _currencyFormat.format(monthlyIn),
-                          style: const TextStyle(
-                            fontSize: 13.5,
+                          style: TextStyle(
+                            fontSize: 13,
                             fontWeight: FontWeight.w700,
-                            color: AppTheme.successSage,
+                            color: textPrim,
                           ),
                         ),
                       ],
@@ -627,15 +636,21 @@ class _FinanceScreenState extends State<FinanceScreen> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text('Pengeluaran Bln Ini',
-                              style: TextStyle(fontSize: 10.5, color: textMuted)),
+                          const Text(
+                            'Pengeluaran',
+                            style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w600,
+                              color: AppTheme.urgentRose,
+                            ),
+                          ),
                           const SizedBox(height: 2),
                           Text(
                             _currencyFormat.format(monthlyOut),
-                            style: const TextStyle(
-                              fontSize: 13.5,
+                            style: TextStyle(
+                              fontSize: 13,
                               fontWeight: FontWeight.w700,
-                              color: AppTheme.urgentRose,
+                              color: textPrim,
                             ),
                           ),
                         ],
@@ -652,13 +667,21 @@ class _FinanceScreenState extends State<FinanceScreen> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text('Net Cash Flow',
-                              style: TextStyle(fontSize: 10.5, color: textMuted)),
+                          Text(
+                            'Arus Bersih',
+                            style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w600,
+                              color: net >= 0
+                                  ? AppTheme.successSage
+                                  : AppTheme.urgentRose,
+                            ),
+                          ),
                           const SizedBox(height: 2),
                           Text(
                             (net >= 0 ? '+' : '') + _currencyFormat.format(net),
                             style: TextStyle(
-                              fontSize: 13.5,
+                              fontSize: 13,
                               fontWeight: FontWeight.w700,
                               color: net >= 0
                                   ? AppTheme.successSage
@@ -699,50 +722,52 @@ class _FinanceScreenState extends State<FinanceScreen> {
         if (filteredTx.isEmpty) ...[
           SliverToBoxAdapter(
             child: Padding(
-              padding: const EdgeInsets.all(32),
-              child: Center(
-                child: Column(
-                  children: [
-                    Icon(Icons.receipt_long_outlined,
-                        size: 40, color: textMuted.withValues(alpha: 0.4)),
-                    const SizedBox(height: 12),
-                    Text(
-                      'Belum ada transaksi',
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                        color: textMuted,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      'Catat pengeluaran atau pemasukan harian Anda dalam hitungan detik.',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: textMuted.withValues(alpha: 0.8),
-                      ),
-                    ),
-                    const SizedBox(height: 14),
-                    OutlinedButton.icon(
-                      onPressed: () => _openAddTransactionModal(context),
-                      icon: const Icon(Icons.add, size: 16),
-                      label: const Text('Catat Transaksi Pertama'),
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: isDark
-                            ? AppTheme.darkAccent
-                            : AppTheme.lightAccent,
-                        side: BorderSide(
-                          color: isDark
-                              ? AppTheme.darkAccent
-                              : AppTheme.lightAccent,
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 28),
+                decoration: BoxDecoration(
+                  color: isDark
+                      ? AppTheme.darkSurfaceElevated.withValues(alpha: 0.4)
+                      : AppTheme.lightSurface,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(
+                      color: borderCol.withValues(alpha: 0.7), width: 0.8),
+                ),
+                child: Center(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Container(
+                        width: 44,
+                        height: 44,
+                        decoration: BoxDecoration(
+                          color: isDark ? AppTheme.darkSurface : AppTheme.lightBg,
+                          shape: BoxShape.circle,
                         ),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(10),
+                        child: Icon(Icons.receipt_long_outlined,
+                            size: 22, color: textMuted),
+                      ),
+                      const SizedBox(height: 12),
+                      Text(
+                        'Belum Ada Transaksi',
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w700,
+                          color: textPrim,
                         ),
                       ),
-                    ),
-                  ],
+                      const SizedBox(height: 4),
+                      Text(
+                        'Tekan tombol + di pojok kanan bawah untuk mencatat pengeluaran atau pemasukan baru.',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: textMuted,
+                          height: 1.4,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ),
@@ -1383,7 +1408,7 @@ class _FinanceScreenState extends State<FinanceScreen> {
                   ),
                   const SizedBox(height: 6),
                   Text(
-                    'Identifikasi kategori pengeluaran terbesar untuk mencegah kehabisan uang jajan sebelum akhir bulan.',
+                    'Identifikasi kategori pengeluaran terbesar untuk mencegah kehabisan uang saku sebelum akhir bulan.',
                     style: TextStyle(
                       fontSize: 11.5,
                       color: textMuted,
@@ -1477,7 +1502,7 @@ class _FinanceScreenState extends State<FinanceScreen> {
       onTap: () => setState(() => _txFilter = value),
       borderRadius: BorderRadius.circular(8),
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
         decoration: BoxDecoration(
           color: isSelected
               ? (isDark
@@ -1503,15 +1528,6 @@ class _FinanceScreenState extends State<FinanceScreen> {
           ),
         ),
       ),
-    );
-  }
-
-  void _openAddTransactionModal(BuildContext context) {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (_) => const AddTransactionModal(),
     );
   }
 }

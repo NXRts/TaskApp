@@ -147,7 +147,10 @@ class FinanceProvider with ChangeNotifier {
   String get safeToSpendStatus {
     final budget = safeToSpendToday;
     final spent = spentToday;
-    if (budget <= 0) return 'overbudget';
+    final total = totalBalance;
+
+    if (total <= 0 && spent <= 0) return 'neutral';
+    if (budget <= 0 && spent > 0) return 'overbudget';
     if (spent > budget) return 'overbudget';
     if (spent >= budget * 0.75) return 'warning';
     return 'safe';
