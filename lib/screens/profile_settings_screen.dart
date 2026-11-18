@@ -318,106 +318,62 @@ class _ProfileSettingsScreenState extends State<ProfileSettingsScreen> {
                     ),
                     Divider(color: borderCol.withValues(alpha: 0.5), height: 1),
                     Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(
-                            'Uji Coba Alarm:',
-                            style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w500, color: textSecondary),
-                          ),
-                          Wrap(
-                            spacing: 4,
+                          Row(
                             children: [
-                              TextButton.icon(
-                                style: TextButton.styleFrom(
-                                  visualDensity: VisualDensity.compact,
-                                  padding: const EdgeInsets.symmetric(horizontal: 6),
-                                ),
-                                icon: const Icon(Icons.notifications_active_outlined, size: 13),
-                                label: const Text('Tes H-1', style: TextStyle(fontSize: 10.5)),
-                                onPressed: () async {
-                                  final result = await TaskReminderService.instance.showTestNotification(type: 0);
-                                  if (context.mounted) {
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      SnackBar(
-                                        content: Text(result.message),
-                                        backgroundColor: result.success ? const Color(0xFF16A34A) : const Color(0xFFDC2626),
-                                        behavior: SnackBarBehavior.floating,
-                                        duration: Duration(seconds: result.success ? 4 : 6),
-                                        action: result.isPermissionDenied
-                                            ? SnackBarAction(
-                                                label: 'Setelan',
-                                                textColor: Colors.white,
-                                                onPressed: () {
-                                                  TaskReminderService.openAppNotificationSettings();
-                                                },
-                                              )
-                                            : null,
-                                      ),
-                                    );
-                                  }
-                                },
+                              Icon(
+                                Icons.volume_up_rounded,
+                                size: 14,
+                                color: isDark ? AppTheme.darkAccent : AppTheme.brandCobalt,
                               ),
-                              TextButton.icon(
-                                style: TextButton.styleFrom(
-                                  visualDensity: VisualDensity.compact,
-                                  padding: const EdgeInsets.symmetric(horizontal: 6),
+                              const SizedBox(width: 6),
+                              Text(
+                                'Uji Coba Suara & Notifikasi Alarm:',
+                                style: TextStyle(
+                                  fontSize: 11.5,
+                                  fontWeight: FontWeight.w600,
+                                  color: textPrimary,
                                 ),
-                                icon: const Icon(Icons.warning_amber_rounded, size: 13),
-                                label: const Text('Tes H-3 Jam', style: TextStyle(fontSize: 10.5)),
-                                onPressed: () async {
-                                  final result = await TaskReminderService.instance.showTestNotification(type: 1);
-                                  if (context.mounted) {
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      SnackBar(
-                                        content: Text(result.message),
-                                        backgroundColor: result.success ? const Color(0xFF16A34A) : const Color(0xFFDC2626),
-                                        behavior: SnackBarBehavior.floating,
-                                        duration: Duration(seconds: result.success ? 4 : 6),
-                                        action: result.isPermissionDenied
-                                            ? SnackBarAction(
-                                                label: 'Setelan',
-                                                textColor: Colors.white,
-                                                onPressed: () {
-                                                  TaskReminderService.openAppNotificationSettings();
-                                                },
-                                              )
-                                            : null,
-                                      ),
-                                    );
-                                  }
-                                },
                               ),
-                              TextButton.icon(
-                                style: TextButton.styleFrom(
-                                  visualDensity: VisualDensity.compact,
-                                  padding: const EdgeInsets.symmetric(horizontal: 6),
+                            ],
+                          ),
+                          const SizedBox(height: 8),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: _buildTestAlarmChip(
+                                  context: context,
+                                  label: 'Tes H-1',
+                                  icon: Icons.notifications_active_outlined,
+                                  type: 0,
+                                  isDark: isDark,
+                                  borderCol: borderCol,
                                 ),
-                                icon: const Icon(Icons.alarm_on_rounded, size: 13),
-                                label: const Text('Tes H-30m', style: TextStyle(fontSize: 10.5)),
-                                onPressed: () async {
-                                  final result = await TaskReminderService.instance.showTestNotification(type: 2);
-                                  if (context.mounted) {
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      SnackBar(
-                                        content: Text(result.message),
-                                        backgroundColor: result.success ? const Color(0xFF16A34A) : const Color(0xFFDC2626),
-                                        behavior: SnackBarBehavior.floating,
-                                        duration: Duration(seconds: result.success ? 4 : 6),
-                                        action: result.isPermissionDenied
-                                            ? SnackBarAction(
-                                                label: 'Setelan',
-                                                textColor: Colors.white,
-                                                onPressed: () {
-                                                  TaskReminderService.openAppNotificationSettings();
-                                                },
-                                              )
-                                            : null,
-                                      ),
-                                    );
-                                  }
-                                },
+                              ),
+                              const SizedBox(width: 6),
+                              Expanded(
+                                child: _buildTestAlarmChip(
+                                  context: context,
+                                  label: 'Tes H-3 Jam',
+                                  icon: Icons.warning_amber_rounded,
+                                  type: 1,
+                                  isDark: isDark,
+                                  borderCol: borderCol,
+                                ),
+                              ),
+                              const SizedBox(width: 6),
+                              Expanded(
+                                child: _buildTestAlarmChip(
+                                  context: context,
+                                  label: 'Tes H-30m',
+                                  icon: Icons.alarm_on_rounded,
+                                  type: 2,
+                                  isDark: isDark,
+                                  borderCol: borderCol,
+                                ),
                               ),
                             ],
                           ),
@@ -442,16 +398,18 @@ class _ProfileSettingsScreenState extends State<ProfileSettingsScreen> {
                               children: [
                                 Icon(
                                   Icons.notifications_active_outlined,
-                                  size: 16,
+                                  size: 15,
                                   color: isDark ? AppTheme.darkAccent : AppTheme.brandCobalt,
                                 ),
                                 const SizedBox(width: 8),
-                                Text(
-                                  'Panduan Alarm & Layar Mati (Lock Screen):',
-                                  style: TextStyle(
-                                    fontSize: 11.5,
-                                    fontWeight: FontWeight.w600,
-                                    color: textPrimary,
+                                Expanded(
+                                  child: Text(
+                                    'Panduan Alarm & Layar Mati (Lock Screen):',
+                                    style: TextStyle(
+                                      fontSize: 11.5,
+                                      fontWeight: FontWeight.w600,
+                                      color: textPrimary,
+                                    ),
                                   ),
                                 ),
                               ],
@@ -472,7 +430,7 @@ class _ProfileSettingsScreenState extends State<ProfileSettingsScreen> {
                                   child: OutlinedButton.icon(
                                     style: OutlinedButton.styleFrom(
                                       visualDensity: VisualDensity.compact,
-                                      padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 8),
+                                      padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
                                       side: BorderSide(
                                         color: isDark ? AppTheme.darkAccent : AppTheme.brandCobalt,
                                       ),
@@ -487,8 +445,10 @@ class _ProfileSettingsScreenState extends State<ProfileSettingsScreen> {
                                     ),
                                     label: Text(
                                       'Setelan Notifikasi',
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
                                       style: TextStyle(
-                                        fontSize: 11,
+                                        fontSize: 10.5,
                                         fontWeight: FontWeight.w600,
                                         color: isDark ? AppTheme.darkAccent : AppTheme.brandCobalt,
                                       ),
@@ -503,7 +463,7 @@ class _ProfileSettingsScreenState extends State<ProfileSettingsScreen> {
                                   child: OutlinedButton.icon(
                                     style: OutlinedButton.styleFrom(
                                       visualDensity: VisualDensity.compact,
-                                      padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 8),
+                                      padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
                                       side: BorderSide(
                                         color: isDark ? AppTheme.darkAccent : AppTheme.brandCobalt,
                                       ),
@@ -517,9 +477,11 @@ class _ProfileSettingsScreenState extends State<ProfileSettingsScreen> {
                                       color: isDark ? AppTheme.darkAccent : AppTheme.brandCobalt,
                                     ),
                                     label: Text(
-                                      'Abaikan Hemat Baterai',
+                                      'Hemat Baterai',
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
                                       style: TextStyle(
-                                        fontSize: 11,
+                                        fontSize: 10.5,
                                         fontWeight: FontWeight.w600,
                                         color: isDark ? AppTheme.darkAccent : AppTheme.brandCobalt,
                                       ),
@@ -806,16 +768,85 @@ class _ProfileSettingsScreenState extends State<ProfileSettingsScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('TaskApp v2.0 • Modern Editorial Edition', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: textPrimary)),
+                  Text('TaskApp v2.4.3 • Academic & Financial Student Hub', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: textPrimary)),
                   const SizedBox(height: 3),
                   Text(
-                    'Dibangun dengan arsitektur offline-first, desain minimalis intensional tanpa slop, dan fitur terfokus untuk mahasiswa.',
+                    'Platform terintegrasi produktivitas akademik, presensi kuliah, jadwal wallpaper, deadline alarm, dan buku kas finansial mahasiswa. 100% Offline-First & Zero-Ad.',
                     style: TextStyle(fontSize: 12, color: textSecondary, height: 1.3),
                   ),
                 ],
               ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTestAlarmChip({
+    required BuildContext context,
+    required String label,
+    required IconData icon,
+    required int type,
+    required bool isDark,
+    required Color borderCol,
+  }) {
+    final accentCol = isDark ? AppTheme.darkAccent : AppTheme.brandCobalt;
+    return Material(
+      color: isDark ? const Color(0xFF1E293B) : const Color(0xFFF1F5F9),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(8),
+        side: BorderSide(
+          color: borderCol.withValues(alpha: 0.6),
+          width: 0.8,
+        ),
+      ),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(8),
+        onTap: () async {
+          final result = await TaskReminderService.instance.showTestNotification(type: type);
+          if (context.mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(result.message),
+                backgroundColor: result.success ? const Color(0xFF16A34A) : const Color(0xFFDC2626),
+                behavior: SnackBarBehavior.floating,
+                duration: Duration(seconds: result.success ? 4 : 6),
+                action: result.isPermissionDenied
+                    ? SnackBarAction(
+                        label: 'Setelan',
+                        textColor: Colors.white,
+                        onPressed: () {
+                          TaskReminderService.openAppNotificationSettings();
+                        },
+                      )
+                    : null,
+              ),
+            );
+          }
+        },
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(icon, size: 13, color: accentCol),
+              const SizedBox(width: 4),
+              Flexible(
+                child: Text(
+                  label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600,
+                    color: isDark ? AppTheme.darkTextPrimary : AppTheme.lightTextPrimary,
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
