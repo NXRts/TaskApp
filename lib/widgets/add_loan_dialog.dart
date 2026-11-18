@@ -4,6 +4,7 @@ import 'package:uuid/uuid.dart';
 import '../models/finance_loan.dart';
 import '../providers/finance_provider.dart';
 import '../utils/app_theme.dart';
+import '../utils/currency_input_formatter.dart';
 import '../utils/date_formatter.dart';
 
 class AddLoanDialog extends StatefulWidget {
@@ -31,8 +32,9 @@ class _AddLoanDialogState extends State<AddLoanDialog> {
       _type = loan.type;
       _friendNameController = TextEditingController(text: loan.friendName);
       _amount = loan.amount;
-      _amountController =
-          TextEditingController(text: loan.amount.toInt().toString());
+      _amountController = TextEditingController(
+        text: loan.amount > 0 ? CurrencyInputFormatter.format(loan.amount) : '',
+      );
       _descController = TextEditingController(text: loan.description);
       _date = loan.date;
     } else {
@@ -53,8 +55,7 @@ class _AddLoanDialogState extends State<AddLoanDialog> {
   }
 
   void _onAmountChanged(String val) {
-    final cleaned = val.replaceAll(RegExp(r'[^0-9]'), '');
-    final parsed = double.tryParse(cleaned) ?? 0.0;
+    final parsed = CurrencyInputFormatter.parse(val);
     setState(() {
       _amount = parsed;
     });
@@ -63,7 +64,7 @@ class _AddLoanDialogState extends State<AddLoanDialog> {
   void _addAmount(double add) {
     setState(() {
       _amount += add;
-      _amountController.text = _amount.toInt().toString();
+      _amountController.text = CurrencyInputFormatter.format(_amount);
     });
   }
 
@@ -480,6 +481,7 @@ class _AddLoanDialogState extends State<AddLoanDialog> {
                           child: TextField(
                             controller: _amountController,
                             keyboardType: TextInputType.number,
+                            inputFormatters: [CurrencyInputFormatter()],
                             autofocus: false,
                             style: TextStyle(
                               fontSize: 20,
