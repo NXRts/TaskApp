@@ -188,9 +188,13 @@ class _AddTransactionModalState extends State<AddTransactionModal> {
     final wallets = context.watch<FinanceProvider>().wallets;
 
     final screenHeight = MediaQuery.of(context).size.height;
+    final topPadding = MediaQuery.of(context).padding.top;
     final bottomInset = MediaQuery.of(context).viewInsets.bottom;
-    // Batasi tinggi maksimum modal di 80% layar agar tidak pernah menabrak/menembus panel status bar atas ponsel
-    final maxModalHeight = screenHeight * 0.80;
+
+    // Geser modal sedikit ke atas agar tombol Simpan tidak terpotong oleh navigasi bawah,
+    // tetap menyisakan jarak aman (~36px) di bawah status bar atas ponsel
+    final maxModalHeight =
+        (screenHeight - topPadding - 36).clamp(0.0, screenHeight * 0.89);
 
     return SafeArea(
       top: true,
@@ -215,7 +219,7 @@ class _AddTransactionModalState extends State<AddTransactionModal> {
             ],
           ),
           padding: EdgeInsets.only(
-            bottom: bottomInset + 12,
+            bottom: bottomInset + 14,
             left: 16,
             right: 16,
             top: 10,
