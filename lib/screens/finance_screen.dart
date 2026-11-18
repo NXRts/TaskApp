@@ -863,6 +863,7 @@ class _FinanceScreenState extends State<FinanceScreen> {
                           showModalBottomSheet(
                             context: context,
                             isScrollControlled: true,
+                            useSafeArea: true,
                             backgroundColor: Colors.transparent,
                             builder: (_) =>
                                 AddTransactionModal(initialTransaction: tx),
@@ -1586,6 +1587,7 @@ class _FinanceScreenState extends State<FinanceScreen> {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
+      useSafeArea: true,
       backgroundColor: Colors.transparent,
       builder: (_) => const AddTransactionModal(),
     );
