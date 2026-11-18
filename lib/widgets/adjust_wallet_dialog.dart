@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../models/finance_wallet.dart';
 import '../providers/finance_provider.dart';
 import '../utils/app_theme.dart';
+import '../utils/currency_input_formatter.dart';
 
 class AdjustWalletDialog extends StatefulWidget {
   final FinanceWallet wallet;
@@ -20,7 +21,9 @@ class _AdjustWalletDialogState extends State<AdjustWalletDialog> {
   void initState() {
     super.initState();
     _balanceController = TextEditingController(
-      text: widget.wallet.balance.toInt().toString(),
+      text: widget.wallet.balance > 0
+          ? CurrencyInputFormatter.format(widget.wallet.balance)
+          : '',
     );
   }
 
@@ -31,8 +34,7 @@ class _AdjustWalletDialogState extends State<AdjustWalletDialog> {
   }
 
   void _save() {
-    final cleaned = _balanceController.text.replaceAll(RegExp(r'[^0-9]'), '');
-    final balance = double.tryParse(cleaned) ?? 0.0;
+    final balance = CurrencyInputFormatter.parse(_balanceController.text);
 
     context.read<FinanceProvider>().updateWalletBalance(widget.wallet.id, balance);
     Navigator.pop(context);
@@ -117,6 +119,7 @@ class _AdjustWalletDialogState extends State<AdjustWalletDialog> {
             TextField(
               controller: _balanceController,
               keyboardType: TextInputType.number,
+              inputFormatters: [CurrencyInputFormatter()],
               autofocus: true,
               style: TextStyle(
                 fontSize: 18,

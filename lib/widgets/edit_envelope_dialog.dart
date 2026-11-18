@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../models/finance_envelope.dart';
 import '../providers/finance_provider.dart';
 import '../utils/app_theme.dart';
+import '../utils/currency_input_formatter.dart';
 
 class EditEnvelopeDialog extends StatefulWidget {
   final FinanceEnvelope envelope;
@@ -20,7 +21,9 @@ class _EditEnvelopeDialogState extends State<EditEnvelopeDialog> {
   void initState() {
     super.initState();
     _budgetController = TextEditingController(
-      text: widget.envelope.monthlyBudget.toInt().toString(),
+      text: widget.envelope.monthlyBudget > 0
+          ? CurrencyInputFormatter.format(widget.envelope.monthlyBudget)
+          : '',
     );
   }
 
@@ -31,8 +34,7 @@ class _EditEnvelopeDialogState extends State<EditEnvelopeDialog> {
   }
 
   void _save() {
-    final cleaned = _budgetController.text.replaceAll(RegExp(r'[^0-9]'), '');
-    final budget = double.tryParse(cleaned) ?? 0.0;
+    final budget = CurrencyInputFormatter.parse(_budgetController.text);
 
     if (budget < 0) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -128,6 +130,7 @@ class _EditEnvelopeDialogState extends State<EditEnvelopeDialog> {
             TextField(
               controller: _budgetController,
               keyboardType: TextInputType.number,
+              inputFormatters: [CurrencyInputFormatter()],
               autofocus: true,
               style: TextStyle(
                 fontSize: 18,

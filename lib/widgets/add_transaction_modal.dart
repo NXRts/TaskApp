@@ -4,6 +4,7 @@ import 'package:uuid/uuid.dart';
 import '../models/finance_transaction.dart';
 import '../providers/finance_provider.dart';
 import '../utils/app_theme.dart';
+import '../utils/currency_input_formatter.dart';
 import '../utils/date_formatter.dart';
 
 class AddTransactionModal extends StatefulWidget {
@@ -42,8 +43,9 @@ class _AddTransactionModalState extends State<AddTransactionModal> {
       _date = tx.date;
       _amount = tx.amount;
       _titleController = TextEditingController(text: tx.title);
-      _amountController =
-          TextEditingController(text: tx.amount.toInt().toString());
+      _amountController = TextEditingController(
+        text: tx.amount > 0 ? CurrencyInputFormatter.format(tx.amount) : '',
+      );
       _noteController = TextEditingController(text: tx.note ?? '');
     } else {
       _type = widget.defaultType ?? 'expense';
@@ -75,7 +77,7 @@ class _AddTransactionModalState extends State<AddTransactionModal> {
   void _addAmount(double add) {
     setState(() {
       _amount += add;
-      _amountController.text = _amount.toInt().toString();
+      _amountController.text = CurrencyInputFormatter.format(_amount);
     });
   }
 
@@ -87,8 +89,7 @@ class _AddTransactionModalState extends State<AddTransactionModal> {
   }
 
   void _onAmountChanged(String val) {
-    final cleaned = val.replaceAll(RegExp(r'[^0-9]'), '');
-    final parsed = double.tryParse(cleaned) ?? 0.0;
+    final parsed = CurrencyInputFormatter.parse(val);
     setState(() {
       _amount = parsed;
     });
@@ -414,6 +415,7 @@ class _AddTransactionModalState extends State<AddTransactionModal> {
                             child: TextField(
                               controller: _amountController,
                               keyboardType: TextInputType.number,
+                              inputFormatters: [CurrencyInputFormatter()],
                               autofocus: false,
                               style: TextStyle(
                                 fontSize: 22,
