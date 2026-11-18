@@ -1264,23 +1264,31 @@ class _FinanceScreenState extends State<FinanceScreen> {
 
                   return Padding(
                     padding: const EdgeInsets.only(bottom: 8),
-                    child: Container(
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: isDark
-                            ? AppTheme.darkSurfaceElevated
-                            : AppTheme.lightSurface,
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(
-                          color: isSettled
-                              ? borderCol.withValues(alpha: 0.4)
-                              : (isLend
-                                  ? AppTheme.brandCobalt.withValues(alpha: 0.3)
-                                  : AppTheme.warningOchre.withValues(alpha: 0.3)),
-                          width: 0.8,
+                    child: InkWell(
+                      onTap: () {
+                        showDialog(
+                          context: context,
+                          builder: (_) => AddLoanDialog(initialLoan: loan),
+                        );
+                      },
+                      borderRadius: BorderRadius.circular(12),
+                      child: Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: isDark
+                              ? AppTheme.darkSurfaceElevated
+                              : AppTheme.lightSurface,
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color: isSettled
+                                ? borderCol.withValues(alpha: 0.4)
+                                : (isLend
+                                    ? AppTheme.brandCobalt.withValues(alpha: 0.3)
+                                    : AppTheme.warningOchre.withValues(alpha: 0.3)),
+                            width: 0.8,
+                          ),
                         ),
-                      ),
-                      child: Row(
+                        child: Row(
                         children: [
                           IconButton(
                             onPressed: () {
@@ -1399,7 +1407,8 @@ class _FinanceScreenState extends State<FinanceScreen> {
                         ],
                       ),
                     ),
-                  );
+                  ),
+                );
                 },
                 childCount: loans.length,
               ),
