@@ -1,43 +1,33 @@
-# TaskApp v2.4.1 — Penyempurnaan Tata Letak Modal Transaksi & Desain Dialog Patungan/Piutang (Mobile UI Polish)
+# TaskApp v2.4.2 — Pemisah Ribuan Otomatis pada Input FinTrack Mahasiswa (Live Currency Formatter)
 
-> **TaskApp v2.4.1** menyempurnakan kenyamanan antarmuka mobile pada modul **FinTrack Mahasiswa**: menata ulang tata letak modal transaksi agar tidak menembus status bar maupun terpotong tombol navigasi, serta mendesain ulang dialog **Catat Patungan & Piutang (Split Bill & IOU)** dengan tipografi satu baris yang elegan dan tombol preset nominal cepat.
+> **TaskApp v2.4.2** menghadirkan pembaruan kenyamanan esensial pada modul **FinTrack Mahasiswa**: pemformatan otomatis pemisah ribuan (*live thousand separator* standar Rupiah) saat mengetik nominal transaksi, talangan teman, saldo dompet, maupun anggaran amplop, tanpa perlu lagi menghitung jumlah angka nol secara manual.
 >
-> Pembaruan ini ditandatangani dengan **Keystore Resmi Permanen** yang sama, sehingga Anda dapat **langsung mengunduh dan menekan "Update" tanpa perlu menghapus aplikasi dan seluruh data tugas/matkul/keuangan Anda tetap aman 100%**.
+> Pembaruan ini ditandatangani dengan **Keystore Resmi Permanen** yang sama, sehingga Anda dapat **langsung mengunduh berkas APK dan menekan "Update" tanpa perlu mencopot aplikasi sebelumnya. Seluruh data perkuliahan, jadwal, tugas, dan catatan keuangan Anda tetap aman 100%**.
 
 ---
 
-## ✨ Apa yang Baru di Versi 2.4.1 (Changelog)
+## ✨ Apa yang Baru di Versi 2.4.2 (Changelog)
 
-### 1. 🤝 Desain Ulang Dialog Catat Patungan & Piutang (Split Bill & IOU Tracker)
-- **Switcher Satu Baris Ringkas & Elegan**:
-  - Teks yang sebelumnya bertumpuk canggung menjadi 2 baris kini diperbarui menjadi label satu baris tegas:
-    - `[ ↗ Saya Talangi ]` (Aksen Kobalt `#3B82F6` dengan bayangan lembut).
-    - `[ ↙ Saya Pinjam ]` (Aksen Amber `#F59E0B` dengan bayangan lembut).
-  - Dilengkapi transisi animasi 140ms yang responsif.
-- **Kartu Edukasi Mikro Dinamis**:
-  - Menjelaskan arti transaksi secara instan di bawah sakelar:
-    - Saat *Saya Talangi*: `🟢 Piutang: Teman berhutang pada Anda (akan ditagih)`.
-    - Saat *Saya Pinjam*: `🟡 Hutang: Anda meminjam uang teman (harus dibayar)`.
-- **Kartu Nominal Cerdas dengan Preset Instan**:
-  - Input nominal bergaya kas modern dengan awalan `Rp ` dan tombol cepat `+10k`, `+20k`, `+50k`, `+100k` serta tombol *Reset*.
-- **Input Berpasangan & Pemilih Tanggal**:
-  - Kolom nama teman berikon `person_outline`.
-  - Kolom keterangan berdampingan rapi dengan tombol pemilih tanggal transaksi.
-- **Interaksi Edit & Hapus**:
-  - Setiap kartu piutang di tab FinTrack kini dapat diketuk langsung untuk diedit atau dihapus melalui ikon tong sampah merah di header dialog.
+### 1. 💵 Pemisah Ribuan Otomatis Secara Real-Time (Live Currency Input Formatter)
+- **Format Rupiah Standar (`id_ID`)**:
+  - Saat Anda mengetik nominal, angka langsung terformat rapi dengan titik pemisah ribuan secara langsung (misal: mengetik `15000` otomatis menjadi `15.000`, `1500000` menjadi `1.500.000`).
+  - Tidak ada lagi risiko salah ketik atau kebingungan menghitung jumlah nol saat mencatat pengeluaran harian yang cepat di sela-sela jam kuliah.
+- **Dukungan Cerdas Tombol Preset Cepat**:
+  - Menekan tombol preset nominal (`+5k`, `+10k`, `+20k`, `+50k`, `+100k`) langsung memformat teks nominal ke format ribuan secara otomatis dan instan.
+- **Pelacakan Posisi Kursor Presisi & Penanganan Backspace Halus**:
+  - Kursor tidak meloncat ke akhir teks saat mengetik atau menyisipkan angka di tengah digit yang sudah ada.
+  - Menghapus karakter di sekitar tanda pemisah ribuan berjalan mulus tanpa tersangkut atau mengulang karakter.
 
-### 2. 📱 Penataan Ulang Posisi & Tinggi Modal Transaksi Mobile
-- **Bebas Tabrakan Panel Atas & Bawah**:
-  - `useSafeArea: true` diterapkan pada seluruh pemanggilan `showModalBottomSheet`.
-  - Batas tinggi dinamis (`screenHeight - topPadding - 36px`) memastikan ada ruang aman ~36px di bawah status bar atas ponsel.
-  - Penambahan bantalan bawah `bottomInset + 14px` mengangkat tombol **"Simpan Pengeluaran"** ke atas sehingga tidak lagi terpotong oleh bilah 3 tombol navigasi Android (*Back / Home / Recents*).
-- **Pembukaan Halus Tanpa Keyboard Paksa (`autofocus: false`)**:
-  - Modal terbuka dengan tenang dan mulus. Keyboard hanya muncul jika pengguna sengaja mengetuk baris input nominal.
+### 2. 🎯 Berlaku Terpadu di Seluruh Formulir FinTrack
+- 🧾 **Modal Catat Pemasukan & Pengeluaran**: Pengalaman mencatat pengeluaran makan, bensin, kos, dan kiriman ortu menjadi lebih cepat (< 2 detik).
+- 🤝 **Dialog Catat Patungan & Piutang Teman**: Nominal talangi teman atau pinjaman kini langsung berpemisah ribuan jelas.
+- 👛 **Dialog Atur Saldo Awal Dompet**: Pengaturan saldo Kas Tunai, Rekening Bank, dan E-Wallet terformat rapi sejak awal input.
+- ✉️ **Dialog Atur Anggaran Amplop Bulanan**: Nominal kuota amplop kos, makan, kuliah, dan nongkrong kini mudah dibaca saat disetel.
 
 ---
 
 ## 📲 Panduan Instalasi & Pembaruan
 
-1. Unduh berkas **`TaskApp-v2.4.1.apk`** dari daftar **Assets** di halaman rilis.
-2. Buka berkas APK di ponsel Anda dan tekan tombol **"Update"**.
-3. Aplikasi akan langsung terbarukan ke **v2.4.1**. Seluruh data perkuliahan, jadwal, tugas, dan buku kas FinTrack Anda tetap aman 100%.
+1. Unduh berkas **`TaskApp-v2.4.2.apk`** dari daftar **Assets** di bawah.
+2. Buka berkas APK di ponsel Android Anda dan pilih tombol **"Update"**.
+3. Aplikasi akan langsung terbarukan ke **v2.4.2**. Seluruh data tugas, presensi, jadwal kuliah, dan buku kas FinTrack Anda tetap utuh 100%.
