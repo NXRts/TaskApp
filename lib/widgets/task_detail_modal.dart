@@ -114,52 +114,90 @@ class _TaskDetailModalState extends State<TaskDetailModal> {
 
             // Top Metadata Row & Action Icons
             Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                if (currentTask.category == TaskCategory.academic && subject != null) ...[
-                  Container(
-                    width: 7,
-                    height: 7,
-                    decoration: BoxDecoration(color: subject.color, shape: BoxShape.circle),
+                Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.only(top: 4),
+                    child: currentTask.category == TaskCategory.academic && subject != null
+                        ? RichText(
+                            text: TextSpan(
+                              children: [
+                                WidgetSpan(
+                                  alignment: PlaceholderAlignment.middle,
+                                  child: Padding(
+                                    padding: const EdgeInsets.only(right: 6),
+                                    child: Container(
+                                      width: 8,
+                                      height: 8,
+                                      decoration: BoxDecoration(color: subject.color, shape: BoxShape.circle),
+                                    ),
+                                  ),
+                                ),
+                                TextSpan(
+                                  text: subject.name,
+                                  style: TextStyle(
+                                    fontSize: 12.5,
+                                    fontWeight: FontWeight.w600,
+                                    color: textPrimary,
+                                    height: 1.3,
+                                  ),
+                                ),
+                                TextSpan(
+                                  text: '  •  ${currentTask.typeLabel}',
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    color: textSecondary,
+                                    height: 1.3,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          )
+                        : Text(
+                            'Pribadi',
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                              color: textSecondary,
+                            ),
+                          ),
                   ),
-                  const SizedBox(width: 5),
-                  Text(
-                    subject.name,
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                      color: textPrimary,
-                    ),
-                  ),
-                  const SizedBox(width: 6),
-                  Text('• ${currentTask.typeLabel}', style: TextStyle(fontSize: 11, color: textSecondary)),
-                ] else ...[
-                  Text('Pribadi', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: textSecondary)),
-                ],
-
-                const Spacer(),
-
-                IconButton(
-                  visualDensity: VisualDensity.compact,
-                  icon: Icon(Icons.edit_outlined, size: 18, color: textSecondary),
-                  tooltip: 'Edit',
-                  onPressed: () {
-                    Navigator.pop(context);
-                    showModalBottomSheet(
-                      context: context,
-                      isScrollControlled: true,
-                      backgroundColor: Colors.transparent,
-                      builder: (_) => AddTaskModal(initialTask: currentTask),
-                    );
-                  },
                 ),
-                IconButton(
-                  visualDensity: VisualDensity.compact,
-                  icon: const Icon(Icons.delete_outline, size: 18, color: AppTheme.urgentRose),
-                  tooltip: 'Hapus',
-                  onPressed: () {
-                    taskProvider.deleteTask(currentTask.id);
-                    Navigator.pop(context);
-                  },
+                const SizedBox(width: 8),
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    IconButton(
+                      visualDensity: VisualDensity.compact,
+                      padding: const EdgeInsets.all(6),
+                      constraints: const BoxConstraints(),
+                      icon: Icon(Icons.edit_outlined, size: 18, color: textSecondary),
+                      tooltip: 'Edit',
+                      onPressed: () {
+                        Navigator.pop(context);
+                        showModalBottomSheet(
+                          context: context,
+                          isScrollControlled: true,
+                          useSafeArea: true,
+                          backgroundColor: Colors.transparent,
+                          builder: (_) => AddTaskModal(initialTask: currentTask),
+                        );
+                      },
+                    ),
+                    const SizedBox(width: 4),
+                    IconButton(
+                      visualDensity: VisualDensity.compact,
+                      padding: const EdgeInsets.all(6),
+                      constraints: const BoxConstraints(),
+                      icon: const Icon(Icons.delete_outline, size: 18, color: AppTheme.urgentRose),
+                      tooltip: 'Hapus',
+                      onPressed: () {
+                        taskProvider.deleteTask(currentTask.id);
+                        Navigator.pop(context);
+                      },
+                    ),
+                  ],
                 ),
               ],
             ),
@@ -190,16 +228,18 @@ class _TaskDetailModalState extends State<TaskDetailModal> {
                       : textSecondary,
                 ),
                 const SizedBox(width: 5),
-                Text(
-                  'Tenggat: ${DateFormatter.formatFullDate(currentTask.dueDate)} (${DateFormatter.formatTime(currentTask.dueDate)})',
-                  style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: currentTask.isOverdue && !currentTask.isCompleted
-                        ? FontWeight.w600
-                        : FontWeight.w400,
-                    color: currentTask.isOverdue && !currentTask.isCompleted
-                        ? AppTheme.urgentRose
-                        : textSecondary,
+                Expanded(
+                  child: Text(
+                    'Tenggat: ${DateFormatter.formatFullDate(currentTask.dueDate)} (${DateFormatter.formatTime(currentTask.dueDate)})',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: currentTask.isOverdue && !currentTask.isCompleted
+                          ? FontWeight.w600
+                          : FontWeight.w400,
+                      color: currentTask.isOverdue && !currentTask.isCompleted
+                          ? AppTheme.urgentRose
+                          : textSecondary,
+                    ),
                   ),
                 ),
               ],

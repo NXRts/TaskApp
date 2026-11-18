@@ -1115,6 +1115,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
             showModalBottomSheet(
               context: context,
               isScrollControlled: true,
+              useSafeArea: true,
               backgroundColor: Colors.transparent,
               builder: (_) => TaskDetailModal(task: task),
             );
