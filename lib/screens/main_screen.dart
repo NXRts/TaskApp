@@ -108,6 +108,7 @@ class _MainScreenState extends State<MainScreen> {
             showModalBottomSheet(
               context: context,
               isScrollControlled: true,
+              useSafeArea: true,
               backgroundColor: Colors.transparent,
               builder: (_) => const AddTransactionModal(),
             );
@@ -115,6 +116,7 @@ class _MainScreenState extends State<MainScreen> {
             showModalBottomSheet(
               context: context,
               isScrollControlled: true,
+              useSafeArea: true,
               backgroundColor: Colors.transparent,
               builder: (_) => const AddTaskModal(),
             );
