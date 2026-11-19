@@ -4,6 +4,7 @@ import '../models/task.dart';
 import '../models/subtask.dart';
 import '../services/storage_service.dart';
 import '../services/task_reminder_service.dart';
+import '../services/task_attachment_service.dart';
 
 enum TaskFilterStatus { all, today, upcoming, overdue, completed }
 
@@ -203,10 +204,35 @@ class TaskProvider with ChangeNotifier {
   }
 
   Future<void> deleteTask(String id) async {
+    final task = getTaskById(id);
+    if (task != null) {
+      for (final att in task.attachments) {
+        await TaskAttachmentService.deleteAttachment(att);
+      }
+    }
     _tasks.removeWhere((t) => t.id == id);
     await _storageService.deleteTask(id);
     await TaskReminderService.instance.cancelTaskReminders(id);
     notifyListeners();
+  }
+
+  Future<void> addAttachmentToTask(String taskId, String attachmentPath) async {
+    final task = getTaskById(taskId);
+    if (task != null && !task.attachments.contains(attachmentPath)) {
+      final updatedAttachments = List<String>.from(task.attachments)..add(attachmentPath);
+      final updated = task.copyWith(attachments: updatedAttachments);
+      await updateTask(updated);
+    }
+  }
+
+  Future<void> removeAttachmentFromTask(String taskId, String attachmentPath) async {
+    final task = getTaskById(taskId);
+    if (task != null && task.attachments.contains(attachmentPath)) {
+      final updatedAttachments = List<String>.from(task.attachments)..remove(attachmentPath);
+      final updated = task.copyWith(attachments: updatedAttachments);
+      await updateTask(updated);
+      await TaskAttachmentService.deleteAttachment(attachmentPath);
+    }
   }
 
   Future<void> toggleTaskStatus(String id) async {

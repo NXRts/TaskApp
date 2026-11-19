@@ -7,6 +7,9 @@ import '../providers/task_provider.dart';
 import '../providers/subject_provider.dart';
 import '../utils/app_theme.dart';
 import '../utils/date_formatter.dart';
+import '../services/task_attachment_service.dart';
+import 'task_attachment_tile.dart';
+import 'task_attachment_picker_sheet.dart';
 import 'add_task_modal.dart';
 
 /// Modern Editorial Task Detail Bottom Sheet
@@ -46,9 +49,9 @@ class _TaskDetailModalState extends State<TaskDetailModal> {
     }
 
     if (task.attachments.isNotEmpty) {
-      buffer.writeln('\n*Tautan Lampiran:*');
+      buffer.writeln('\n*Lampiran / Berkas Tugas:*');
       for (var att in task.attachments) {
-        buffer.writeln('• $att');
+        buffer.writeln('• ${TaskAttachmentService.getDisplayName(att)}');
       }
     }
 
@@ -382,45 +385,136 @@ class _TaskDetailModalState extends State<TaskDetailModal> {
               ],
             ),
 
-            // Attachments
-            if (currentTask.attachments.isNotEmpty) ...[
-              const SizedBox(height: 16),
-              Text(
-                'TAUTAN LAMPIRAN',
-                style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, letterSpacing: 1.1, color: textSecondary),
-              ),
-              const SizedBox(height: 6),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: currentTask.attachments.map((url) {
-                  return Padding(
-                    padding: const EdgeInsets.only(bottom: 4),
-                    child: InkWell(
-                      onTap: () {
-                        Clipboard.setData(ClipboardData(text: url));
+            // Attachments Section
+            const SizedBox(height: 18),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  'LAMPIRAN & DOKUMEN TUGAS',
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: 1.1,
+                    color: textSecondary,
+                  ),
+                ),
+                InkWell(
+                  borderRadius: BorderRadius.circular(5),
+                  onTap: () async {
+                    final picked = await TaskAttachmentPickerSheet.show(context);
+                    if (picked.isNotEmpty && context.mounted) {
+                      for (final p in picked) {
+                        await taskProvider.addAttachmentToTask(currentTask.id, p);
+                      }
+                      if (context.mounted) {
                         ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Tautan disalin ke clipboard!')),
-                        );
-                      },
-                      child: Row(
-                        children: [
-                          Icon(Icons.link, size: 14, color: AppTheme.brandCobalt),
-                          const SizedBox(width: 6),
-                          Expanded(
-                            child: Text(
-                              url,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(
-                                fontSize: 12.5,
-                                color: AppTheme.brandCobalt,
-                                decoration: TextDecoration.underline,
-                              ),
+                          SnackBar(
+                            content: Text(
+                              picked.length == 1
+                                  ? 'Berhasil melampirkan 1 berkas'
+                                  : 'Berhasil melampirkan ${picked.length} berkas',
                             ),
+                            behavior: SnackBarBehavior.floating,
+                            duration: const Duration(seconds: 2),
                           ),
-                        ],
-                      ),
+                        );
+                      }
+                    }
+                  },
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(Icons.add_circle_outline_rounded, size: 14, color: AppTheme.brandCobalt),
+                        const SizedBox(width: 4),
+                        const Text(
+                          'Tambah',
+                          style: TextStyle(
+                            fontSize: 11.5,
+                            fontWeight: FontWeight.w600,
+                            color: AppTheme.brandCobalt,
+                          ),
+                        ),
+                      ],
                     ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+
+            if (currentTask.attachments.isEmpty) ...[
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                decoration: BoxDecoration(
+                  color: isDark ? AppTheme.darkSurfaceElevated : AppTheme.lightBorderSubtle,
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: borderCol, width: 0.8),
+                ),
+                child: InkWell(
+                  onTap: () async {
+                    final picked = await TaskAttachmentPickerSheet.show(context);
+                    if (picked.isNotEmpty && context.mounted) {
+                      for (final p in picked) {
+                        await taskProvider.addAttachmentToTask(currentTask.id, p);
+                      }
+                    }
+                  },
+                  child: Row(
+                    children: [
+                      Icon(Icons.attachment_rounded, size: 18, color: textSecondary),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Text(
+                          'Belum ada foto catatan atau PDF soal. Ketuk untuk melampirkan.',
+                          style: TextStyle(fontSize: 11.5, color: textSecondary),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ] else ...[
+              Column(
+                children: currentTask.attachments.map((att) {
+                  return TaskAttachmentTile(
+                    pathOrUrl: att,
+                    showDeleteButton: true,
+                    onDelete: () async {
+                      final confirmed = await showDialog<bool>(
+                        context: context,
+                        builder: (ctx) => AlertDialog(
+                          backgroundColor: isDark ? AppTheme.darkSurface : AppTheme.lightSurface,
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          title: Text(
+                            'Hapus Lampiran?',
+                            style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: textPrimary),
+                          ),
+                          content: Text(
+                            'Apakah Anda yakin ingin menghapus lampiran "${TaskAttachmentService.getDisplayName(att)}"?',
+                            style: TextStyle(fontSize: 12.5, color: textSecondary),
+                          ),
+                          actions: [
+                            TextButton(
+                              onPressed: () => Navigator.of(ctx).pop(false),
+                              child: const Text('Batal'),
+                            ),
+                            ElevatedButton(
+                              style: ElevatedButton.styleFrom(backgroundColor: Colors.redAccent),
+                              onPressed: () => Navigator.of(ctx).pop(true),
+                              child: const Text('Hapus', style: TextStyle(color: Colors.white)),
+                            ),
+                          ],
+                        ),
+                      );
+
+                      if (confirmed == true && context.mounted) {
+                        await taskProvider.removeAttachmentFromTask(currentTask.id, att);
+                      }
+                    },
                   );
                 }).toList(),
               ),

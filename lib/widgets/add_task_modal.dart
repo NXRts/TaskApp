@@ -7,6 +7,8 @@ import '../providers/task_provider.dart';
 import '../providers/subject_provider.dart';
 import '../utils/app_theme.dart';
 import '../utils/date_formatter.dart';
+import '../services/task_attachment_service.dart';
+import 'task_attachment_tile.dart';
 import 'add_subject_dialog.dart';
 
 /// Modern Editorial Add/Edit Task Bottom Sheet
@@ -38,6 +40,7 @@ class _AddTaskModalState extends State<AddTaskModal> {
   final List<String> _attachments = [];
 
   bool _showAdvanced = false;
+  bool _isAttaching = false;
 
   @override
   void initState() {
@@ -138,6 +141,60 @@ class _AddTaskModalState extends State<AddTaskModal> {
         _attachments.add(text);
         _attachmentController.clear();
       });
+    }
+  }
+
+  Future<void> _pickCamera() async {
+    setState(() => _isAttaching = true);
+    try {
+      final path = await TaskAttachmentService.pickImageFromCamera();
+      if (path != null && mounted) {
+        setState(() => _attachments.add(path));
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Gagal mengambil foto: $e')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isAttaching = false);
+    }
+  }
+
+  Future<void> _pickGallery() async {
+    setState(() => _isAttaching = true);
+    try {
+      final paths = await TaskAttachmentService.pickMultipleImagesFromGallery();
+      if (paths.isNotEmpty && mounted) {
+        setState(() => _attachments.addAll(paths));
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Gagal memilih foto galeri: $e')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isAttaching = false);
+    }
+  }
+
+  Future<void> _pickPdf() async {
+    setState(() => _isAttaching = true);
+    try {
+      final paths = await TaskAttachmentService.pickPdfFiles();
+      if (paths.isNotEmpty && mounted) {
+        setState(() => _attachments.addAll(paths));
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Gagal memilih dokumen PDF: $e')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isAttaching = false);
     }
   }
 
@@ -664,8 +721,76 @@ class _AddTaskModalState extends State<AddTaskModal> {
               ),
 
               if (_showAdvanced) ...[
-                const SizedBox(height: 10),
-                // Attachment field
+                const SizedBox(height: 12),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      'LAMPIRAN BERKAS & FOTO TUGAS',
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: 1.1,
+                        color: textSecondary,
+                      ),
+                    ),
+                    if (_isAttaching)
+                      const SizedBox(
+                        width: 14,
+                        height: 14,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: AppTheme.brandCobalt,
+                        ),
+                      ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+
+                // Quick Buttons: Kamera, Galeri, PDF
+                Row(
+                  children: [
+                    Expanded(
+                      child: _buildAttachmentActionButton(
+                        icon: Icons.camera_alt_outlined,
+                        label: 'Kamera',
+                        color: Colors.teal,
+                        onTap: _isAttaching ? null : _pickCamera,
+                        isDark: isDark,
+                        borderCol: borderCol,
+                        textPrimary: textPrimary,
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                    Expanded(
+                      child: _buildAttachmentActionButton(
+                        icon: Icons.photo_library_outlined,
+                        label: 'Galeri',
+                        color: Colors.blueAccent,
+                        onTap: _isAttaching ? null : _pickGallery,
+                        isDark: isDark,
+                        borderCol: borderCol,
+                        textPrimary: textPrimary,
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                    Expanded(
+                      child: _buildAttachmentActionButton(
+                        icon: Icons.picture_as_pdf_outlined,
+                        label: 'PDF Soal',
+                        color: Colors.redAccent,
+                        onTap: _isAttaching ? null : _pickPdf,
+                        isDark: isDark,
+                        borderCol: borderCol,
+                        textPrimary: textPrimary,
+                      ),
+                    ),
+                  ],
+                ),
+
+                const SizedBox(height: 8),
+
+                // Manual URL Input field
                 Row(
                   children: [
                     Expanded(
@@ -673,8 +798,8 @@ class _AddTaskModalState extends State<AddTaskModal> {
                         controller: _attachmentController,
                         style: TextStyle(fontSize: 12.5, color: textPrimary),
                         decoration: InputDecoration(
-                          hintText: 'Tautan Google Drive / LMS / Dokumen...',
-                          hintStyle: TextStyle(fontSize: 12, color: textSecondary),
+                          hintText: 'Atau tempel tautan Google Drive / LMS...',
+                          hintStyle: TextStyle(fontSize: 11.5, color: textSecondary),
                           prefixIcon: Icon(Icons.link, size: 16, color: textSecondary),
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(7),
@@ -692,26 +817,28 @@ class _AddTaskModalState extends State<AddTaskModal> {
                     const SizedBox(width: 6),
                     IconButton(
                       visualDensity: VisualDensity.compact,
+                      tooltip: 'Tambah Tautan',
                       icon: const Icon(Icons.add, size: 20),
                       onPressed: _addAttachment,
                     ),
                   ],
                 ),
+
+                // List of Attached Items
                 if (_attachments.isNotEmpty) ...[
-                  const SizedBox(height: 4),
-                  Wrap(
-                    spacing: 6,
+                  const SizedBox(height: 8),
+                  Column(
                     children: _attachments.asMap().entries.map((entry) {
-                      return Chip(
-                        visualDensity: VisualDensity.compact,
-                        label: Text(entry.value, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 11)),
-                        onDeleted: () => setState(() => _attachments.removeAt(entry.key)),
+                      return TaskAttachmentTile(
+                        pathOrUrl: entry.value,
+                        compact: true,
+                        onDelete: () => setState(() => _attachments.removeAt(entry.key)),
                       );
                     }).toList(),
                   ),
                 ],
 
-                const SizedBox(height: 8),
+                const SizedBox(height: 10),
 
                 // Notes field
                 TextFormField(
@@ -823,6 +950,48 @@ class _AddTaskModalState extends State<AddTaskModal> {
                 ? (isDark ? AppTheme.darkAccent : Colors.white)
                 : (isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary),
           ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildAttachmentActionButton({
+    required IconData icon,
+    required String label,
+    required Color color,
+    required VoidCallback? onTap,
+    required bool isDark,
+    required Color borderCol,
+    required Color textPrimary,
+  }) {
+    return InkWell(
+      borderRadius: BorderRadius.circular(8),
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
+        decoration: BoxDecoration(
+          color: isDark ? AppTheme.darkSurfaceElevated : AppTheme.lightBorderSubtle,
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: borderCol, width: 0.8),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(icon, size: 15, color: color),
+            const SizedBox(width: 5),
+            Flexible(
+              child: Text(
+                label,
+                style: TextStyle(
+                  fontSize: 11.5,
+                  fontWeight: FontWeight.w600,
+                  color: textPrimary,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+          ],
         ),
       ),
     );
