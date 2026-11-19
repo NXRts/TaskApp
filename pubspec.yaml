@@ -49,6 +49,8 @@ dependencies:
   gal: ^3.0.0
   timezone: ^0.10.1
   flutter_timezone: ^5.1.1
+  image_picker: ^1.2.4
+  file_picker: ^13.4.0
 
 dev_dependencies:
   flutter_test:

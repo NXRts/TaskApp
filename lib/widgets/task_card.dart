@@ -214,7 +214,7 @@ class TaskCard extends StatelessWidget {
                               const SizedBox(width: 10),
                             ],
                             if (task.attachments.isNotEmpty) ...[
-                              Icon(Icons.link, size: 13, color: textSecondary),
+                              Icon(Icons.attach_file_rounded, size: 13, color: textSecondary),
                               const SizedBox(width: 2),
                               Text(
                                 '${task.attachments.length}',
