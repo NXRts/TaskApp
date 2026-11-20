@@ -174,6 +174,14 @@ class StorageService {
     await _settingsBox.put('is_24_hour_format', is24);
   }
 
+  bool getIsMonthlyCalendarView() {
+    return _settingsBox.get('calendar_is_monthly_view', defaultValue: false) as bool;
+  }
+
+  Future<void> setIsMonthlyCalendarView(bool isMonthly) async {
+    await _settingsBox.put('calendar_is_monthly_view', isMonthly);
+  }
+
   int getCompletedPomodoroSessions() {
     return _settingsBox.get('completed_pomodoro_sessions', defaultValue: 0) as int;
   }
