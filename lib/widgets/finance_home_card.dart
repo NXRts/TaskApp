@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import '../providers/finance_provider.dart';
 import '../utils/app_theme.dart';
 import '../screens/finance_screen.dart';
+import '../screens/main_screen.dart';
 
 class FinanceHomeCard extends StatelessWidget {
   const FinanceHomeCard({super.key});
@@ -47,10 +48,12 @@ class FinanceHomeCard extends StatelessWidget {
 
     return InkWell(
       onTap: () {
-        Navigator.push(
-          context,
-          MaterialPageRoute(builder: (_) => const FinanceScreen()),
-        );
+        if (!MainScreen.switchTab(context, MainScreen.financeTabIndex)) {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const FinanceScreen()),
+          );
+        }
       },
       borderRadius: BorderRadius.circular(14),
       child: Container(

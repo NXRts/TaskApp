@@ -9,6 +9,7 @@ import '../widgets/add_transaction_modal.dart';
 import '../widgets/add_loan_dialog.dart';
 import '../widgets/edit_envelope_dialog.dart';
 import '../widgets/adjust_wallet_dialog.dart';
+import 'main_screen.dart';
 
 class FinanceScreen extends StatefulWidget {
   const FinanceScreen({super.key});
@@ -37,9 +38,23 @@ class _FinanceScreenState extends State<FinanceScreen> {
         isDark ? AppTheme.darkTextMuted : AppTheme.lightTextMuted;
 
     final finance = context.watch<FinanceProvider>();
+    final isStandalone =
+        context.findAncestorWidgetOfExactType<MainScreen>() == null &&
+        Navigator.canPop(context);
 
     return Scaffold(
       backgroundColor: bgCol,
+      floatingActionButton: isStandalone
+          ? FloatingActionButton(
+              heroTag: 'finance_standalone_fab',
+              elevation: 2,
+              backgroundColor: isDark ? AppTheme.darkAccent : AppTheme.lightAccent,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+              onPressed: () => _openAddTransactionModal(context),
+              child: const Icon(Icons.add, size: 24),
+            )
+          : null,
       body: SafeArea(
         child: CustomScrollView(
           physics: const BouncingScrollPhysics(),
@@ -52,61 +67,87 @@ class _FinanceScreenState extends State<FinanceScreen> {
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            Text(
-                              'FinTrack',
-                              style: TextStyle(
-                                fontSize: 22,
-                                fontWeight: FontWeight.w800,
-                                color: textPrim,
-                                letterSpacing: -0.5,
-                              ),
+                    Expanded(
+                      child: Row(
+                        children: [
+                          if (isStandalone) ...[
+                            IconButton(
+                              visualDensity: VisualDensity.compact,
+                              padding: EdgeInsets.zero,
+                              constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                              icon: Icon(Icons.arrow_back_rounded, size: 20, color: textPrim),
+                              tooltip: 'Kembali',
+                              onPressed: () => Navigator.pop(context),
                             ),
-                            const SizedBox(width: 8),
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 7, vertical: 2),
-                              decoration: BoxDecoration(
-                                color: isDark
-                                    ? AppTheme.darkAccent.withValues(alpha: 0.15)
-                                    : AppTheme.brandCobalt.withValues(alpha: 0.1),
-                                borderRadius: BorderRadius.circular(6),
-                                border: Border.all(
-                                  color: isDark
-                                      ? AppTheme.darkAccent.withValues(alpha: 0.4)
-                                      : AppTheme.brandCobalt.withValues(alpha: 0.3),
-                                  width: 0.8,
-                                ),
-                              ),
-                              child: Text(
-                                'OFFLINE',
-                                style: TextStyle(
-                                  fontSize: 9.5,
-                                  fontWeight: FontWeight.w700,
-                                  letterSpacing: 0.5,
-                                  color: isDark
-                                      ? AppTheme.darkAccent
-                                      : AppTheme.brandCobalt,
-                                ),
-                              ),
-                            ),
+                            const SizedBox(width: 6),
                           ],
-                        ),
-                        const SizedBox(height: 2),
-                        Text(
-                          'Buku Kas & Uang Harian Mahasiswa',
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: textMuted,
-                            fontWeight: FontWeight.w500,
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  children: [
+                                    Flexible(
+                                      child: Text(
+                                        'FinTrack',
+                                        style: TextStyle(
+                                          fontSize: 22,
+                                          fontWeight: FontWeight.w800,
+                                          color: textPrim,
+                                          letterSpacing: -0.5,
+                                        ),
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(
+                                          horizontal: 7, vertical: 2),
+                                      decoration: BoxDecoration(
+                                        color: isDark
+                                            ? AppTheme.darkAccent.withValues(alpha: 0.15)
+                                            : AppTheme.brandCobalt.withValues(alpha: 0.1),
+                                        borderRadius: BorderRadius.circular(6),
+                                        border: Border.all(
+                                          color: isDark
+                                              ? AppTheme.darkAccent.withValues(alpha: 0.4)
+                                              : AppTheme.brandCobalt.withValues(alpha: 0.3),
+                                          width: 0.8,
+                                        ),
+                                      ),
+                                      child: Text(
+                                        'OFFLINE',
+                                        style: TextStyle(
+                                          fontSize: 9.5,
+                                          fontWeight: FontWeight.w700,
+                                          letterSpacing: 0.5,
+                                          color: isDark
+                                              ? AppTheme.darkAccent
+                                              : AppTheme.brandCobalt,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  'Buku Kas & Uang Harian Mahasiswa',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: textMuted,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ],
+                            ),
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
+                    const SizedBox(width: 8),
                     ElevatedButton.icon(
                       onPressed: () => _openAddTransactionModal(context),
                       icon: const Icon(Icons.add, size: 16),

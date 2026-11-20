@@ -10,7 +10,21 @@ import '../utils/app_theme.dart';
 
 /// Modern Editorial Bottom Navigation Shell
 class MainScreen extends StatefulWidget {
+  static const int tasksTabIndex = 0;
+  static const int subjectsTabIndex = 1;
+  static const int calendarTabIndex = 2;
+  static const int financeTabIndex = 3;
+  static const int focusTabIndex = 4;
+
   const MainScreen({super.key});
+
+  /// Switches the active bottom navigation tab when [context] is inside [MainScreen].
+  static bool switchTab(BuildContext context, int index) {
+    final state = context.findAncestorStateOfType<_MainScreenState>();
+    if (state == null) return false;
+    state._switchToTab(index);
+    return true;
+  }
 
   @override
   State<MainScreen> createState() => _MainScreenState();
@@ -18,6 +32,11 @@ class MainScreen extends StatefulWidget {
 
 class _MainScreenState extends State<MainScreen> {
   int _currentIndex = 0;
+
+  void _switchToTab(int index) {
+    if (index < 0 || index >= _screens.length || _currentIndex == index) return;
+    setState(() => _currentIndex = index);
+  }
 
   final List<Widget> _screens = const [
     HomeScreen(),
