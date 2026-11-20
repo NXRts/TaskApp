@@ -1,13 +1,21 @@
 import 'dart:io';
+import 'dart:typed_data';
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hive/hive.dart';
+import 'package:provider/provider.dart';
 import 'package:taskapp/models/finance_wallet.dart';
 import 'package:taskapp/models/finance_transaction.dart';
 import 'package:taskapp/models/finance_envelope.dart';
 import 'package:taskapp/models/finance_loan.dart';
 import 'package:taskapp/models/finance_settings.dart';
 import 'package:taskapp/providers/finance_provider.dart';
+import 'package:taskapp/providers/settings_provider.dart';
+import 'package:taskapp/providers/subject_provider.dart';
+import 'package:taskapp/providers/task_provider.dart';
+import 'package:taskapp/screens/main_screen.dart';
 import 'package:taskapp/services/storage_service.dart';
+import 'package:taskapp/utils/app_theme.dart';
 
 void main() {
   late Directory tempDir;
@@ -219,5 +227,59 @@ void main() {
     final restoredLoans = storage.getFinanceLoans();
     expect(restoredLoans.length, 1);
     expect(restoredLoans.first.friendName, 'Bima');
+  });
+
+  testWidgets('Tapping FinanceHomeCard on HomeScreen switches to Keuangan tab while keeping bottom navbar',
+      (tester) async {
+    for (final boxName in [
+      StorageService.tasksBoxName,
+      StorageService.subjectsBoxName,
+      StorageService.settingsBoxName,
+      StorageService.financeBoxName,
+      StorageService.financeTransactionsBoxName,
+      StorageService.financeLoansBoxName,
+    ]) {
+      await Hive.openBox(boxName, bytes: Uint8List(0));
+    }
+    final storage = StorageService();
+    await storage.init(customPath: tempDir.path);
+    await storage.setTaskRemindersEnabled(false);
+
+    await tester.pumpWidget(
+      MultiProvider(
+        providers: [
+          ChangeNotifierProvider(create: (_) => TaskProvider(storage)),
+          ChangeNotifierProvider(create: (_) => SubjectProvider(storage)),
+          ChangeNotifierProvider(create: (_) => SettingsProvider(storage)),
+          ChangeNotifierProvider(create: (_) => FinanceProvider(storage)),
+        ],
+        child: MaterialApp(
+          theme: AppTheme.darkTheme,
+          home: const MainScreen(),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    // Verify we start on HomeScreen with FinanceHomeCard visible
+    expect(find.text('Safe-to-Spend Hari Ini'), findsOneWidget);
+
+    // Tap FinanceHomeCard to open FinanceScreen
+    await tester.tap(find.text('Safe-to-Spend Hari Ini'));
+    await tester.pumpAndSettle();
+
+    // Bottom navigation bar and FinTrack should both be visible
+    expect(find.text('FinTrack'), findsOneWidget);
+    expect(find.text('Tugas'), findsOneWidget);
+    expect(find.text('Matkul'), findsOneWidget);
+    expect(find.text('Kalender'), findsOneWidget);
+    expect(find.text('Keuangan'), findsOneWidget);
+    expect(find.text('Fokus'), findsOneWidget);
+    expect(find.byType(FloatingActionButton), findsOneWidget);
+
+    // User can still switch back to Tugas via bottom navbar
+    await tester.tap(find.text('Tugas'));
+    await tester.pumpAndSettle();
+    expect(find.text('Safe-to-Spend Hari Ini'), findsOneWidget);
   });
 }
