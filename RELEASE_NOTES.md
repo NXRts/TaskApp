@@ -1,29 +1,37 @@
-# TaskApp v2.4.4 — Penyempurnaan Tata Letak Modal Detail Tugas & Multi-Line Header (Mobile UI Polish)
+# TaskApp v2.5.0 — Lampiran Berkas & Foto Tugas Lokal (Offline Camera & PDF Attachments)
 
-> **TaskApp v2.4.4** menghadirkan pembaruan kenyamanan antarmuka pada modal **Detail Tugas (Task Detail Modal)**: mengatasi galat *overflow* pada baris metadata/judul matkul panjang dengan *multi-line text wrap* otomatis, serta mengunci posisi tombol **Edit** dan **Hapus** agar tetap kokoh di sudut kanan atas tanpa pernah terdorong keluar layar.
+> **TaskApp v2.5.0** menghadirkan fitur **Lampiran Berkas & Foto Tugas Lokal** yang bekerja **100% offline-first**: ambil foto catatan papan tulis langsung dari kamera, pilih beberapa foto dari galeri, atau lampirkan dokumen PDF soal tugas serta membukanya langsung di dalam aplikasi tanpa bergantung koneksi internet.
 >
 > Pembaruan ini ditandatangani dengan **Keystore Resmi Permanen** (`taskapp-release.jks`), sehingga Anda dapat **langsung mengunduh berkas APK dan menekan "Update" tanpa perlu mencopot aplikasi sebelumnya. Seluruh data perkuliahan, tugas, presensi, dan buku kas FinTrack Anda tetap aman 100%**.
 
 ---
 
-## ✨ Apa yang Baru di Versi 2.4.4 (Changelog)
+## ✨ Apa yang Baru di Versi 2.5.0 (Changelog)
 
-### 1. 📋 Desain Ulang Header Modal Detail Tugas (Bebas Overflow)
-- **Pelipatan Teks Multi-Line Otomatis (Auto Multi-Line Wrap)**:
-  - Menyelesaikan galat *RenderFlex right overflowed by 7.5 pixels* yang terjadi saat mata kuliah memiliki nama panjang (misalnya *English for Academic Purposes (EAP)*) bersanding dengan label jenis tugas (*Tugas Individu / Tugas Kelompok*).
-  - Teks metadata kini dibungkus dengan `Expanded` dan `RichText` terpadu, sehingga teks panjang otomatis berlanjut ke baris bawahnya secara proporsional.
-- **Posisi Tombol Edit & Hapus Terkunci di Kanan Atas**:
-  - Tombol aksi `[ ✏️ Edit ]` dan `[ 🗑️ Hapus ]` kini ditempatkan pada kontainer terpisah yang berlabuh kuat (*pinned*) di pojok kanan atas modal.
-  - Tombol tidak akan pernah bergeser, terdorong ke luar layar, atau hilang terpotong berapapun panjangnya judul tugas atau nama mata kuliah.
-- **Proteksi Overflow pada Baris Tenggat Waktu**:
-  - Tanggal dan jam tenggat waktu (`Tenggat: ...`) kini dilindungi dengan `Expanded` agar tetap aman pada tampilan smartphone dengan resolusi layar kompak.
-- **Peningkatan Safe Area Modal**:
-  - Memastikan modal terbuka dalam batas area aman layar (`useSafeArea: true`) saat diakses dari kartu tugas beranda maupun tampilan matriks kalender.
+### 1. 📎 Lampiran Kamera, Galeri & PDF Soal Offline
+- **Ambil Foto Langsung dari Kamera**:
+  - Foto catatan papan tulis atau penjelasan dosen langsung dari modal tambah/edit tugas maupun modal detail tugas.
+  - Berkas foto disalin aman ke direktori privat internal aplikasi (`task_attachments`) agar tetap tersedia secara offline.
+- **Pilih Multi-Foto dari Galeri**:
+  - Mendukung pemilihan satu atau beberapa gambar sekaligus dari galeri perangkat untuk lampiran kisi-kisi atau materi kuliah.
+- **Lampirkan Dokumen PDF Tugas / Soal**:
+  - Pilih berkas `.pdf` lembar soal, modul praktikum, atau panduan tugas langsung dari penyimpanan perangkat.
+- **Dukungan Tautan URL Tetap Tersedia**:
+  - Tetap dapat menempelkan tautan eksternal seperti Google Drive, LMS/Spada, atau link Zoom berdampingan dengan berkas lokal.
+
+### 2. 🖼️ Penampil Gambar & Pembaca PDF Tersemat
+- **Penampil Gambar Internal (`AttachmentImageViewerScreen`)**:
+  - Mendukung gesture *pinch-to-zoom* (skala `0.5x` s/d `5.0x`), *double-tap* untuk zoom 2.5x / reset, *pan*, tombol **Reset Skala**, dan tombol **Bagikan Foto**.
+- **Pembaca PDF Tersemat (`AttachmentPdfViewerScreen`)**:
+  - Membaca dokumen PDF soal/materi langsung di dalam aplikasi via `PdfPreview` lengkap dengan pratinjau halaman, cetak langsung, dan tombol **Bagikan Berkas PDF**.
+- **Integrasi Menyeluruh di Kartu & Modal Tugas**:
+  - Tombol cepat `[ Kamera ]`, `[ Galeri ]`, dan `[ PDF Soal ]` pada modal Tambah/Edit Tugas, daftar lampiran lengkap di Detail Tugas (dengan aksi tambah, buka, bagikan, dan hapus), serta indikator jumlah lampiran di Kartu Tugas beranda.
+  - Berkas lampiran lokal otomatis dibersihkan dari penyimpanan aplikasi saat lampiran atau tugas dihapus.
 
 ---
 
 ## 📲 Panduan Instalasi & Pembaruan
 
-1. Unduh berkas **`TaskApp-v2.4.4.apk`** dari daftar **Assets** di bawah.
+1. Unduh berkas **`TaskApp-v2.5.0.apk`** dari daftar **Assets** di bawah.
 2. Buka berkas APK di ponsel Android Anda dan pilih tombol **"Update"**.
-3. Aplikasi akan langsung terbarukan ke **v2.4.4**. Seluruh data tugas, catatan akademik, dan keuangan Anda tetap utuh 100%.
+3. Aplikasi akan langsung terbarukan ke **v2.5.0**. Seluruh data tugas, catatan akademik, dan keuangan Anda tetap utuh 100%.
