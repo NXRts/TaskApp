@@ -111,3 +111,13 @@ Untuk menghasilkan file installer `.apk` yang siap dipasang langsung di smartpho
 flutter build apk --release
 ```
 File APK akan berada di `build/app/outputs/flutter-apk/app-release.apk`.
+
+---
+
+## 💖 Dukung Pengembang (Support Me)
+
+TaskApp dibangun dan dipelihara secara gratis, 100% offline-first, dan tanpa iklan. Jika aplikasi ini membantu aktivitas perkuliahan Anda, dukungan Anda sangat berarti untuk pengembangan fitur selanjutnya:
+
+- **Saweria** (QRIS, GoPay, OVO, DANA): [saweria.co/yusufarrofi](https://saweria.co/yusufarrofi)
+- **Ko-fi**: [ko-fi.com/yusufarrofi](https://ko-fi.com/yusufarrofi/)
+- **Yapp.ink**: [yapp.ink/yusufarrofi21](https://yapp.ink/yusufarrofi21)
