@@ -7,6 +7,7 @@ import '../providers/subject_provider.dart';
 import '../services/storage_service.dart';
 import '../services/task_reminder_service.dart';
 import 'schedule_export_screen.dart';
+import '../widgets/support_creator_card.dart';
 import '../utils/app_theme.dart';
 
 /// Modern Editorial Profile & Settings Screen
@@ -752,6 +753,18 @@ class _ProfileSettingsScreenState extends State<ProfileSettingsScreen> {
             Divider(color: borderCol),
             const SizedBox(height: 14),
 
+            // Support Me / Creator Section
+            Text(
+              'DUKUNG PENGEMBANG',
+              style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, letterSpacing: 1.1, color: textSecondary),
+            ),
+            const SizedBox(height: 8),
+            const SupportCreatorCard(),
+
+            const SizedBox(height: 24),
+            Divider(color: borderCol),
+            const SizedBox(height: 14),
+
             // About App
             Text(
               'TENTANG TASKAPP',
@@ -768,7 +781,7 @@ class _ProfileSettingsScreenState extends State<ProfileSettingsScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('TaskApp v2.4.3 • Academic & Financial Student Hub', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: textPrimary)),
+                  Text('TaskApp v2.5.1 • Academic & Financial Student Hub', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: textPrimary)),
                   const SizedBox(height: 3),
                   Text(
                     'Platform terintegrasi produktivitas akademik, presensi kuliah, jadwal wallpaper, deadline alarm, dan buku kas finansial mahasiswa. 100% Offline-First & Zero-Ad.',

@@ -82,6 +82,22 @@ class MainActivity : FlutterActivity() {
                         }
                     }
                 }
+                "openExternalUrl" -> {
+                    val url = call.argument<String>("url")?.trim()
+                    if (url.isNullOrEmpty() || (!url.startsWith("https://") && !url.startsWith("http://"))) {
+                        result.error("INVALID_URL", "URL harus menggunakan skema http atau https", null)
+                        return@setMethodCallHandler
+                    }
+                    try {
+                        val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url)).apply {
+                            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                        }
+                        startActivity(intent)
+                        result.success(true)
+                    } catch (e: Exception) {
+                        result.error("UNAVAILABLE", e.message, null)
+                    }
+                }
                 else -> {
                     result.notImplemented()
                 }
