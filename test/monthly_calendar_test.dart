@@ -207,5 +207,53 @@ void main() {
       expect(find.byType(MonthlyCalendarGrid), findsNothing);
       expect(storage.getIsMonthlyCalendarView(), isFalse);
     });
+
+    testWidgets('CalendarScreen aligns 23:00-24:00 labels evenly and keeps 23:59 tasks above 24:00 line',
+        (tester) async {
+      final storage = StorageService.instance;
+      await storage.setTaskRemindersEnabled(false);
+      final now = DateTime.now();
+      await storage.saveTask(
+        TaskItem(
+          id: 'task-2359',
+          title: 'Membuat Video EAP',
+          dueDate: DateTime(now.year, now.month, now.day, 23, 59),
+          priority: TaskPriority.medium,
+        ),
+      );
+      final taskProvider = TaskProvider(storage);
+      final subjectProvider = SubjectProvider(storage);
+
+      await tester.pumpWidget(
+        MultiProvider(
+          providers: [
+            ChangeNotifierProvider<TaskProvider>.value(value: taskProvider),
+            ChangeNotifierProvider<SubjectProvider>.value(value: subjectProvider),
+          ],
+          child: MaterialApp(
+            theme: AppTheme.lightTheme,
+            home: const CalendarScreen(),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // CalendarScreen delegates the main FAB to MainScreen (no duplicate FAB)
+      expect(find.byType(FloatingActionButton), findsNothing);
+
+      // Hour labels 23:00 and 24:00 must be spaced by exactly _hourHeight (62.0)
+      final y23 = tester.getCenter(find.text('23:00')).dy;
+      final y24 = tester.getCenter(find.text('24:00')).dy;
+      expect(y24 - y23, moreOrLessEquals(62.0, epsilon: 0.5));
+
+      // Task due at 23:59 stays within the 23:00-24:00 slot and does not cross 24:00
+      final cardFinder = find.ancestor(
+        of: find.text('Membuat Video EAP'),
+        matching: find.byType(GestureDetector),
+      );
+      final cardRect = tester.getRect(cardFinder.first);
+      expect(cardRect.bottom, lessThanOrEqualTo(y24 + 0.5));
+      expect(find.text('23:59'), findsOneWidget);
+    });
   });
 }

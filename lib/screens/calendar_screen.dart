@@ -663,29 +663,6 @@ class _CalendarScreenState extends State<CalendarScreen> {
           ),
         ],
       ),
-      floatingActionButton: FloatingActionButton(
-        heroTag: 'calendar_fab',
-        onPressed: () {
-          showModalBottomSheet(
-            context: context,
-            isScrollControlled: true,
-            backgroundColor: Colors.transparent,
-            builder: (_) => AddTaskModal(
-              initialDueDate: DateTime(
-                _selectedDate.year,
-                _selectedDate.month,
-                _selectedDate.day,
-                DateTime.now().hour,
-                0,
-              ),
-            ),
-          );
-        },
-        backgroundColor: accentCol,
-        foregroundColor: Colors.white,
-        tooltip: 'Tambah Tugas Baru',
-        child: const Icon(Icons.add),
-      ),
     );
   }
 
@@ -994,7 +971,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
         _selectedDate.month == now.month &&
         _selectedDate.day == now.day;
 
-    final double totalHeight = _gridTopOffset + (24 * _hourHeight) + 40.0;
+    final double totalHeight = _gridTopOffset + (24 * _hourHeight) + 96.0;
 
     return LayoutBuilder(
       builder: (context, constraints) {
@@ -1017,14 +994,15 @@ class _CalendarScreenState extends State<CalendarScreen> {
           }
         }
 
-        // 2. Add tasks for this day
+        // 2. Add tasks for this day (clamp layout start so late tasks like 23:59 stay above 24:00)
         for (final task in dayTasks) {
-          final startMinutes = task.dueDate.hour * 60 + task.dueDate.minute;
+          final rawMinutes = task.dueDate.hour * 60 + task.dueDate.minute;
+          final layoutStart = rawMinutes.clamp(0, 1440 - 50);
           items.add(_TimelineItem(
             id: 'task-${task.id}',
             isSubject: false,
-            startMinutes: startMinutes,
-            endMinutes: (startMinutes + 50).clamp(0, 1440),
+            startMinutes: layoutStart,
+            endMinutes: layoutStart + 50,
             task: task,
           ));
         }
@@ -1042,11 +1020,11 @@ class _CalendarScreenState extends State<CalendarScreen> {
             child: Stack(
               clipBehavior: Clip.none,
               children: [
-                // 1. Background Hour Slots & Divider Lines (0 to 24)
+                // 1. Background Hour Slots & Divider Lines (0 to 23)
                 for (int hour = 0; hour < 24; hour++)
                   Positioned(
                     top: _gridTopOffset + (hour * _hourHeight),
-                    left: 0,
+                    left: _timeColWidth,
                     right: 0,
                     height: _hourHeight,
                     child: InkWell(
@@ -1078,37 +1056,33 @@ class _CalendarScreenState extends State<CalendarScreen> {
                             ),
                           ),
                         ),
-                        child: Row(
-                          children: [
-                            // Hour Time Label
-                            SizedBox(
-                              width: _timeColWidth,
-                              child: Padding(
-                                padding: const EdgeInsets.only(left: 12, top: 4),
-                                child: Text(
-                                  CalendarTimeHelper.formatHourLabel(hour, _is24HourFormat),
-                                  style: TextStyle(
-                                    fontSize: 10.5,
-                                    fontWeight: FontWeight.w600,
-                                    color: textSecondary.withValues(alpha: 0.8),
-                                    letterSpacing: -0.2,
-                                  ),
-                                ),
-                              ),
-                            ),
-                            // Empty Hour Content / Subtle hint
-                            Expanded(
-                              child: Container(
-                                alignment: Alignment.centerRight,
-                                padding: const EdgeInsets.only(right: 16),
-                                child: Icon(
-                                  Icons.add_rounded,
-                                  size: 13,
-                                  color: textSecondary.withValues(alpha: 0.12),
-                                ),
-                              ),
-                            ),
-                          ],
+                        alignment: Alignment.centerRight,
+                        padding: const EdgeInsets.only(right: 16),
+                        child: Icon(
+                          Icons.add_rounded,
+                          size: 13,
+                          color: textSecondary.withValues(alpha: 0.12),
+                        ),
+                      ),
+                    ),
+                  ),
+
+                // Hour Time Labels (00:00 to 24:00) aligned evenly on each grid line
+                for (int hour = 0; hour <= 24; hour++)
+                  Positioned(
+                    top: _gridTopOffset + (hour * _hourHeight) - 7.5,
+                    left: 0,
+                    width: _timeColWidth,
+                    child: Padding(
+                      padding: const EdgeInsets.only(left: 12),
+                      child: Text(
+                        CalendarTimeHelper.formatHourLabel(hour, _is24HourFormat),
+                        style: TextStyle(
+                          fontSize: 10.5,
+                          fontWeight: FontWeight.w600,
+                          height: 1.2,
+                          color: textSecondary.withValues(alpha: 0.8),
+                          letterSpacing: -0.2,
                         ),
                       ),
                     ),
@@ -1117,38 +1091,18 @@ class _CalendarScreenState extends State<CalendarScreen> {
                 // Bottom 24:00 (12 AM) boundary line
                 Positioned(
                   top: _gridTopOffset + (24 * _hourHeight),
-                  left: 0,
+                  left: _timeColWidth,
                   right: 0,
-                  child: Row(
-                    children: [
-                      SizedBox(
-                        width: _timeColWidth,
-                        child: Padding(
-                          padding: const EdgeInsets.only(left: 12),
-                          child: Text(
-                            CalendarTimeHelper.formatHourLabel(24, _is24HourFormat),
-                            style: TextStyle(
-                              fontSize: 10.5,
-                              fontWeight: FontWeight.w600,
-                              color: textSecondary.withValues(alpha: 0.8),
-                            ),
-                          ),
-                        ),
-                      ),
-                      Expanded(
-                        child: Container(
-                          height: 0.6,
-                          color: borderCol.withValues(alpha: 0.5),
-                        ),
-                      ),
-                    ],
+                  child: Container(
+                    height: 0.6,
+                    color: borderCol.withValues(alpha: 0.5),
                   ),
                 ),
 
                 // Vertical timeline separator between Time column and Grid
                 Positioned(
                   top: _gridTopOffset,
-                  bottom: 30,
+                  height: 24 * _hourHeight,
                   left: _timeColWidth,
                   child: Container(
                     width: 0.8,
@@ -1273,7 +1227,8 @@ class _CalendarScreenState extends State<CalendarScreen> {
     Color accentCol,
   ) {
     final item = pos.item;
-    final top = _gridTopOffset + (item.startMinutes / 60.0) * _hourHeight;
+    final double maxGridBottom = _gridTopOffset + (24 * _hourHeight);
+    final double rawTop = _gridTopOffset + (item.startMinutes / 60.0) * _hourHeight;
 
     if (item.isSubject && item.subject != null) {
       final subject = item.subject!;
@@ -1282,6 +1237,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
       final height = rawHeight.clamp(48.0, 500.0);
 
       final subjectColor = subject.color;
+      final top = rawTop.clamp(_gridTopOffset, maxGridBottom - height);
       final timeStr =
           '${CalendarTimeHelper.formatMinutes(subject.startMinutes, _is24HourFormat)} - ${CalendarTimeHelper.formatMinutes(subject.safeEndMinutes, _is24HourFormat)}';
 
@@ -1383,7 +1339,8 @@ class _CalendarScreenState extends State<CalendarScreen> {
       );
     } else if (!item.isSubject && item.task != null) {
       final task = item.task!;
-      final height = 50.0;
+      const double height = 50.0;
+      final double top = rawTop.clamp(_gridTopOffset, maxGridBottom - height);
       final taskProvider = Provider.of<TaskProvider>(context, listen: false);
       final timeStr = CalendarTimeHelper.formatDateTime(task.dueDate, _is24HourFormat);
 
