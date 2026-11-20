@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hive/hive.dart';
@@ -96,6 +97,18 @@ void main() {
 
     setUp(() async {
       tempDir = await Directory.systemTemp.createTemp('calendar_test_');
+      Hive.init(tempDir.path);
+      // Pre-open boxes with in-memory backend so widget tests avoid dart:io file locks inside FakeAsync.
+      for (final boxName in [
+        StorageService.tasksBoxName,
+        StorageService.subjectsBoxName,
+        StorageService.settingsBoxName,
+        StorageService.financeBoxName,
+        StorageService.financeTransactionsBoxName,
+        StorageService.financeLoansBoxName,
+      ]) {
+        await Hive.openBox(boxName, bytes: Uint8List(0));
+      }
       await StorageService().init(customPath: tempDir.path);
     });
 
