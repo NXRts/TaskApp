@@ -11,6 +11,7 @@ import '../widgets/add_task_modal.dart';
 import '../widgets/task_detail_modal.dart';
 import '../screens/subject_detail_screen.dart';
 import '../screens/schedule_export_screen.dart';
+import '../widgets/monthly_calendar_grid.dart';
 import '../utils/app_theme.dart';
 
 /// Helper class for 24-hour and 12-hour AM/PM time formatting
@@ -98,6 +99,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
   static const double _gridTopOffset = 14.0;
 
   late DateTime _selectedDate;
+  late DateTime _focusedMonth;
   late DateTime _lastKnownToday;
   ScrollController? _dateScrollController;
   final ScrollController _timelineScrollController = ScrollController();
@@ -106,6 +108,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
   // View state: 0 = Garis Waktu (Timeline Timetable), 1 = Daftar Tugas (List)
   int _selectedView = 0;
   bool _is24HourFormat = true;
+  bool _isMonthlyView = false;
 
   static DateTime _normalizeDate(DateTime date) =>
       DateTime(date.year, date.month, date.day);
@@ -163,10 +166,14 @@ class _CalendarScreenState extends State<CalendarScreen> {
     final today = _normalizeDate(DateTime.now());
     _lastKnownToday = today;
     _selectedDate = today;
+    _focusedMonth = DateTime(today.year, today.month, 1);
     _is24HourFormat = StorageService.instance.getIs24HourTimeFormat();
+    _isMonthlyView = StorageService.instance.getIsMonthlyCalendarView();
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      _scrollToIndex(_pastDaysCount, animate: false);
+      if (!_isMonthlyView) {
+        _scrollToIndex(_pastDaysCount, animate: false);
+      }
       _scrollToAppropriateHour(animate: false);
     });
   }
@@ -178,16 +185,19 @@ class _CalendarScreenState extends State<CalendarScreen> {
     if (_dateScrollController == null) {
       _lastViewportWidth = screenWidth;
       _dateScrollController = ScrollController(
-        initialScrollOffset: _calculateCenterOffset(_pastDaysCount, screenWidth),
+        initialScrollOffset: _calculateCenterOffset(
+          _resolveStripSelectedIndex(_lastKnownToday),
+          screenWidth,
+        ),
       );
     } else if ((screenWidth - _lastViewportWidth).abs() > 1.0) {
       _lastViewportWidth = screenWidth;
-      final selectedIndex = _pastDaysCount +
-          _normalizeDate(_selectedDate).difference(_lastKnownToday).inDays;
-      final targetIndex = selectedIndex.clamp(0, _totalDaysCount - 1);
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        _scrollToIndex(targetIndex, animate: false);
-      });
+      if (!_isMonthlyView) {
+        final targetIndex = _resolveStripSelectedIndex(_lastKnownToday);
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          _scrollToIndex(targetIndex, animate: false);
+        });
+      }
     }
   }
 
@@ -203,6 +213,70 @@ class _CalendarScreenState extends State<CalendarScreen> {
       _is24HourFormat = !_is24HourFormat;
     });
     StorageService.instance.setIs24HourTimeFormat(_is24HourFormat);
+  }
+
+  void _toggleCalendarDisplayMode(bool isMonthly) {
+    if (_isMonthlyView == isMonthly) return;
+    setState(() {
+      _isMonthlyView = isMonthly;
+      _focusedMonth = DateTime(_selectedDate.year, _selectedDate.month, 1);
+    });
+    StorageService.instance.setIsMonthlyCalendarView(isMonthly);
+    if (!isMonthly) {
+      final today = _normalizeDate(DateTime.now());
+      final selectedIndex = _resolveStripSelectedIndex(today);
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _scrollToIndex(selectedIndex, animate: false);
+      });
+    }
+  }
+
+  void _changeFocusedMonth(int monthDelta) {
+    final today = _normalizeDate(DateTime.now());
+    final newMonth =
+        DateTime(_focusedMonth.year, _focusedMonth.month + monthDelta, 1);
+    setState(() {
+      _focusedMonth = newMonth;
+      if (_selectedDate.year != newMonth.year ||
+          _selectedDate.month != newMonth.month) {
+        if (newMonth.year == today.year && newMonth.month == today.month) {
+          _selectedDate = today;
+        } else {
+          _selectedDate = newMonth;
+        }
+      }
+    });
+    if (_selectedView == 0) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _scrollToAppropriateHour(animate: true);
+      });
+    }
+  }
+
+  bool _isDateInDefaultStrip(DateTime today) {
+    final diff = _normalizeDate(_selectedDate).difference(today).inDays;
+    return diff >= -_pastDaysCount && diff < (_totalDaysCount - _pastDaysCount);
+  }
+
+  int _resolveStripSelectedIndex(DateTime today) {
+    if (!_isDateInDefaultStrip(today)) {
+      return _pastDaysCount;
+    }
+    return (_pastDaysCount +
+            _normalizeDate(_selectedDate).difference(today).inDays)
+        .clamp(0, _totalDaysCount - 1);
+  }
+
+  List<DateTime> _buildStripDateList(DateTime today) {
+    final anchor =
+        _isDateInDefaultStrip(today) ? today : _normalizeDate(_selectedDate);
+    return List.generate(_totalDaysCount, (index) {
+      return DateTime(
+        anchor.year,
+        anchor.month,
+        anchor.day - _pastDaysCount + index,
+      );
+    });
   }
 
   @override
@@ -226,10 +300,13 @@ class _CalendarScreenState extends State<CalendarScreen> {
       if (_normalizeDate(_selectedDate).isAtSameMomentAs(previousToday) ||
           _normalizeDate(_selectedDate).isBefore(today)) {
         _selectedDate = today;
+        _focusedMonth = DateTime(today.year, today.month, 1);
       }
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) {
-          _scrollToIndex(_pastDaysCount, animate: true);
+          if (!_isMonthlyView) {
+            _scrollToIndex(_resolveStripSelectedIndex(today), animate: true);
+          }
           _scrollToAppropriateHour(animate: true);
         }
       });
@@ -240,11 +317,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
         .where((s) => s.dayOfWeek == _selectedDate.weekday)
         .toList();
 
-    final dateList = List.generate(_totalDaysCount, (index) {
-      return today
-          .subtract(const Duration(days: _pastDaysCount))
-          .add(Duration(days: index));
-    });
+    final dateList = _buildStripDateList(today);
 
     return Scaffold(
       appBar: AppBar(
@@ -267,8 +340,12 @@ class _CalendarScreenState extends State<CalendarScreen> {
               setState(() {
                 _lastKnownToday = currentToday;
                 _selectedDate = currentToday;
+                _focusedMonth =
+                    DateTime(currentToday.year, currentToday.month, 1);
               });
-              _scrollToIndex(_pastDaysCount, animate: true);
+              if (!_isMonthlyView) {
+                _scrollToIndex(_pastDaysCount, animate: true);
+              }
               _scrollToAppropriateHour(animate: true);
             },
             child: Text(
@@ -285,117 +362,217 @@ class _CalendarScreenState extends State<CalendarScreen> {
       ),
       body: Column(
         children: [
-          // Month Label
+          // Month Label + Month Navigation + Strip/Monthly Toggle
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 6),
+            padding: const EdgeInsets.fromLTRB(20, 6, 16, 4),
             child: Row(
               children: [
-                Text(
-                  DateFormat('MMMM yyyy').format(_selectedDate).toUpperCase(),
-                  style: TextStyle(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w700,
-                    letterSpacing: 1.2,
-                    color: textSecondary,
+                Expanded(
+                  child: Row(
+                    children: [
+                      Flexible(
+                        child: Text(
+                          DateFormat('MMMM yyyy')
+                              .format(
+                                _isMonthlyView ? _focusedMonth : _selectedDate,
+                              )
+                              .toUpperCase(),
+                          style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w700,
+                            letterSpacing: 1.2,
+                            color: textSecondary,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      if (_isMonthlyView) ...[
+                        const SizedBox(width: 6),
+                        _buildMonthNavButton(
+                          icon: Icons.chevron_left_rounded,
+                          tooltip: 'Bulan Sebelumnya',
+                          onTap: () => _changeFocusedMonth(-1),
+                          textSecondary: textSecondary,
+                          borderCol: borderCol,
+                        ),
+                        const SizedBox(width: 4),
+                        _buildMonthNavButton(
+                          icon: Icons.chevron_right_rounded,
+                          tooltip: 'Bulan Berikutnya',
+                          onTap: () => _changeFocusedMonth(1),
+                          textSecondary: textSecondary,
+                          borderCol: borderCol,
+                        ),
+                      ],
+                    ],
                   ),
+                ),
+                const SizedBox(width: 8),
+                _buildCalendarDisplayToggle(
+                  isDark,
+                  textPrimary,
+                  textSecondary,
+                  borderCol,
+                  accentCol,
                 ),
               ],
             ),
           ),
 
-          // Horizontal Date Selector Strip (Things 3 style)
-          SizedBox(
-            height: 70,
-            child: ListView.builder(
-              controller: _dateScrollController,
-              scrollDirection: Axis.horizontal,
-              physics: const BouncingScrollPhysics(
-                parent: AlwaysScrollableScrollPhysics(),
-              ),
-              padding: const EdgeInsets.symmetric(
-                horizontal: _listHorizontalPadding,
-              ),
-              itemExtent: _itemExtent,
-              itemCount: dateList.length,
-              itemBuilder: (context, index) {
-                final date = dateList[index];
-                final isSelected = date.year == _selectedDate.year &&
-                    date.month == _selectedDate.month &&
-                    date.day == _selectedDate.day;
-                final isToday = date.year == today.year &&
-                    date.month == today.month &&
-                    date.day == today.day;
-                final hasTasks = taskProvider.getTasksForDate(date).isNotEmpty;
-                final hasClasses = subjectProvider.subjects.any((s) => s.dayOfWeek == date.weekday);
-
-                return GestureDetector(
-                  onTap: () {
-                    setState(() => _selectedDate = date);
-                    _scrollToIndex(index, animate: true);
-                    WidgetsBinding.instance.addPostFrameCallback((_) {
-                      _scrollToAppropriateHour(animate: true);
-                    });
-                  },
-                  child: Container(
-                    width: _itemWidth,
-                    margin: const EdgeInsets.symmetric(
-                      horizontal: _itemHorizontalMargin,
-                      vertical: 4,
+          // Calendar Selector: Horizontal Strip OR Full Monthly Grid View
+          AnimatedSize(
+            duration: const Duration(milliseconds: 220),
+            curve: Curves.easeOutCubic,
+            alignment: Alignment.topCenter,
+            child: _isMonthlyView
+                ? GestureDetector(
+                    onHorizontalDragEnd: (details) {
+                      final velocity = details.primaryVelocity ?? 0;
+                      if (velocity < -250) {
+                        _changeFocusedMonth(1);
+                      } else if (velocity > 250) {
+                        _changeFocusedMonth(-1);
+                      }
+                    },
+                    child: MonthlyCalendarGrid(
+                      focusedMonth: _focusedMonth,
+                      selectedDate: _selectedDate,
+                      today: today,
+                      tasks: taskProvider.allTasks,
+                      subjects: subjectProvider.subjects,
+                      onDateSelected: (date) {
+                        setState(() {
+                          _selectedDate = date;
+                          _focusedMonth = DateTime(date.year, date.month, 1);
+                        });
+                        if (_selectedView == 0) {
+                          WidgetsBinding.instance.addPostFrameCallback((_) {
+                            _scrollToAppropriateHour(animate: true);
+                          });
+                        }
+                      },
                     ),
-                    decoration: BoxDecoration(
-                      color: isSelected
-                          ? (isDark ? AppTheme.darkAccent : AppTheme.lightAccent)
-                          : (isToday
-                              ? (isDark ? AppTheme.darkSurfaceElevated : AppTheme.lightBorderSubtle)
-                              : Colors.transparent),
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(
-                          color: isSelected
-                            ? (isDark ? AppTheme.darkAccent : AppTheme.lightAccent)
-                            : (isToday ? borderCol : Colors.transparent),
-                        width: 0.8,
+                  )
+                : SizedBox(
+                    height: 70,
+                    child: ListView.builder(
+                      controller: _dateScrollController,
+                      scrollDirection: Axis.horizontal,
+                      physics: const BouncingScrollPhysics(
+                        parent: AlwaysScrollableScrollPhysics(),
                       ),
-                    ),
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Text(
-                          DateFormat('E').format(date).toUpperCase(),
-                          style: TextStyle(
-                            fontSize: 10,
-                            fontWeight: FontWeight.w600,
-                            color: isSelected ? Colors.white70 : textSecondary,
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: _listHorizontalPadding,
+                      ),
+                      itemExtent: _itemExtent,
+                      itemCount: dateList.length,
+                      itemBuilder: (context, index) {
+                        final date = dateList[index];
+                        final isSelected = date.year == _selectedDate.year &&
+                            date.month == _selectedDate.month &&
+                            date.day == _selectedDate.day;
+                        final isToday = date.year == today.year &&
+                            date.month == today.month &&
+                            date.day == today.day;
+                        final hasTasks =
+                            taskProvider.getTasksForDate(date).isNotEmpty;
+                        final hasClasses = subjectProvider.subjects
+                            .any((s) => s.dayOfWeek == date.weekday);
+
+                        return GestureDetector(
+                          onTap: () {
+                            setState(() {
+                              _selectedDate = date;
+                              _focusedMonth =
+                                  DateTime(date.year, date.month, 1);
+                            });
+                            _scrollToIndex(index, animate: true);
+                            WidgetsBinding.instance.addPostFrameCallback((_) {
+                              _scrollToAppropriateHour(animate: true);
+                            });
+                          },
+                          child: Container(
+                            width: _itemWidth,
+                            margin: const EdgeInsets.symmetric(
+                              horizontal: _itemHorizontalMargin,
+                              vertical: 4,
+                            ),
+                            decoration: BoxDecoration(
+                              color: isSelected
+                                  ? (isDark
+                                      ? AppTheme.darkAccent
+                                      : AppTheme.lightAccent)
+                                  : (isToday
+                                      ? (isDark
+                                          ? AppTheme.darkSurfaceElevated
+                                          : AppTheme.lightBorderSubtle)
+                                      : Colors.transparent),
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(
+                                color: isSelected
+                                    ? (isDark
+                                        ? AppTheme.darkAccent
+                                        : AppTheme.lightAccent)
+                                    : (isToday
+                                        ? borderCol
+                                        : Colors.transparent),
+                                width: 0.8,
+                              ),
+                            ),
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Text(
+                                  DateFormat('E').format(date).toUpperCase(),
+                                  style: TextStyle(
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.w600,
+                                    color: isSelected
+                                        ? Colors.white70
+                                        : textSecondary,
+                                  ),
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  '${date.day}',
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w700,
+                                    color: isSelected
+                                        ? Colors.white
+                                        : textPrimary,
+                                  ),
+                                ),
+                                const SizedBox(height: 3),
+                                // Quiet dot indicator
+                                Container(
+                                  width: 4,
+                                  height: 4,
+                                  decoration: BoxDecoration(
+                                    color: hasTasks
+                                        ? (isSelected
+                                            ? Colors.white
+                                            : (isDark
+                                                ? AppTheme.darkAccent
+                                                : AppTheme.brandCobalt))
+                                        : (hasClasses
+                                            ? (isSelected
+                                                ? Colors.white70
+                                                : (isDark
+                                                    ? Colors.white30
+                                                    : Colors.black26))
+                                            : Colors.transparent),
+                                    shape: BoxShape.circle,
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
-                        ),
-                        const SizedBox(height: 2),
-                        Text(
-                          '${date.day}',
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w700,
-                            color: isSelected ? Colors.white : textPrimary,
-                          ),
-                        ),
-                        const SizedBox(height: 3),
-                        // Quiet dot indicator
-                        Container(
-                          width: 4,
-                          height: 4,
-                          decoration: BoxDecoration(
-                            color: hasTasks
-                                ? (isSelected ? Colors.white : (isDark ? AppTheme.darkAccent : AppTheme.brandCobalt))
-                                : (hasClasses
-                                    ? (isSelected ? Colors.white70 : (isDark ? Colors.white30 : Colors.black26))
-                                    : Colors.transparent),
-                            shape: BoxShape.circle,
-                          ),
-                        ),
-                      ],
+                        );
+                      },
                     ),
                   ),
-                );
-              },
-            ),
           ),
 
           const SizedBox(height: 6),
@@ -508,6 +685,124 @@ class _CalendarScreenState extends State<CalendarScreen> {
         foregroundColor: Colors.white,
         tooltip: 'Tambah Tugas Baru',
         child: const Icon(Icons.add),
+      ),
+    );
+  }
+
+  /// Calendar display mode toggle (Horizontal Strip vs Monthly Grid View)
+  Widget _buildCalendarDisplayToggle(
+    bool isDark,
+    Color textPrimary,
+    Color textSecondary,
+    Color borderCol,
+    Color accentCol,
+  ) {
+    return Container(
+      height: 28,
+      padding: const EdgeInsets.all(2),
+      decoration: BoxDecoration(
+        color: isDark ? AppTheme.darkSurfaceElevated : AppTheme.lightBorderSubtle,
+        borderRadius: BorderRadius.circular(7),
+        border: Border.all(color: borderCol, width: 0.8),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          _buildCalendarDisplayButton(
+            icon: Icons.view_week_outlined,
+            label: 'Strip',
+            isSelected: !_isMonthlyView,
+            onTap: () => _toggleCalendarDisplayMode(false),
+            isDark: isDark,
+            accentCol: accentCol,
+            textPrimary: textPrimary,
+            textSecondary: textSecondary,
+          ),
+          _buildCalendarDisplayButton(
+            icon: Icons.calendar_month_outlined,
+            label: 'Bulanan',
+            isSelected: _isMonthlyView,
+            onTap: () => _toggleCalendarDisplayMode(true),
+            isDark: isDark,
+            accentCol: accentCol,
+            textPrimary: textPrimary,
+            textSecondary: textSecondary,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCalendarDisplayButton({
+    required IconData icon,
+    required String label,
+    required bool isSelected,
+    required VoidCallback onTap,
+    required bool isDark,
+    required Color accentCol,
+    required Color textPrimary,
+    required Color textSecondary,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+        decoration: BoxDecoration(
+          color: isSelected
+              ? (isDark ? AppTheme.darkSurface : Colors.white)
+              : Colors.transparent,
+          borderRadius: BorderRadius.circular(5),
+          boxShadow: isSelected
+              ? [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.07),
+                    blurRadius: 2,
+                    offset: const Offset(0, 1),
+                  ),
+                ]
+              : null,
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              icon,
+              size: 12,
+              color: isSelected ? accentCol : textSecondary,
+            ),
+            const SizedBox(width: 4),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 10.5,
+                fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                color: isSelected ? textPrimary : textSecondary,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildMonthNavButton({
+    required IconData icon,
+    required String tooltip,
+    required VoidCallback onTap,
+    required Color textSecondary,
+    required Color borderCol,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(6),
+      child: Container(
+        width: 24,
+        height: 24,
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(6),
+          border: Border.all(color: borderCol, width: 0.8),
+        ),
+        child: Icon(icon, size: 16, color: textSecondary),
       ),
     );
   }
