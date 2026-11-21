@@ -1,38 +1,34 @@
-# TaskApp v2.5.1 — Mode Kalender Bulanan Penuh (Monthly Calendar Grid View)
+# TaskApp v2.5.2 — Perapian Navigasi FinTrack, Garis Waktu Kalender & Kartu Dukungan Pengembang
 
-> **TaskApp v2.5.1** menghadirkan fitur **Mode Kalender Bulanan Penuh (*Monthly Grid View*)** pada layar **Kalender & Jadwal** untuk memudahkan perencanaan akademik jangka menengah, memantau sebaran deadline tugas dalam 1 bulan penuh, serta melihat hari kuliah aktif secara sekilas.
+> **TaskApp v2.5.2** menghadirkan penyempurnaan UX dan perbaikan penting pada navigasi kartu **Safe-to-Spend** beranda menuju halaman **Keuangan**, perapian tata letak garis waktu **Kalender & Jadwal** (`00:00–24:00`), serta penambahan fitur **Dukung Pengembang (Support Me)** di layar Profil & Pengaturan.
 >
 > Pembaruan ini ditandatangani dengan **Keystore Resmi Permanen** (`taskapp-release.jks`), sehingga Anda dapat **langsung mengunduh berkas APK dan menekan "Update" tanpa perlu mencopot aplikasi sebelumnya. Seluruh data perkuliahan, tugas, lampiran, presensi, dan buku kas FinTrack Anda tetap aman 100%**.
 
 ---
 
-## ✨ Apa yang Baru di Versi 2.5.1 (Changelog)
+## ✨ Apa yang Baru di Versi 2.5.2 (Changelog)
 
-### 1. 🗓️ Mode Tampilan Kalender Bulanan Penuh (`MonthlyCalendarGrid`)
-- **Sakelar Toggle Instan (`Strip` | `Bulanan`)**:
-  - Beralih mulus dengan transisi animasi halus (`AnimatedSize`) antara pita tanggal horizontal 45 hari dan tampilan matriks kalender 1 bulan penuh berbasis awal pekan Senin (`SEN`–`MIN`).
-  - Pilihan mode tampilan Anda otomatis disimpan secara lokal di Hive (`StorageService`) agar tetap konsisten saat aplikasi dibuka kembali.
-- **Navigasi Bulan Semesteran & Gestur Swipe**:
-  - Pindah antarbulan dengan tombol panah **`<`** / **`>`** atau cukup usap (*horizontal swipe*) pada area kisi kalender bulanan.
-  - Tombol **"Hari Ini"** langsung mengembalikan fokus bulan dan tanggal terpilih ke hari berjalan.
-  - Penyesuaian jangkar (*anchor*) otomatis pada pita tanggal `Strip` jika Anda memilih tanggal yang berada di luar rentang bawaan lalu beralih kembali ke mode `Strip`.
+### 1. 🧭 Perbaikan Navigasi Kartu Keuangan Beranda (`FinanceHomeCard` & `MainScreen`)
+- **Bilah Navigasi Bawah & FAB Tetap Aktif**:
+  - Mengetuk kartu **Safe-to-Spend Hari Ini** di halaman awal kini langsung memindahkan tab aktif ke tab **Keuangan** melalui `MainScreen.switchTab`, sehingga bilah navigasi bawah (*Tugas, Matkul, Kalender, Keuangan, Fokus*) dan tombol `+` tetap tampil dan dapat digunakan untuk berpindah halaman.
+- **Pengaman Mode Standalone (`FinanceScreen`)**:
+  - Jika `FinanceScreen` dibuka di luar `MainScreen`, halaman otomatis menampilkan tombol **Kembali** pada header serta tombol `+` lokal, dengan proteksi teks header agar tetap bebas *overflow*.
 
-### 2. 🎯 Penanda Visual Deadline Tugas, Jadwal Kuliah & Beban Bulanan
-- **Titik Warna Semantik Deadline Tugas**:
-  - Menampilkan hingga **3 titik warna** pada setiap tanggal berdasarkan prioritas dan status penyelesaian:
-    - **Merah (`Mendesak`)**: Tugas terlambat (*overdue*) atau prioritas tinggi yang belum selesai.
-    - **Amber**: Tugas prioritas sedang yang belum selesai.
-    - **Kobalt / Aksen**: Tugas prioritas rendah yang belum selesai.
-    - **Hijau (`Selesai`)**: Tugas yang telah diselesaikan.
-- **Penanda Hari Kuliah Aktif**:
-  - Menampilkan hingga **2 batang indikator warna** mata kuliah aktif pada hari perkuliahan sesuai jadwal mingguan Anda.
-- **Legenda Ringkas & Penghitung Tugas Bulanan**:
-  - Dilengkapi legenda warna (`Mendesak`, `Tugas`, `Selesai`, `Kuliah`) serta ringkasan jumlah tugas pada bulan yang sedang dipantau (`<N> tugas bulan ini`).
+### 2. 🗓️ Perapian Garis Waktu Kalender & Jadwal (`CalendarScreen`)
+- **Tugas Larut Malam (`23:59`) Tetap Rapi di Blok `23:00–24:00`**:
+  - Posisi kartu tugas diklem ke rentang `00:00–24:00` sehingga tugas berbatas waktu `23:59` tidak lagi meluber melewati garis batas `24:00` atau terpotong bilah navigasi bawah.
+- **Penyelarasan Label Jam `00:00`–`24:00` & Ruang Gulir Bawah**:
+  - Seluruh label jam `00:00` s/d `24:00` disejajarkan tepat pada garis horizontal masing-masing dengan jarak seragam, ruang gulir bawah ditambah agar aman dari tombol `+`, dan FAB duplikat pada `CalendarScreen` dibersihkan.
+
+### 3. 💖 Kartu Dukungan Pengembang (`SupportCreatorCard`)
+- **Dukung Pengembangan TaskApp di Profil & Pengaturan**:
+  - Menyediakan akses cepat ke platform dukungan **Saweria** (`saweria.co/yusufarrofi`), **Ko-fi** (`ko-fi.com/yusufarrofi/`), dan **Yapp.ink** (`yapp.ink/yusufarrofi21`).
+  - Mendukung pembukaan tautan langsung di browser (`ExternalLinkHelper` & handler `openExternalUrl` Android) maupun tombol 1-ketuk **Salin tautan** ke clipboard.
 
 ---
 
 ## 📲 Panduan Instalasi & Pembaruan
 
-1. Unduh berkas **`TaskApp-v2.5.1.apk`** dari daftar **Assets** di bawah.
+1. Unduh berkas **`TaskApp-v2.5.2.apk`** dari daftar **Assets** di bawah.
 2. Buka berkas APK di ponsel Android Anda dan pilih tombol **"Update"**.
-3. Aplikasi akan langsung terbarukan ke **v2.5.1**. Seluruh data tugas, lampiran berkas, catatan akademik, dan keuangan Anda tetap utuh 100%.
+3. Aplikasi akan langsung terbarukan ke **v2.5.2**. Seluruh data tugas, lampiran berkas, catatan akademik, dan keuangan Anda tetap utuh 100%.
