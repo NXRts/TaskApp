@@ -111,21 +111,28 @@ void main() {
       expect(ambient.isPlaying, isTrue);
       expect(storage.getAmbientSoundTrack(), 'gentle_rain');
 
-      // Adjust volume
+      // Adjust volume -> does NOT reset playback cursor or interrupt isPlaying
+      final cursorBeforeVolume = ambient.pcmReadCursor;
+      expect(cursorBeforeVolume, greaterThan(0));
       await ambient.setVolume(0.4, storage: storage);
       expect(ambient.volume, closeTo(0.4, 0.001));
       expect(storage.getAmbientSoundVolume(), closeTo(0.4, 0.001));
+      expect(ambient.isPlaying, isTrue);
+      expect(ambient.pcmReadCursor, equals(cursorBeforeVolume));
 
-      // Pause when focus timer stops, resume when focus timer starts
+      // Pause when focus timer stops (preserves cursor), resume advances from current cursor
       await ambient.onFocusTimerStopped();
       expect(ambient.isPlaying, isFalse);
+      expect(ambient.pcmReadCursor, equals(cursorBeforeVolume));
 
       await ambient.onFocusTimerStarted();
       expect(ambient.isPlaying, isTrue);
+      expect(ambient.pcmReadCursor, greaterThan(cursorBeforeVolume));
 
-      // Switching to Off stops playback
+      // Switching to Off stops playback and resets cursor to 0
       await ambient.selectTrack(AmbientSoundType.off, storage: storage);
       expect(ambient.isPlaying, isFalse);
+      expect(ambient.pcmReadCursor, equals(0));
       expect(storage.getAmbientSoundTrack(), 'off');
 
       await Hive.close();
@@ -184,7 +191,7 @@ void main() {
 
       expect(ambient.selectedTrack, AmbientSoundType.gentleRain);
       expect(ambient.isPlaying, isTrue);
-      expect(find.text('Gentle Rain • Rintik hujan penenang fokus'), findsOneWidget);
+      expect(find.text(AmbientSoundType.gentleRain.subtitle), findsOneWidget);
       expect(find.byType(Slider), findsOneWidget);
       expect(find.text('Aktif'), findsOneWidget);
 
