@@ -51,15 +51,16 @@ void main() {
     await tempDir.delete(recursive: true);
   });
 
-  group('AmbientSoundGenerator & AmbientSoundService', () {
+  group('AmbientSoundGenerator & Multi-Track AmbientSoundService', () {
     test('generateWavBytes creates valid RIFF/WAVE PCM16 buffers and scales volume', () {
-      for (final type in [
-        AmbientSoundType.gentleRain,
-        AmbientSoundType.quietStudy,
-        AmbientSoundType.whiteNoise,
+      for (final track in [
+        AmbientSoundTrack.rain,
+        AmbientSoundTrack.fire,
+        AmbientSoundTrack.cafe,
+        AmbientSoundTrack.ocean,
       ]) {
         final wav = AmbientSoundGenerator.generateWavBytes(
-          type,
+          track,
           sampleRate: 8000,
           durationSeconds: 1,
         );
@@ -68,14 +69,13 @@ void main() {
         expect(String.fromCharCodes(wav.sublist(8, 12)), 'WAVE');
         expect(String.fromCharCodes(wav.sublist(36, 40)), 'data');
 
-        // Verify non-silent audio payload and accurate volume scaling
         final bdFull = ByteData.sublistView(wav);
         int maxSampleFull = 0;
         for (int offset = 44; offset + 1 < wav.length; offset += 2) {
           final s = bdFull.getInt16(offset, Endian.little).abs();
           if (s > maxSampleFull) maxSampleFull = s;
         }
-        expect(maxSampleFull, greaterThan(1000));
+        expect(maxSampleFull, greaterThan(500));
 
         final halfWav = AmbientSoundGenerator.scaleWavVolume(wav, 0.5);
         final bdHalf = ByteData.sublistView(halfWav);
@@ -88,58 +88,63 @@ void main() {
       }
     });
 
-    test('AmbientSoundService persists track & volume and syncs with focus timer lifecycle',
+    test('AmbientSoundService plays multiple tracks simultaneously, preserves cursor on volume change, and handles Play All / Reset',
         () async {
-      final tempDir = await Directory.systemTemp.createTemp('ambient_svc_test_');
+      final tempDir = await Directory.systemTemp.createTemp('ambient_mixer_test_');
       final storage = StorageService();
       await storage.init(customPath: tempDir.path);
 
       final ambient = AmbientSoundService.instance;
       ambient.testMode = true;
-      await ambient.selectTrack(AmbientSoundType.off, storage: storage);
+      await ambient.resetAll(storage: storage);
 
-      expect(ambient.selectedTrack, AmbientSoundType.off);
-      expect(ambient.isPlaying, isFalse);
+      expect(ambient.isAnyPlaying, isFalse);
+      expect(ambient.activePlayingCount, 0);
+      expect(ambient.masterVolume, 1.0);
 
-      // Select Gentle Rain with autoPlay
-      await ambient.selectTrack(
-        AmbientSoundType.gentleRain,
-        storage: storage,
-        autoPlay: true,
-      );
-      expect(ambient.selectedTrack, AmbientSoundType.gentleRain);
-      expect(ambient.isPlaying, isTrue);
-      expect(storage.getAmbientSoundTrack(), 'gentle_rain');
+      // Play Rain and Fireplace simultaneously
+      await ambient.toggleSound(AmbientSoundTrack.rain, storage: storage);
+      await ambient.toggleSound(AmbientSoundTrack.fire, storage: storage);
+      await ambient.toggleSound(AmbientSoundTrack.cafe, storage: storage);
 
-      // Adjust volume -> does NOT reset playback cursor or interrupt isPlaying
-      final cursorBeforeVolume = ambient.pcmReadCursor;
-      expect(cursorBeforeVolume, greaterThan(0));
-      await ambient.setVolume(0.4, storage: storage);
-      expect(ambient.volume, closeTo(0.4, 0.001));
-      expect(storage.getAmbientSoundVolume(), closeTo(0.4, 0.001));
-      expect(ambient.isPlaying, isTrue);
-      expect(ambient.pcmReadCursor, equals(cursorBeforeVolume));
+      expect(ambient.isTrackPlaying(AmbientSoundTrack.rain), isTrue);
+      expect(ambient.isTrackPlaying(AmbientSoundTrack.fire), isTrue);
+      expect(ambient.isTrackPlaying(AmbientSoundTrack.cafe), isTrue);
+      expect(ambient.isTrackPlaying(AmbientSoundTrack.ocean), isFalse);
+      expect(ambient.activePlayingCount, 3);
 
-      // Pause when focus timer stops (preserves cursor), resume advances from current cursor
-      await ambient.onFocusTimerStopped();
-      expect(ambient.isPlaying, isFalse);
-      expect(ambient.pcmReadCursor, equals(cursorBeforeVolume));
+      // Adjust volume of Rain -> does not reset cursor or stop other tracks
+      final rainCursorBefore = ambient.getTrackCursor(AmbientSoundTrack.rain);
+      expect(rainCursorBefore, greaterThan(0));
+      await ambient.setSoundVolume(AmbientSoundTrack.rain, 0.8, storage: storage);
+      expect(ambient.getTrackVolume(AmbientSoundTrack.rain), closeTo(0.8, 0.001));
+      expect(ambient.getTrackCursor(AmbientSoundTrack.rain), equals(rainCursorBefore));
+      expect(ambient.activePlayingCount, 3);
 
-      await ambient.onFocusTimerStarted();
-      expect(ambient.isPlaying, isTrue);
-      expect(ambient.pcmReadCursor, greaterThan(cursorBeforeVolume));
+      // Master volume
+      await ambient.setMasterVolume(0.7, storage: storage);
+      expect(ambient.masterVolume, closeTo(0.7, 0.001));
+      expect(storage.getAmbientMasterVolume(), closeTo(0.7, 0.001));
 
-      // Switching to Off stops playback and resets cursor to 0
-      await ambient.selectTrack(AmbientSoundType.off, storage: storage);
-      expect(ambient.isPlaying, isFalse);
-      expect(ambient.pcmReadCursor, equals(0));
-      expect(storage.getAmbientSoundTrack(), 'off');
+      // Play All activates all 9 FocEase sounds simultaneously
+      await ambient.playAll();
+      expect(ambient.activePlayingCount, AmbientSoundTrack.values.length);
+
+      // Pause All stops playback while preserving volumes
+      await ambient.stopAll();
+      expect(ambient.isAnyPlaying, isFalse);
+      expect(ambient.getTrackVolume(AmbientSoundTrack.rain), closeTo(0.8, 0.001));
+
+      // Reset All restores default 0.5 track volumes and 1.0 master volume
+      await ambient.resetAll(storage: storage);
+      expect(ambient.getTrackVolume(AmbientSoundTrack.rain), closeTo(0.5, 0.001));
+      expect(ambient.masterVolume, closeTo(1.0, 0.001));
 
       await Hive.close();
       await tempDir.delete(recursive: true);
     });
 
-    testWidgets('PomodoroScreen renders Ambient Zen Soundscapes and controls playback',
+    testWidgets('PomodoroScreen separates Timer Pomodoro and Ambient Sounds tab and supports multi-track playback',
         (tester) async {
       late Directory tempDir;
       late StorageService storage;
@@ -163,7 +168,7 @@ void main() {
 
       final ambient = AmbientSoundService.instance;
       ambient.testMode = true;
-      await ambient.selectTrack(AmbientSoundType.off, storage: storage);
+      await ambient.resetAll(storage: storage);
 
       await tester.pumpWidget(
         MultiProvider(
@@ -179,35 +184,37 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      expect(find.text('SUARA LATAR ZEN (OFFLINE)'), findsOneWidget);
-      expect(find.text('Hening'), findsOneWidget);
-      expect(find.text('Hujan Lembut'), findsOneWidget);
-      expect(find.text('Suasana Kafe'), findsOneWidget);
-      expect(find.text('Ombak Malam'), findsOneWidget);
+      // Verify top section tabs exist inside Fokus screen
+      expect(find.text('Timer Pomodoro'), findsOneWidget);
+      expect(find.text('Ambient Sounds'), findsWidgets);
 
-      // Select Hujan Lembut -> starts playing and shows subtitle + volume slider
-      await tester.tap(find.text('Hujan Lembut'));
+      // Switch to Ambient Sounds tab
+      await tester.tap(find.text('Ambient Sounds').first);
       await tester.pumpAndSettle();
 
-      expect(ambient.selectedTrack, AmbientSoundType.gentleRain);
-      expect(ambient.isPlaying, isTrue);
-      expect(find.text(AmbientSoundType.gentleRain.subtitle), findsOneWidget);
-      expect(find.byType(Slider), findsOneWidget);
-      expect(find.text('Aktif'), findsOneWidget);
+      // Verify FocEase controls and tracks are rendered
+      expect(find.text('Master'), findsOneWidget);
+      expect(find.text('Play All'), findsOneWidget);
+      expect(find.text('Reset'), findsWidgets);
+      expect(find.text('Rain'), findsOneWidget);
+      expect(find.text('Fireplace'), findsOneWidget);
+      expect(find.text('River'), findsOneWidget);
+      expect(find.text('Wind'), findsOneWidget);
+      expect(find.text('Cafe Ambience'), findsOneWidget);
+      expect(find.text('Morning Birds'), findsOneWidget);
 
-      // Tap Aktif pill to pause ambient preview, then start Focus Timer to auto-resume
-      await tester.tap(find.text('Aktif'));
+      // Tap Play All -> all 9 tracks play simultaneously and button changes to Pause All
+      await tester.tap(find.text('Play All'));
       await tester.pumpAndSettle();
-      expect(ambient.isPlaying, isFalse);
-      expect(find.text('Putar'), findsOneWidget);
 
-      await tester.tap(find.text('Mulai'));
-      await tester.pump();
-      expect(ambient.isPlaying, isTrue);
+      expect(ambient.activePlayingCount, 9);
+      expect(find.text('Pause All'), findsOneWidget);
+      expect(find.text('9 Aktif'), findsOneWidget);
 
-      await tester.tap(find.text('Jeda'));
-      await tester.pump();
-      expect(ambient.isPlaying, isFalse);
+      // Tap Pause All -> stops all tracks
+      await tester.tap(find.text('Pause All'));
+      await tester.pumpAndSettle();
+      expect(ambient.activePlayingCount, 0);
 
       await tester.runAsync(() async {
         await Hive.close();

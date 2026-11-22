@@ -6,9 +6,10 @@ import '../providers/settings_provider.dart';
 import '../services/ambient_sound_service.dart';
 import '../services/pomodoro_alert_service.dart';
 import '../services/storage_service.dart';
+import '../widgets/ambient_sounds_view.dart';
 import '../utils/app_theme.dart';
 
-/// Zen Minimalist Focus (Pomodoro) Screen
+/// Zen Minimalist Focus (Pomodoro & Separated Ambient Sounds Mixer) Screen
 class PomodoroScreen extends StatefulWidget {
   const PomodoroScreen({super.key});
 
@@ -24,6 +25,9 @@ class _PomodoroScreenState extends State<PomodoroScreen> {
   bool _isRunning = false;
   bool _isBreak = false;
   Timer? _timer;
+
+  /// Top tab inside Fokus menu: 0 = Pomodoro Timer, 1 = Ambient Sounds (FocEase Mixer)
+  int _selectedSection = 0;
 
   String? _selectedTaskId;
   final AmbientSoundService _ambientService = AmbientSoundService.instance;
@@ -47,23 +51,18 @@ class _PomodoroScreenState extends State<PomodoroScreen> {
   void dispose() {
     _timer?.cancel();
     _ambientService.removeListener(_onAmbientChanged);
-    _ambientService.onFocusTimerStopped();
     super.dispose();
   }
 
   void _startTimer() {
     if (_isRunning) return;
     setState(() => _isRunning = true);
-    if (!_isBreak) {
-      _ambientService.onFocusTimerStarted();
-    }
 
     _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
       if (_remainingSeconds > 0) {
         setState(() => _remainingSeconds--);
       } else {
         _timer?.cancel();
-        _ambientService.onFocusTimerStopped();
         final wasBreak = _isBreak;
         final taskProvider = Provider.of<TaskProvider>(context, listen: false);
         final task = _selectedTaskId != null ? taskProvider.getTaskById(_selectedTaskId) : null;
@@ -101,13 +100,11 @@ class _PomodoroScreenState extends State<PomodoroScreen> {
 
   void _pauseTimer() {
     _timer?.cancel();
-    _ambientService.onFocusTimerStopped();
     setState(() => _isRunning = false);
   }
 
   void _resetTimer() {
     _timer?.cancel();
-    _ambientService.onFocusTimerStopped();
     setState(() {
       _isRunning = false;
       _remainingSeconds = _isBreak ? breakDuration : focusDuration;
@@ -116,7 +113,6 @@ class _PomodoroScreenState extends State<PomodoroScreen> {
 
   void _switchMode(bool isBreakMode) {
     _timer?.cancel();
-    _ambientService.onFocusTimerStopped();
     setState(() {
       _isRunning = false;
       _isBreak = isBreakMode;
@@ -258,6 +254,7 @@ class _PomodoroScreenState extends State<PomodoroScreen> {
     final textPrimary = isDark ? AppTheme.darkTextPrimary : AppTheme.lightTextPrimary;
     final textSecondary = isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary;
     final borderCol = isDark ? AppTheme.darkBorder : AppTheme.lightBorder;
+    final activeSoundsCount = _ambientService.activePlayingCount;
 
     return Scaffold(
       appBar: AppBar(
@@ -325,468 +322,296 @@ class _PomodoroScreenState extends State<PomodoroScreen> {
           const SizedBox(width: 8),
         ],
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-        child: Column(
-          children: [
-            // Mode Selector (Fokus 25m vs Rehat 5m)
-            Container(
-              height: 34,
-              padding: const EdgeInsets.all(2.5),
+      body: Column(
+        children: [
+          // Top Section Switcher inside Fokus menu: Pomodoro Timer vs Ambient Sounds
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+            child: Container(
+              height: 40,
+              padding: const EdgeInsets.all(3),
               decoration: BoxDecoration(
                 color: isDark ? AppTheme.darkSurface : AppTheme.lightBorderSubtle,
-                borderRadius: BorderRadius.circular(8),
+                borderRadius: BorderRadius.circular(11),
                 border: Border.all(color: borderCol, width: 0.8),
               ),
               child: Row(
                 children: [
-                  _buildModeSegment(
-                    title: 'Fokus (25m)',
-                    isSelected: !_isBreak,
-                    onTap: () => _switchMode(false),
+                  _buildSectionTab(
+                    index: 0,
+                    icon: Icons.timer_outlined,
+                    title: 'Timer Pomodoro',
+                    isDark: isDark,
                   ),
-                  _buildModeSegment(
-                    title: 'Rehat (5m)',
-                    isSelected: _isBreak,
-                    onTap: () => _switchMode(true),
-                  ),
-                ],
-              ),
-            ),
-
-            const SizedBox(height: 24),
-
-            // Target Task Selector Dropdown
-            if (pendingTasks.isNotEmpty) ...[
-              Container(
-                height: 40,
-                padding: const EdgeInsets.symmetric(horizontal: 12),
-                decoration: BoxDecoration(
-                  color: Theme.of(context).cardTheme.color,
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: borderCol, width: 0.8),
-                ),
-                child: DropdownButtonHideUnderline(
-                  child: DropdownButton<String>(
-                    isExpanded: true,
-                    hint: Text(
-                      'Pilih tugas yang ingin difokuskan...',
-                      style: TextStyle(fontSize: 12.5, color: textSecondary),
-                    ),
-                    value: _selectedTaskId,
-                    items: pendingTasks.map((t) {
-                      return DropdownMenuItem(
-                        value: t.id,
-                        child: Text(
-                          t.title,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(fontSize: 13, color: textPrimary),
-                        ),
-                      );
-                    }).toList(),
-                    onChanged: (val) {
-                      setState(() => _selectedTaskId = val);
-                    },
-                  ),
-                ),
-              ),
-              const SizedBox(height: 28),
-            ],
-
-            // Minimalist Circular Timer
-            Stack(
-              alignment: Alignment.center,
-              children: [
-                SizedBox(
-                  width: 220,
-                  height: 220,
-                  child: CircularProgressIndicator(
-                    value: _progress,
-                    strokeWidth: 4,
-                    backgroundColor: isDark ? const Color(0xFF242731) : const Color(0xFFEAEAEC),
-                    valueColor: AlwaysStoppedAnimation<Color>(
-                      _isBreak ? AppTheme.successSage : (isDark ? AppTheme.darkAccent : AppTheme.lightAccent),
-                    ),
-                  ),
-                ),
-                Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      _formatTime(_remainingSeconds),
-                      style: TextStyle(
-                        fontSize: 52,
-                        fontWeight: FontWeight.w700,
-                        letterSpacing: -1.5,
-                        color: textPrimary,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      _isBreak ? 'WAKTU REHAT' : 'SESI FOKUS',
-                      style: TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w700,
-                        letterSpacing: 1.2,
-                        color: textSecondary,
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-
-            const SizedBox(height: 36),
-
-            // Controls (Start / Pause / Reset)
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                OutlinedButton(
-                  style: OutlinedButton.styleFrom(
-                    side: BorderSide(color: borderCol),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                    padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 11),
-                  ),
-                  onPressed: _resetTimer,
-                  child: Text('Reset', style: TextStyle(fontSize: 13, color: textSecondary)),
-                ),
-                const SizedBox(width: 14),
-                ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: isDark ? AppTheme.darkAccent : AppTheme.lightAccent,
-                    foregroundColor: Colors.white,
-                    elevation: 0,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                    padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
-                  ),
-                  onPressed: _isRunning ? _pauseTimer : _startTimer,
-                  child: Text(
-                    _isRunning ? 'Jeda' : 'Mulai',
-                    style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
-                  ),
-                ),
-              ],
-            ),
-
-            const SizedBox(height: 28),
-
-            // Ambient Zen Soundscapes Card (Offline Looping)
-            _buildAmbientZenCard(
-              context,
-              isDark: isDark,
-              textPrimary: textPrimary,
-              textSecondary: textSecondary,
-              borderCol: borderCol,
-            ),
-
-            const SizedBox(height: 18),
-
-            // Completed Sessions tracker
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-              decoration: BoxDecoration(
-                color: Theme.of(context).cardTheme.color,
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: borderCol, width: 0.8),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Container(
-                    width: 7,
-                    height: 7,
-                    decoration: const BoxDecoration(color: AppTheme.successSage, shape: BoxShape.circle),
-                  ),
-                  const SizedBox(width: 8),
-                  Flexible(
-                    child: Text(
-                      '$completedSessions sesi fokus terselesaikan (${settingsProvider.totalFocusMinutes} menit)',
-                      style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w500, color: textPrimary),
-                    ),
+                  _buildSectionTab(
+                    index: 1,
+                    icon: Icons.graphic_eq_rounded,
+                    title: 'Ambient Sounds',
+                    badgeCount: activeSoundsCount,
+                    isDark: isDark,
                   ),
                 ],
               ),
             ),
-          ],
-        ),
-      ),
-    );
-  }
+          ),
 
-  Widget _buildAmbientZenCard(
-    BuildContext context, {
-    required bool isDark,
-    required Color textPrimary,
-    required Color textSecondary,
-    required Color borderCol,
-  }) {
-    final selectedTrack = _ambientService.selectedTrack;
-    final isPlaying = _ambientService.isPlaying;
-    final accentCol = isDark ? AppTheme.darkAccent : AppTheme.brandCobalt;
-
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
-      decoration: BoxDecoration(
-        color: Theme.of(context).cardTheme.color,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: borderCol, width: 0.8),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Icon(
-                Icons.graphic_eq_rounded,
-                size: 16,
-                color: isPlaying ? AppTheme.successSage : accentCol,
-              ),
-              const SizedBox(width: 6),
-              Expanded(
-                child: Text(
-                  'SUARA LATAR ZEN (OFFLINE)',
-                  style: TextStyle(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w700,
-                    letterSpacing: 1.0,
-                    color: textSecondary,
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ),
-              if (selectedTrack != AmbientSoundType.off)
-                InkWell(
-                  borderRadius: BorderRadius.circular(6),
-                  onTap: () => _ambientService.togglePlay(),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                    decoration: BoxDecoration(
-                      color: isPlaying
-                          ? AppTheme.successSage.withValues(alpha: 0.14)
-                          : (isDark ? AppTheme.darkSurfaceElevated : AppTheme.lightBorderSubtle),
-                      borderRadius: BorderRadius.circular(6),
-                      border: Border.all(
-                        color: isPlaying
-                            ? AppTheme.successSage.withValues(alpha: 0.4)
-                            : borderCol,
-                        width: 0.8,
-                      ),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(
-                          isPlaying ? Icons.pause_rounded : Icons.play_arrow_rounded,
-                          size: 13,
-                          color: isPlaying ? AppTheme.successSage : textPrimary,
+          Expanded(
+            child: IndexedStack(
+              index: _selectedSection,
+              children: [
+                // Tab 0: Clean Pomodoro Timer View
+                SingleChildScrollView(
+                  padding: const EdgeInsets.fromLTRB(24, 12, 24, 92),
+                  child: Column(
+                    children: [
+                      // Mode Selector (Fokus 25m vs Rehat 5m)
+                      Container(
+                        height: 34,
+                        padding: const EdgeInsets.all(2.5),
+                        decoration: BoxDecoration(
+                          color: isDark ? AppTheme.darkSurface : AppTheme.lightBorderSubtle,
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: borderCol, width: 0.8),
                         ),
-                        const SizedBox(width: 3),
-                        Text(
-                          isPlaying ? 'Aktif' : 'Putar',
-                          style: TextStyle(
-                            fontSize: 10.5,
-                            fontWeight: FontWeight.w600,
-                            color: isPlaying ? AppTheme.successSage : textPrimary,
+                        child: Row(
+                          children: [
+                            _buildModeSegment(
+                              title: 'Fokus (25m)',
+                              isSelected: !_isBreak,
+                              onTap: () => _switchMode(false),
+                            ),
+                            _buildModeSegment(
+                              title: 'Rehat (5m)',
+                              isSelected: _isBreak,
+                              onTap: () => _switchMode(true),
+                            ),
+                          ],
+                        ),
+                      ),
+
+                      const SizedBox(height: 24),
+
+                      // Target Task Selector Dropdown
+                      if (pendingTasks.isNotEmpty) ...[
+                        Container(
+                          height: 40,
+                          padding: const EdgeInsets.symmetric(horizontal: 12),
+                          decoration: BoxDecoration(
+                            color: Theme.of(context).cardTheme.color,
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(color: borderCol, width: 0.8),
+                          ),
+                          child: DropdownButtonHideUnderline(
+                            child: DropdownButton<String>(
+                              isExpanded: true,
+                              hint: Text(
+                                'Pilih tugas yang ingin difokuskan...',
+                                style: TextStyle(fontSize: 12.5, color: textSecondary),
+                              ),
+                              value: _selectedTaskId,
+                              items: pendingTasks.map((t) {
+                                return DropdownMenuItem(
+                                  value: t.id,
+                                  child: Text(
+                                    t.title,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: TextStyle(fontSize: 13, color: textPrimary),
+                                  ),
+                                );
+                              }).toList(),
+                              onChanged: (val) {
+                                setState(() => _selectedTaskId = val);
+                              },
+                            ),
                           ),
                         ),
+                        const SizedBox(height: 28),
                       ],
-                    ),
+
+                      // Minimalist Circular Timer
+                      Stack(
+                        alignment: Alignment.center,
+                        children: [
+                          SizedBox(
+                            width: 220,
+                            height: 220,
+                            child: CircularProgressIndicator(
+                              value: _progress,
+                              strokeWidth: 4,
+                              backgroundColor: isDark ? const Color(0xFF242731) : const Color(0xFFEAEAEC),
+                              valueColor: AlwaysStoppedAnimation<Color>(
+                                _isBreak ? AppTheme.successSage : (isDark ? AppTheme.darkAccent : AppTheme.lightAccent),
+                              ),
+                            ),
+                          ),
+                          Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                _formatTime(_remainingSeconds),
+                                style: TextStyle(
+                                  fontSize: 52,
+                                  fontWeight: FontWeight.w700,
+                                  letterSpacing: -1.5,
+                                  color: textPrimary,
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                _isBreak ? 'WAKTU REHAT' : 'SESI FOKUS',
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w700,
+                                  letterSpacing: 1.2,
+                                  color: textSecondary,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+
+                      const SizedBox(height: 36),
+
+                      // Controls (Start / Pause / Reset)
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          OutlinedButton(
+                            style: OutlinedButton.styleFrom(
+                              side: BorderSide(color: borderCol),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                              padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 11),
+                            ),
+                            onPressed: _resetTimer,
+                            child: Text('Reset', style: TextStyle(fontSize: 13, color: textSecondary)),
+                          ),
+                          const SizedBox(width: 14),
+                          ElevatedButton(
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: isDark ? AppTheme.darkAccent : AppTheme.lightAccent,
+                              foregroundColor: Colors.white,
+                              elevation: 0,
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                              padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
+                            ),
+                            onPressed: _isRunning ? _pauseTimer : _startTimer,
+                            child: Text(
+                              _isRunning ? 'Jeda' : 'Mulai',
+                              style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+                            ),
+                          ),
+                        ],
+                      ),
+
+                      const SizedBox(height: 28),
+
+                      // Completed Sessions tracker
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                        decoration: BoxDecoration(
+                          color: Theme.of(context).cardTheme.color,
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: borderCol, width: 0.8),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Container(
+                              width: 7,
+                              height: 7,
+                              decoration: const BoxDecoration(color: AppTheme.successSage, shape: BoxShape.circle),
+                            ),
+                            const SizedBox(width: 8),
+                            Flexible(
+                              child: Text(
+                                '$completedSessions sesi fokus terselesaikan (${settingsProvider.totalFocusMinutes} menit)',
+                                style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w500, color: textPrimary),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-            ],
-          ),
-          const SizedBox(height: 10),
-          // 2x2 Grid of Soundscape Options
-          Row(
-            children: [
-              Expanded(
-                child: _buildSoundscapeOption(
-                  track: AmbientSoundType.off,
-                  isDark: isDark,
-                  textPrimary: textPrimary,
-                  textSecondary: textSecondary,
-                  borderCol: borderCol,
-                  accentCol: accentCol,
-                ),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: _buildSoundscapeOption(
-                  track: AmbientSoundType.gentleRain,
-                  isDark: isDark,
-                  textPrimary: textPrimary,
-                  textSecondary: textSecondary,
-                  borderCol: borderCol,
-                  accentCol: accentCol,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          Row(
-            children: [
-              Expanded(
-                child: _buildSoundscapeOption(
-                  track: AmbientSoundType.quietStudy,
-                  isDark: isDark,
-                  textPrimary: textPrimary,
-                  textSecondary: textSecondary,
-                  borderCol: borderCol,
-                  accentCol: accentCol,
-                ),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: _buildSoundscapeOption(
-                  track: AmbientSoundType.whiteNoise,
-                  isDark: isDark,
-                  textPrimary: textPrimary,
-                  textSecondary: textSecondary,
-                  borderCol: borderCol,
-                  accentCol: accentCol,
-                ),
-              ),
-            ],
-          ),
-          if (selectedTrack != AmbientSoundType.off) ...[
-            const SizedBox(height: 10),
-            Divider(color: borderCol.withValues(alpha: 0.6), height: 1),
-            const SizedBox(height: 8),
-            Text(
-              selectedTrack.subtitle,
-              style: TextStyle(
-                fontSize: 11,
-                fontWeight: FontWeight.w500,
-                color: textSecondary,
-              ),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-            ),
-            const SizedBox(height: 4),
-            Row(
-              children: [
-                Icon(
-                  _ambientService.volume <= 0.01
-                      ? Icons.volume_mute_outlined
-                      : Icons.volume_down_outlined,
-                  size: 16,
-                  color: textSecondary,
-                ),
-                Expanded(
-                  child: SliderTheme(
-                    data: SliderTheme.of(context).copyWith(
-                      trackHeight: 3.0,
-                      thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 6.5),
-                      overlayShape: const RoundSliderOverlayShape(overlayRadius: 14.0),
-                      activeTrackColor: accentCol,
-                      inactiveTrackColor: borderCol,
-                      thumbColor: accentCol,
-                    ),
-                    child: Slider(
-                      value: _ambientService.volume,
-                      min: 0.0,
-                      max: 1.0,
-                      onChanged: (val) {
-                        StorageService? storage;
-                        try {
-                          storage = StorageService.instance;
-                        } catch (_) {}
-                        _ambientService.setVolume(val, storage: storage);
-                      },
-                    ),
-                  ),
-                ),
-                SizedBox(
-                  width: 34,
-                  child: Text(
-                    '${(_ambientService.volume * 100).round()}%',
-                    textAlign: TextAlign.right,
-                    style: TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w600,
-                      color: textSecondary,
-                    ),
-                  ),
-                ),
+
+                // Tab 1: Dedicated Separated Ambient Sounds Mixer View (FocEase)
+                const AmbientSoundsView(),
               ],
             ),
-          ],
+          ),
         ],
       ),
     );
   }
 
-  Widget _buildSoundscapeOption({
-    required AmbientSoundType track,
+  Widget _buildSectionTab({
+    required int index,
+    required IconData icon,
+    required String title,
     required bool isDark,
-    required Color textPrimary,
-    required Color textSecondary,
-    required Color borderCol,
-    required Color accentCol,
+    int badgeCount = 0,
   }) {
-    final isSelected = _ambientService.selectedTrack == track;
-    final isPlayingThis = isSelected && _ambientService.isPlaying && track != AmbientSoundType.off;
+    final isSelected = _selectedSection == index;
+    final activeBg = isDark ? AppTheme.darkSurfaceElevated : Colors.white;
+    final activeText = isDark ? AppTheme.darkTextPrimary : AppTheme.lightTextPrimary;
+    final inactiveText = isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary;
+    final accentCol = index == 1
+        ? const Color(0xFFA855F7)
+        : (isDark ? AppTheme.darkAccent : AppTheme.brandCobalt);
 
-    return Material(
-      color: isSelected
-          ? (isDark ? accentCol.withValues(alpha: 0.16) : accentCol.withValues(alpha: 0.08))
-          : (isDark ? AppTheme.darkSurfaceElevated : AppTheme.lightBorderSubtle),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(8),
-        side: BorderSide(
-          color: isSelected ? accentCol : borderCol.withValues(alpha: 0.7),
-          width: isSelected ? 1.1 : 0.8,
-        ),
-      ),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(8),
-        onTap: () {
-          StorageService? storage;
-          try {
-            storage = StorageService.instance;
-          } catch (_) {}
-          _ambientService.selectTrack(
-            track,
-            storage: storage,
-            autoPlay: track != AmbientSoundType.off,
-          );
-        },
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 9),
-          child: Row(
-            children: [
-              Icon(
-                track.icon,
-                size: 15,
-                color: isSelected ? accentCol : textSecondary,
-              ),
-              const SizedBox(width: 7),
-              Expanded(
-                child: Text(
-                  track.label,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
-                    color: isSelected ? textPrimary : textSecondary,
+    return Expanded(
+      child: GestureDetector(
+        onTap: () => setState(() => _selectedSection = index),
+        child: Container(
+          decoration: BoxDecoration(
+            color: isSelected ? activeBg : Colors.transparent,
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Center(
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  icon,
+                  size: 15,
+                  color: isSelected ? accentCol : inactiveText,
+                ),
+                const SizedBox(width: 6),
+                Flexible(
+                  child: Text(
+                    title,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontSize: 12.5,
+                      fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                      color: isSelected ? activeText : inactiveText,
+                    ),
                   ),
                 ),
-              ),
-              if (isPlayingThis)
-                Container(
-                  width: 6,
-                  height: 6,
-                  decoration: const BoxDecoration(
-                    color: AppTheme.successSage,
-                    shape: BoxShape.circle,
+                if (badgeCount > 0) ...[
+                  const SizedBox(width: 6),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1.5),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFA855F7).withValues(alpha: 0.2),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Text(
+                      '$badgeCount',
+                      style: const TextStyle(
+                        fontSize: 10.5,
+                        fontWeight: FontWeight.w700,
+                        color: Color(0xFFA855F7),
+                      ),
+                    ),
                   ),
-                ),
-            ],
+                ],
+              ],
+            ),
           ),
         ),
       ),

@@ -8,177 +8,184 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'storage_service.dart';
 
-/// Available offline ambient soundscape tracks for Pomodoro focus sessions.
-enum AmbientSoundType {
-  off(
-    id: 'off',
-    label: 'Hening',
-    subtitle: 'Tanpa suara latar ambient',
-    icon: Icons.volume_off_outlined,
-    assetPath: null,
-  ),
-  gentleRain(
-    id: 'gentle_rain',
-    label: 'Hujan Lembut',
-    subtitle: 'Gentle Rain • Rekaman rintik hujan alami penenang fokus',
+/// All 9 Ambient Sound tracks from FocEase (https://focease.vercel.app/),
+/// capable of playing simultaneously as a multi-track audio mixer.
+enum AmbientSoundTrack {
+  rain(
+    id: 'rain',
+    name: 'Rain',
+    subtitle: 'Hujan rintik alami',
+    assetPath: 'sounds/ambient_rain.wav',
     icon: Icons.water_drop_outlined,
-    assetPath: 'sounds/ambient_gentle_rain.wav',
+    sliderColor: Color(0xFF3B82F6),
+    activeBgColor: Color(0xFF2563EB),
+    activeTextColor: Color(0xFF60A5FA),
   ),
-  quietStudy(
-    id: 'quiet_study',
-    label: 'Suasana Kafe',
-    subtitle: 'Quiet Study • Rekaman suasana kafe & ruang baca',
+  fire(
+    id: 'fire',
+    name: 'Fireplace',
+    subtitle: 'Perapian kayu hangat',
+    assetPath: 'sounds/ambient_fire.wav',
+    icon: Icons.local_fire_department_outlined,
+    sliderColor: Color(0xFFF97316),
+    activeBgColor: Color(0xFFEA580C),
+    activeTextColor: Color(0xFFFB923C),
+  ),
+  stream(
+    id: 'stream',
+    name: 'River',
+    subtitle: 'Aliran sungai tenang',
+    assetPath: 'sounds/ambient_stream.wav',
+    icon: Icons.waves_rounded,
+    sliderColor: Color(0xFF06B6D4),
+    activeBgColor: Color(0xFF0891B2),
+    activeTextColor: Color(0xFF22D3EE),
+  ),
+  wind(
+    id: 'wind',
+    name: 'Wind',
+    subtitle: 'Desir angin pepohonan',
+    assetPath: 'sounds/ambient_wind.wav',
+    icon: Icons.air_rounded,
+    sliderColor: Color(0xFF14B8A6),
+    activeBgColor: Color(0xFF0D9488),
+    activeTextColor: Color(0xFF2DD4BF),
+  ),
+  cafe(
+    id: 'cafe',
+    name: 'Cafe Ambience',
+    subtitle: 'Suasana kedai kopi & ruang baca',
+    assetPath: 'sounds/ambient_cafe.wav',
     icon: Icons.local_cafe_outlined,
-    assetPath: 'sounds/ambient_quiet_study.wav',
+    sliderColor: Color(0xFFF59E0B),
+    activeBgColor: Color(0xFFD97706),
+    activeTextColor: Color(0xFFFBBF24),
   ),
-  whiteNoise(
-    id: 'white_noise',
-    label: 'Ombak Malam',
-    subtitle: 'Night Waves • Rekaman debur ombak pantai alami',
-    icon: Icons.waves_outlined,
-    assetPath: 'sounds/ambient_night_waves.wav',
+  birds(
+    id: 'birds',
+    name: 'Morning Birds',
+    subtitle: 'Kicau burung pagi hari',
+    assetPath: 'sounds/ambient_birds.wav',
+    icon: Icons.flutter_dash_outlined,
+    sliderColor: Color(0xFF22C55E),
+    activeBgColor: Color(0xFF16A34A),
+    activeTextColor: Color(0xFF4ADE80),
+  ),
+  thunder(
+    id: 'thunder',
+    name: 'Thunderstorm',
+    subtitle: 'Gemuruh petir kejauhan',
+    assetPath: 'sounds/ambient_thunder.wav',
+    icon: Icons.thunderstorm_outlined,
+    sliderColor: Color(0xFFEAB308),
+    activeBgColor: Color(0xFFCA8A04),
+    activeTextColor: Color(0xFFFACC15),
+  ),
+  night(
+    id: 'night',
+    name: 'Nature Night',
+    subtitle: 'Suasana malam alam tenang',
+    assetPath: 'sounds/ambient_night.wav',
+    icon: Icons.nightlight_outlined,
+    sliderColor: Color(0xFF6366F1),
+    activeBgColor: Color(0xFF4F46E5),
+    activeTextColor: Color(0xFF818CF8),
+  ),
+  ocean(
+    id: 'ocean',
+    name: 'Ocean Waves',
+    subtitle: 'Deburan ombak pantai',
+    assetPath: 'sounds/ambient_ocean.wav',
+    icon: Icons.water_outlined,
+    sliderColor: Color(0xFF0EA5E9),
+    activeBgColor: Color(0xFF0284C7),
+    activeTextColor: Color(0xFF38BDF8),
   );
 
   final String id;
-  final String label;
+  final String name;
   final String subtitle;
+  final String assetPath;
   final IconData icon;
-  final String? assetPath;
+  final Color sliderColor;
+  final Color activeBgColor;
+  final Color activeTextColor;
 
-  const AmbientSoundType({
+  const AmbientSoundTrack({
     required this.id,
-    required this.label,
+    required this.name,
     required this.subtitle,
-    required this.icon,
     required this.assetPath,
+    required this.icon,
+    required this.sliderColor,
+    required this.activeBgColor,
+    required this.activeTextColor,
   });
 
-  static AmbientSoundType fromId(String? id) {
-    for (final value in AmbientSoundType.values) {
+  static AmbientSoundTrack? fromId(String? id) {
+    for (final value in AmbientSoundTrack.values) {
       if (value.id == id) return value;
     }
-    return AmbientSoundType.off;
+    return null;
   }
 }
 
-/// Pure-Dart procedural 16-bit PCM WAV synthesizer and volume scaler for
-/// offline ambient soundscapes.
-class AmbientSoundGenerator {
-  static const int defaultSampleRate = 22050;
+/// Sleep timer presets matching FocEase (No Timer, 15m, 30m, 45m, 1h).
+class AmbientTimerOption {
+  final String label;
+  final int seconds;
 
-  static double _smoothNoteEnv(
-    double dt,
-    double dur, {
-    double attack = 0.035,
-    double decayRate = 2.2,
-  }) {
-    if (dt < 0.0 || dt >= dur) return 0.0;
-    final att = 0.5 - 0.5 * math.cos(math.pi * math.min(1.0, dt / attack));
-    double rel = 1.0;
-    if (dt > dur - 0.12) {
-      rel = 0.5 + 0.5 * math.cos(math.pi * ((dt - (dur - 0.12)) / 0.12));
-    }
-    return att * math.exp(-dt * decayRate) * rel;
-  }
+  const AmbientTimerOption({required this.label, required this.seconds});
+
+  static const List<AmbientTimerOption> options = [
+    AmbientTimerOption(label: 'No Timer', seconds: 0),
+    AmbientTimerOption(label: '15 Minutes', seconds: 900),
+    AmbientTimerOption(label: '30 Minutes', seconds: 1800),
+    AmbientTimerOption(label: '45 Minutes', seconds: 2700),
+    AmbientTimerOption(label: '1 Hour', seconds: 3600),
+  ];
+}
+
+/// Pure-Dart procedural 16-bit PCM WAV synthesizer and volume scaler fallback.
+class AmbientSoundGenerator {
+  static const int defaultSampleRate = 16000;
 
   /// Generates a valid 16-bit mono RIFF/WAVE byte buffer with a seamless loop seam.
   static Uint8List generateWavBytes(
-    AmbientSoundType type, {
+    AmbientSoundTrack track, {
     int sampleRate = defaultSampleRate,
-    int durationSeconds = 4,
+    int durationSeconds = 2,
     double volumeScale = 1.0,
   }) {
     final totalSamples = math.max(sampleRate, sampleRate * durationSeconds);
-    final fadeSamples = math.min(totalSamples ~/ 4, (sampleRate * 0.4).round());
+    final fadeSamples = math.min(totalSamples ~/ 4, (sampleRate * 0.3).round());
     final rawLength = totalSamples + fadeSamples;
     final raw = Float64List(rawLength);
+    final rng = math.Random(track.index * 97 + 13);
     final gain = volumeScale.clamp(0.0, 1.0);
-    final durSec = totalSamples / sampleRate;
 
-    if (type == AmbientSoundType.gentleRain) {
-      const dropletNotes = [523.25, 392.00, 659.25, 587.33, 440.00, 329.63, 493.88, 392.00];
-      const padFreqs = [130.81, 196.00, 246.94, 293.66];
-      for (int i = 0; i < rawLength; i++) {
-        final tSec = i / sampleRate;
-        final tMod = (i % totalSamples) / sampleRate;
+    double lp1 = 0.0;
+    double lp2 = 0.0;
+    double lp3 = 0.0;
+    final alpha = 0.06 + (track.index % 4) * 0.03;
 
-        double pad = 0.0;
-        for (int n = 0; n < padFreqs.length; n++) {
-          final amp = n == 0 ? 0.14 : 0.09;
-          pad += amp * math.sin(2.0 * math.pi * padFreqs[n] * tSec);
-        }
-
-        double drop = 0.0;
-        final stepIdx = (tMod / 0.5).floor();
-        for (int k = math.max(0, stepIdx - 2); k <= stepIdx; k++) {
-          final freq = dropletNotes[k % dropletNotes.length];
-          final dt = tMod - k * 0.5;
-          final env = _smoothNoteEnv(dt, 1.2, attack: 0.025, decayRate: 2.5);
-          if (env > 0.0) {
-            drop += env * 0.18 * math.sin(2.0 * math.pi * freq * dt);
-          }
-        }
-        raw[i] = (pad + drop) * gain;
-      }
-    } else if (type == AmbientSoundType.quietStudy) {
-      const chordFreqs = [174.61, 220.00, 261.63, 329.63];
-      const melodyFreqs = [440.00, 523.25, 659.25, 587.33];
-      for (int i = 0; i < rawLength; i++) {
-        final tSec = i / sampleRate;
-        final tMod = (i % totalSamples) / sampleRate;
-
-        double pad = 0.0;
-        for (final f in chordFreqs) {
-          pad += 0.09 *
-              (math.sin(2.0 * math.pi * f * tSec) +
-                  0.08 * math.sin(4.0 * math.pi * f * tSec));
-        }
-
-        final beatIdx = tMod.floor();
-        final dtM = tMod - beatIdx;
-        final melFreq = melodyFreqs[beatIdx % melodyFreqs.length];
-        final envM = _smoothNoteEnv(dtM, 0.95, attack: 0.04, decayRate: 2.0);
-        final mel = envM * 0.16 * math.sin(2.0 * math.pi * melFreq * dtM);
-
-        raw[i] = (pad + mel) * gain;
-      }
-    } else if (type == AmbientSoundType.whiteNoise) {
-      const droneFreqs = [73.42, 110.00, 146.83, 185.00, 220.00, 293.66];
-      for (int i = 0; i < rawLength; i++) {
-        final tSec = i / sampleRate;
-        final tNorm = (i % totalSamples) / totalSamples;
-        final tMod = (i % totalSamples) / sampleRate;
-
-        final breath = 0.55 - 0.38 * math.cos(2.0 * math.pi * tNorm);
-        double drone = 0.0;
-        for (int n = 0; n < droneFreqs.length; n++) {
-          final amp = n < 2 ? 0.12 : 0.07;
-          drone += amp * math.sin(2.0 * math.pi * droneFreqs[n] * tSec);
-        }
-
-        final bowlEnv = _smoothNoteEnv(
-          tMod % math.max(1.0, durSec * 0.5),
-          math.max(1.0, durSec * 0.5),
-          attack: 0.06,
-          decayRate: 1.2,
-        );
-        final bowl = bowlEnv *
-            0.14 *
-            (0.65 * math.sin(2.0 * math.pi * 293.66 * tSec) +
-                0.35 * math.sin(2.0 * math.pi * 440.00 * tSec));
-
-        raw[i] = (drone * breath + bowl) * gain;
-      }
+    for (int i = 0; i < rawLength; i++) {
+      final w = rng.nextDouble() * 2.0 - 1.0;
+      lp1 += alpha * (w - lp1);
+      lp2 += alpha * (lp1 - lp2);
+      lp3 += alpha * (lp2 - lp3);
+      final t = (i % totalSamples) / totalSamples;
+      final mod = 0.85 + 0.15 * math.sin(2.0 * math.pi * t);
+      raw[i] = lp3 * 0.45 * mod * gain;
     }
 
-    // Circular cosine crossfade at seam
     final out = Float64List(totalSamples);
     for (int i = 0; i < totalSamples; i++) {
       out[i] = raw[i];
     }
     for (int i = 0; i < fadeSamples; i++) {
-      final alpha = i / fadeSamples;
-      final w = 0.5 - 0.5 * math.cos(math.pi * alpha);
+      final a = i / fadeSamples;
+      final w = 0.5 - 0.5 * math.cos(math.pi * a);
       out[i] = (1.0 - w) * raw[totalSamples + i] + w * raw[i];
     }
 
@@ -207,22 +214,19 @@ class AmbientSoundGenerator {
     final bytes = Uint8List(totalLength);
     final bd = ByteData.sublistView(bytes);
 
-    // RIFF header
     bytes.setRange(0, 4, 'RIFF'.codeUnits);
     bd.setUint32(4, 36 + dataByteLength, Endian.little);
     bytes.setRange(8, 12, 'WAVE'.codeUnits);
 
-    // fmt subchunk
     bytes.setRange(12, 16, 'fmt '.codeUnits);
-    bd.setUint32(16, 16, Endian.little); // PCM chunk size
-    bd.setUint16(20, 1, Endian.little); // AudioFormat = 1 (PCM)
-    bd.setUint16(22, 1, Endian.little); // NumChannels = 1 (Mono)
+    bd.setUint32(16, 16, Endian.little);
+    bd.setUint16(20, 1, Endian.little);
+    bd.setUint16(22, 1, Endian.little);
     bd.setUint32(24, sampleRate, Endian.little);
-    bd.setUint32(28, sampleRate * 2, Endian.little); // ByteRate
-    bd.setUint16(32, 2, Endian.little); // BlockAlign
-    bd.setUint16(34, 16, Endian.little); // BitsPerSample
+    bd.setUint32(28, sampleRate * 2, Endian.little);
+    bd.setUint16(32, 2, Endian.little);
+    bd.setUint16(34, 16, Endian.little);
 
-    // data subchunk
     bytes.setRange(36, 40, 'data'.codeUnits);
     bd.setUint32(40, dataByteLength, Endian.little);
 
@@ -235,281 +239,380 @@ class AmbientSoundGenerator {
   }
 }
 
-/// Offline looping ambient soundscape player integrated with Pomodoro Focus Timer.
+/// Multi-track simultaneous offline Ambient Sounds mixer (modeled on FocEase).
 ///
-/// On Linux desktop, streams raw 16-bit PCM slices over `stdin` to `pacat` / `aplay`:
-/// - Adjusting volume scales samples in real time at the current [_pcmReadCursor]
-///   without restarting the track from 0:00.
-/// - Closing the application automatically closes the `stdin` pipe (`EOF`),
-///   causing the audio process to exit immediately so it never plays in the background.
+/// - Any combination of the 9 [AmbientSoundTrack]s can play simultaneously.
+/// - Each track has its own play/pause state, volume (`0.0..1.0`, default `0.5`),
+///   and sample read cursor (`_trackCursors[track]`) so adjusting volume never
+///   restarts a track from 0:00.
+/// - Includes a Master Volume slider (`0.0..1.0`, default `1.0`), Sleep Timer
+///   (`No Timer`, `15m`, `30m`, `45m`, `1h`), `Play All`, `Pause All`, and `Reset`.
+/// - On Linux desktop, mixes all active tracks in real time into a single `stdin`
+///   PCM stream to `pacat` / `aplay`, which automatically exits on `EOF` when
+///   the app window closes.
 class AmbientSoundService extends ChangeNotifier {
   static final AmbientSoundService _instance = AmbientSoundService._internal();
   factory AmbientSoundService() => _instance;
   static AmbientSoundService get instance => _instance;
 
-  AmbientSoundService._internal();
+  AmbientSoundService._internal() {
+    for (final track in AmbientSoundTrack.values) {
+      _playing[track] = false;
+      _volumes[track] = defaultTrackVolume;
+      _currentGains[track] = defaultTrackVolume;
+      _trackCursors[track] = 0;
+    }
+  }
 
-  AudioPlayer? _audioPlayer;
-  AudioPlayer get audioPlayer => _audioPlayer ??= AudioPlayer();
+  static const double defaultTrackVolume = 0.5;
+  static const double defaultMasterVolume = 1.0;
 
-  AmbientSoundType _selectedTrack = AmbientSoundType.off;
-  double _volume = 0.65;
-  double _currentGain = 0.65;
-  bool _isPlaying = false;
-  int _loopSessionToken = 0;
+  final Map<AmbientSoundTrack, bool> _playing = {};
+  final Map<AmbientSoundTrack, double> _volumes = {};
+  final Map<AmbientSoundTrack, double> _currentGains = {};
+  final Map<AmbientSoundTrack, int> _trackCursors = {};
+  final Map<AmbientSoundTrack, Uint8List> _rawWavCache = {};
+  final Map<AmbientSoundTrack, AudioPlayer> _players = {};
 
-  /// Current sample read position within the active track's PCM buffer.
-  int _pcmReadCursor = 0;
-  AmbientSoundType _cursorTrack = AmbientSoundType.off;
+  double _masterVolume = defaultMasterVolume;
+  int _timerDuration = 0;
+  int _timeLeft = 0;
+  Timer? _sleepTimer;
 
-  /// When true, skips native AudioPlayer / OS process calls for deterministic unit/widget tests.
-  bool testMode = false;
-
+  int _streamToken = 0;
   Process? _linuxProcess;
   Timer? _linuxFeedTimer;
   AppLifecycleListener? _lifecycleListener;
   bool _cleanedOrphansOnStartup = false;
-  final Map<AmbientSoundType, Uint8List> _rawWavCache = {};
 
-  AmbientSoundType get selectedTrack => _selectedTrack;
-  double get volume => _volume;
-  bool get isPlaying => _isPlaying && _selectedTrack != AmbientSoundType.off;
+  /// When true, skips native AudioPlayer / OS process calls for deterministic unit/widget tests.
+  bool testMode = false;
+
+  double get masterVolume => _masterVolume;
+  int get timerDuration => _timerDuration;
+  int get timeLeft => _timeLeft;
+
+  bool isTrackPlaying(AmbientSoundTrack track) => _playing[track] ?? false;
+  double getTrackVolume(AmbientSoundTrack track) =>
+      _volumes[track] ?? defaultTrackVolume;
+
+  int get activePlayingCount =>
+      _playing.values.where((playing) => playing).length;
+
+  bool get isAnyPlaying => activePlayingCount > 0;
+
+  List<AmbientSoundTrack> get activeTracks => AmbientSoundTrack.values
+      .where((track) => _playing[track] == true)
+      .toList();
 
   @visibleForTesting
-  int get pcmReadCursor => _pcmReadCursor;
+  int getTrackCursor(AmbientSoundTrack track) => _trackCursors[track] ?? 0;
 
   void _ensureLifecycleListener() {
     if (testMode || _lifecycleListener != null) return;
     try {
       _lifecycleListener = AppLifecycleListener(
         onDetach: () {
-          stop();
+          stopAll();
         },
         onExitRequested: () async {
-          await stop();
+          await stopAll();
           return AppExitResponse.exit;
         },
       );
     } catch (_) {}
   }
 
-  /// Loads persisted ambient track and volume preferences from [StorageService].
+  /// Loads persisted master volume, timer duration, and per-track volumes from [StorageService].
   void loadPreferences(StorageService storage) {
     _ensureLifecycleListener();
     if (!_cleanedOrphansOnStartup && !testMode && !kIsWeb && Platform.isLinux) {
       _cleanedOrphansOnStartup = true;
       unawaited(_cleanupOrphanedLinuxPlayers());
     }
-    _selectedTrack = AmbientSoundType.fromId(storage.getAmbientSoundTrack());
-    _volume = storage.getAmbientSoundVolume();
-    _currentGain = _volume;
+
+    _masterVolume = storage.getAmbientMasterVolume();
+    _timerDuration = storage.getAmbientTimerDuration();
+    final savedVolumes = storage.getAmbientTrackVolumes();
+    for (final track in AmbientSoundTrack.values) {
+      final vol = savedVolumes[track.id] ?? defaultTrackVolume;
+      _volumes[track] = vol;
+      _currentGains[track] = vol * _masterVolume;
+    }
     notifyListeners();
   }
 
-  /// Selects an ambient soundscape track, persists the choice, and optionally starts playback.
-  Future<void> selectTrack(
-    AmbientSoundType track, {
+  /// Toggles play/pause for a single [track] without interrupting other active tracks.
+  Future<void> toggleSound(
+    AmbientSoundTrack track, {
     StorageService? storage,
-    bool autoPlay = true,
   }) async {
-    final trackChanged = _selectedTrack != track;
-    _selectedTrack = track;
-    if (trackChanged) {
-      _pcmReadCursor = 0;
-      _cursorTrack = track;
-    }
-    if (storage != null) {
-      await storage.setAmbientSoundTrack(track.id);
+    _ensureLifecycleListener();
+    final nowPlaying = !(_playing[track] ?? false);
+    _playing[track] = nowPlaying;
+    _currentGains[track] = getTrackVolume(track) * _masterVolume;
+
+    if (nowPlaying && testMode) {
+      _trackCursors[track] = (_trackCursors[track] ?? 0) + 120;
     }
 
-    if (track == AmbientSoundType.off) {
-      await stop();
-      return;
-    }
-
-    if (autoPlay || _isPlaying) {
-      if (trackChanged || !_isPlaying) {
-        await play();
-      } else {
-        notifyListeners();
-      }
-    } else {
-      notifyListeners();
-    }
+    notifyListeners();
+    await _syncPlaybackEngine(changedTrack: track);
   }
 
-  /// Updates the ambient volume (0.0 to 1.0) in real time without restarting the track.
-  Future<void> setVolume(
-    double newVolume, {
+  /// Updates the volume (`0.0..1.0`) of a single [track] in real time without restarting it.
+  Future<void> setSoundVolume(
+    AmbientSoundTrack track,
+    double volume, {
     StorageService? storage,
   }) async {
-    final clamped = newVolume.clamp(0.0, 1.0);
-    if ((_volume - clamped).abs() < 0.002) return;
-    _volume = clamped;
+    final clamped = volume.clamp(0.0, 1.0);
+    if (((_volumes[track] ?? defaultTrackVolume) - clamped).abs() < 0.002) {
+      return;
+    }
+    _volumes[track] = clamped;
     if (storage != null) {
-      await storage.setAmbientSoundVolume(_volume);
+      await _persistTrackVolumes(storage);
     }
     notifyListeners();
 
-    if (!_isPlaying || _selectedTrack == AmbientSoundType.off || testMode) {
-      _currentGain = _volume;
+    if (testMode || !isTrackPlaying(track)) {
+      _currentGains[track] = clamped * _masterVolume;
       return;
     }
 
-    // On Linux, the active stdin PCM feeder automatically interpolates _currentGain
-    // toward _volume on the next 40ms chunk at the exact current _pcmReadCursor.
+    // On Linux, the stdin mixer loop interpolates _currentGains[track] toward
+    // _volumes[track] * _masterVolume at the current cursor without restarting.
     if (!kIsWeb && !Platform.isLinux) {
       try {
-        await audioPlayer.setVolume(_volume);
+        await _players[track]?.setVolume(clamped * _masterVolume);
       } catch (_) {}
     }
   }
 
-  /// Toggles ambient sound playback on or off for the currently selected track.
-  Future<void> togglePlay() async {
-    if (_selectedTrack == AmbientSoundType.off) return;
-    if (_isPlaying) {
-      await pause();
-    } else {
-      await play();
+  /// Updates the global master volume (`0.0..1.0`) across all active tracks in real time.
+  Future<void> setMasterVolume(
+    double volume, {
+    StorageService? storage,
+  }) async {
+    final clamped = volume.clamp(0.0, 1.0);
+    if ((_masterVolume - clamped).abs() < 0.002) return;
+    _masterVolume = clamped;
+    if (storage != null) {
+      await storage.setAmbientMasterVolume(_masterVolume);
     }
-  }
-
-  /// Automatically starts ambient playback when a Pomodoro Focus session begins.
-  Future<void> onFocusTimerStarted() async {
-    if (_selectedTrack == AmbientSoundType.off) return;
-    if (!_isPlaying) {
-      await play();
-    }
-  }
-
-  /// Automatically pauses ambient playback when a Focus session pauses, resets, or finishes.
-  Future<void> onFocusTimerStopped() async {
-    if (_isPlaying) {
-      await pause();
-    }
-  }
-
-  /// Starts infinite looping playback of the selected ambient track from current cursor.
-  Future<void> play() async {
-    if (_selectedTrack == AmbientSoundType.off) return;
-    _ensureLifecycleListener();
-    final token = ++_loopSessionToken;
-    _stopLinuxStreamProcess();
-
-    if (_cursorTrack != _selectedTrack) {
-      _pcmReadCursor = 0;
-      _cursorTrack = _selectedTrack;
-    }
-    _currentGain = _volume;
-    _isPlaying = true;
     notifyListeners();
 
-    if (testMode) {
-      // Advance simulated cursor slightly in test mode so tests can verify cursor continuity
-      _pcmReadCursor += 100;
-      return;
-    }
+    if (testMode || !isAnyPlaying) return;
 
-    final track = _selectedTrack;
-    if (!kIsWeb && Platform.isLinux) {
-      unawaited(_startLinuxStdinStream(track, token));
-      return;
-    }
-
-    try {
-      await audioPlayer.setReleaseMode(ReleaseMode.loop);
-      await audioPlayer.setVolume(_volume);
-      final assetPath = track.assetPath;
-      if (assetPath != null) {
-        await audioPlayer.play(AssetSource(assetPath));
-      } else {
-        final bytes = await _getRawWavBytes(track);
-        await audioPlayer.play(BytesSource(bytes));
+    if (!kIsWeb && !Platform.isLinux) {
+      for (final track in activeTracks) {
+        try {
+          await _players[track]?.setVolume(getTrackVolume(track) * _masterVolume);
+        } catch (_) {}
       }
-    } catch (e) {
-      debugPrint('AmbientSoundService play error: $e');
     }
   }
 
-  /// Pauses current ambient playback while preserving [_pcmReadCursor].
-  Future<void> pause() async {
-    _loopSessionToken++;
-    _isPlaying = false;
+  /// Plays all 9 ambient sound tracks simultaneously (FocEase "Play All").
+  Future<void> playAll() async {
+    _ensureLifecycleListener();
+    for (final track in AmbientSoundTrack.values) {
+      _playing[track] = true;
+      _currentGains[track] = getTrackVolume(track) * _masterVolume;
+      if (testMode) {
+        _trackCursors[track] = (_trackCursors[track] ?? 0) + 120;
+      }
+    }
+    notifyListeners();
+    await _syncPlaybackEngine();
+  }
+
+  /// Pauses all currently playing ambient sound tracks (FocEase "Pause All").
+  Future<void> stopAll() async {
+    for (final track in AmbientSoundTrack.values) {
+      _playing[track] = false;
+    }
+    _streamToken++;
     _stopLinuxStreamProcess();
     notifyListeners();
 
     if (testMode) return;
+
     if (!kIsWeb && Platform.isLinux) {
       unawaited(_cleanupOrphanedLinuxPlayers());
     } else if (!kIsWeb) {
-      try {
-        await audioPlayer.pause();
-      } catch (_) {}
+      for (final player in _players.values) {
+        try {
+          await player.pause();
+        } catch (_) {}
+      }
     }
   }
 
-  /// Stops current ambient playback completely and resets [_pcmReadCursor].
-  Future<void> stop() async {
-    _loopSessionToken++;
-    _isPlaying = false;
-    _pcmReadCursor = 0;
+  /// Stops all tracks and resets volumes to 50%, master to 100%, and timer to No Timer (FocEase "Reset").
+  Future<void> resetAll({StorageService? storage}) async {
+    _sleepTimer?.cancel();
+    _sleepTimer = null;
+    _timerDuration = 0;
+    _timeLeft = 0;
+    _masterVolume = defaultMasterVolume;
+
+    for (final track in AmbientSoundTrack.values) {
+      _playing[track] = false;
+      _volumes[track] = defaultTrackVolume;
+      _currentGains[track] = defaultTrackVolume;
+      _trackCursors[track] = 0;
+    }
+
+    _streamToken++;
     _stopLinuxStreamProcess();
+
+    if (storage != null) {
+      await storage.setAmbientMasterVolume(defaultMasterVolume);
+      await storage.setAmbientTimerDuration(0);
+      await _persistTrackVolumes(storage);
+    }
+
     notifyListeners();
 
     if (testMode) return;
+
     if (!kIsWeb && Platform.isLinux) {
       unawaited(_cleanupOrphanedLinuxPlayers());
     } else if (!kIsWeb) {
-      try {
-        await audioPlayer.stop();
-      } catch (_) {}
+      for (final player in _players.values) {
+        try {
+          await player.stop();
+        } catch (_) {}
+      }
     }
   }
 
-  Future<Uint8List> _getRawWavBytes(AmbientSoundType track) async {
+  /// Sets the sleep countdown timer duration in seconds (`0` = No Timer).
+  Future<void> setTimerDuration(
+    int seconds, {
+    StorageService? storage,
+  }) async {
+    _sleepTimer?.cancel();
+    _sleepTimer = null;
+    _timerDuration = seconds < 0 ? 0 : seconds;
+    _timeLeft = _timerDuration;
+
+    if (storage != null) {
+      await storage.setAmbientTimerDuration(_timerDuration);
+    }
+
+    if (_timerDuration > 0) {
+      _sleepTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+        if (_timeLeft <= 1) {
+          timer.cancel();
+          _sleepTimer = null;
+          _timeLeft = 0;
+          _timerDuration = 0;
+          if (storage != null) {
+            unawaited(storage.setAmbientTimerDuration(0));
+          }
+          unawaited(stopAll());
+        } else {
+          _timeLeft--;
+          notifyListeners();
+        }
+      });
+    }
+
+    notifyListeners();
+  }
+
+  Future<void> _persistTrackVolumes(StorageService storage) async {
+    final map = <String, double>{
+      for (final track in AmbientSoundTrack.values)
+        track.id: getTrackVolume(track),
+    };
+    await storage.setAmbientTrackVolumes(map);
+  }
+
+  Future<void> _syncPlaybackEngine({AmbientSoundTrack? changedTrack}) async {
+    if (testMode) return;
+
+    if (!isAnyPlaying) {
+      _streamToken++;
+      _stopLinuxStreamProcess();
+      if (!kIsWeb && !Platform.isLinux) {
+        for (final player in _players.values) {
+          try {
+            await player.pause();
+          } catch (_) {}
+        }
+      }
+      return;
+    }
+
+    if (!kIsWeb && Platform.isLinux) {
+      // Preload WAV bytes for all active tracks
+      for (final track in activeTracks) {
+        await _getRawWavBytes(track);
+      }
+      // If the single Linux stdin mixer stream is not running yet, start it
+      if (_linuxProcess == null || _linuxFeedTimer == null) {
+        final token = ++_streamToken;
+        unawaited(_startLinuxMultiTrackMixer(token));
+      }
+      return;
+    }
+
+    if (!kIsWeb) {
+      final tracksToUpdate =
+          changedTrack != null ? [changedTrack] : AmbientSoundTrack.values;
+      for (final track in tracksToUpdate) {
+        final shouldPlay = isTrackPlaying(track);
+        if (shouldPlay) {
+          final player = _players.putIfAbsent(track, () => AudioPlayer());
+          try {
+            await player.setReleaseMode(ReleaseMode.loop);
+            await player.setVolume(getTrackVolume(track) * _masterVolume);
+            await player.play(AssetSource(track.assetPath));
+          } catch (e) {
+            debugPrint('AmbientSoundService play error (${track.id}): $e');
+          }
+        } else {
+          try {
+            await _players[track]?.pause();
+          } catch (_) {}
+        }
+      }
+    }
+  }
+
+  Future<Uint8List> _getRawWavBytes(AmbientSoundTrack track) async {
     final cached = _rawWavCache[track];
     if (cached != null) return cached;
 
-    final assetPath = track.assetPath;
-    if (assetPath != null) {
-      try {
-        final byteData = await rootBundle.load('assets/$assetPath');
-        final bytes = byteData.buffer.asUint8List(
-          byteData.offsetInBytes,
-          byteData.lengthInBytes,
-        );
-        _rawWavCache[track] = bytes;
-        return bytes;
-      } catch (_) {}
-    }
+    try {
+      final byteData = await rootBundle.load('assets/${track.assetPath}');
+      final bytes = byteData.buffer.asUint8List(
+        byteData.offsetInBytes,
+        byteData.lengthInBytes,
+      );
+      _rawWavCache[track] = bytes;
+      return bytes;
+    } catch (_) {}
 
     final generated = AmbientSoundGenerator.generateWavBytes(
       track,
-      durationSeconds: 4,
+      durationSeconds: 3,
     );
     _rawWavCache[track] = generated;
     return generated;
   }
 
-  /// Streams 16-bit PCM slices continuously over `stdin` to `pacat` or `aplay`.
-  /// Because audio is piped via `stdin`, closing the app closes the pipe (`EOF`)
-  /// and terminates the player automatically, while volume changes scale samples
-  /// in-place at [_pcmReadCursor] without restarting from 0:00.
-  Future<void> _startLinuxStdinStream(AmbientSoundType track, int token) async {
+  /// Mixes all currently active tracks in real time into a single `stdin` PCM stream.
+  Future<void> _startLinuxMultiTrackMixer(int token) async {
     try {
       await _cleanupOrphanedLinuxPlayers();
-      final wavBytes = await _getRawWavBytes(track);
-      if (!_isPlaying || _loopSessionToken != token || wavBytes.length <= 44) {
-        return;
-      }
+      if (!isAnyPlaying || _streamToken != token) return;
 
-      final headerBd = ByteData.sublistView(wavBytes);
-      final sampleRate = headerBd.getUint32(24, Endian.little);
-      final totalSamples = (wavBytes.length - 44) ~/ 2;
-      if (totalSamples <= 0) return;
-
-      _pcmReadCursor = _pcmReadCursor % totalSamples;
+      const int sampleRate = 16000;
 
       Process? proc;
       try {
@@ -539,7 +642,7 @@ class AmbientSoundService extends ChangeNotifier {
       }
 
       if (proc == null) return;
-      if (!_isPlaying || _loopSessionToken != token) {
+      if (!isAnyPlaying || _streamToken != token) {
         try {
           proc.kill(ProcessSignal.sigterm);
         } catch (_) {}
@@ -547,16 +650,15 @@ class AmbientSoundService extends ChangeNotifier {
       }
 
       _linuxProcess = proc;
-      // Ignore broken pipe errors when process is killed on pause/stop
       proc.stdin.done.ignore();
 
       final sw = Stopwatch()..start();
       int samplesSent = 0;
-      final int prebufferSamples = (sampleRate * 0.14).round(); // 140ms lookahead
+      final int prebufferSamples = (sampleRate * 0.14).round();
       final int maxChunkSamples = (sampleRate * 0.25).round();
 
-      void feedSlices() {
-        if (!_isPlaying || _loopSessionToken != token || _linuxProcess != proc) {
+      void feedMixedSlices() {
+        if (!isAnyPlaying || _streamToken != token || _linuxProcess != proc) {
           return;
         }
         final elapsedSamples = (sw.elapsedMicroseconds * sampleRate) ~/ 1000000;
@@ -564,24 +666,54 @@ class AmbientSoundService extends ChangeNotifier {
         int count = targetSamples - samplesSent;
         if (count <= 0) return;
         if (count > maxChunkSamples) {
-          // Recover gracefully if event loop paused briefly
           samplesSent = targetSamples - prebufferSamples;
           count = prebufferSamples;
         }
 
         final outBytes = Uint8List(count * 2);
         final outBd = ByteData.sublistView(outBytes);
-        final targetVol = _volume;
+        final playingTracks = activeTracks;
+
+        // Prepare ByteData views for active tracks
+        final activeViews = <({
+          AmbientSoundTrack track,
+          ByteData bd,
+          int totalSamples,
+          double targetGain,
+        })>[];
+
+        for (final track in playingTracks) {
+          final wav = _rawWavCache[track];
+          if (wav != null && wav.length > 44) {
+            final total = (wav.length - 44) ~/ 2;
+            if (total > 0) {
+              activeViews.add((
+                track: track,
+                bd: ByteData.sublistView(wav),
+                totalSamples: total,
+                targetGain: getTrackVolume(track) * _masterVolume,
+              ));
+            }
+          }
+        }
 
         for (int i = 0; i < count; i++) {
-          _currentGain += 0.003 * (targetVol - _currentGain);
-          final sample = headerBd.getInt16(44 + _pcmReadCursor * 2, Endian.little);
-          _pcmReadCursor++;
-          if (_pcmReadCursor >= totalSamples) {
-            _pcmReadCursor = 0;
+          double mixed = 0.0;
+          for (final item in activeViews) {
+            final curGain = (_currentGains[item.track] ?? item.targetGain) +
+                0.003 * (item.targetGain - (_currentGains[item.track] ?? item.targetGain));
+            _currentGains[item.track] = curGain;
+
+            int cursor = (_trackCursors[item.track] ?? 0) % item.totalSamples;
+            final sample = item.bd.getInt16(44 + cursor * 2, Endian.little);
+            cursor++;
+            if (cursor >= item.totalSamples) cursor = 0;
+            _trackCursors[item.track] = cursor;
+
+            mixed += sample * curGain;
           }
-          final scaled = (sample * _currentGain).round().clamp(-32767, 32767);
-          outBd.setInt16(i * 2, scaled, Endian.little);
+          final clamped = mixed.round().clamp(-32767, 32767);
+          outBd.setInt16(i * 2, clamped, Endian.little);
         }
 
         try {
@@ -590,13 +722,13 @@ class AmbientSoundService extends ChangeNotifier {
         } catch (_) {}
       }
 
-      feedSlices();
+      feedMixedSlices();
       _linuxFeedTimer = Timer.periodic(
         const Duration(milliseconds: 35),
-        (_) => feedSlices(),
+        (_) => feedMixedSlices(),
       );
     } catch (e) {
-      debugPrint('AmbientSoundService Linux stdin stream error: $e');
+      debugPrint('AmbientSoundService Linux multi-track mixer error: $e');
     }
   }
 
@@ -615,7 +747,6 @@ class AmbientSoundService extends ChangeNotifier {
     }
   }
 
-  /// Cleans up any orphaned background audio processes from previous app runs.
   Future<void> _cleanupOrphanedLinuxPlayers() async {
     if (kIsWeb || !Platform.isLinux || testMode) return;
     for (final pattern in [

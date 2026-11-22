@@ -216,6 +216,46 @@ class StorageService {
     await _settingsBox.put('ambient_sound_volume', volume.clamp(0.0, 1.0));
   }
 
+  double getAmbientMasterVolume() {
+    final val = _settingsBox.get('ambient_master_volume', defaultValue: 1.0);
+    if (val is num) {
+      return val.toDouble().clamp(0.0, 1.0);
+    }
+    return 1.0;
+  }
+
+  Future<void> setAmbientMasterVolume(double volume) async {
+    await _settingsBox.put('ambient_master_volume', volume.clamp(0.0, 1.0));
+  }
+
+  int getAmbientTimerDuration() {
+    final val = _settingsBox.get('ambient_timer_duration', defaultValue: 0);
+    if (val is int) return val < 0 ? 0 : val;
+    return 0;
+  }
+
+  Future<void> setAmbientTimerDuration(int seconds) async {
+    await _settingsBox.put('ambient_timer_duration', seconds < 0 ? 0 : seconds);
+  }
+
+  Map<String, double> getAmbientTrackVolumes() {
+    final raw = _settingsBox.get('ambient_track_volumes');
+    final result = <String, double>{};
+    if (raw is Map) {
+      for (final entry in raw.entries) {
+        final v = entry.value;
+        if (v is num) {
+          result[entry.key.toString()] = v.toDouble().clamp(0.0, 1.0);
+        }
+      }
+    }
+    return result;
+  }
+
+  Future<void> setAmbientTrackVolumes(Map<String, double> volumes) async {
+    await _settingsBox.put('ambient_track_volumes', Map<String, double>.from(volumes));
+  }
+
   // --- TASK DEADLINE REMINDERS PREFERENCES ---
   bool getTaskRemindersEnabled() {
     return _settingsBox.get('task_reminders_enabled', defaultValue: true) as bool;
