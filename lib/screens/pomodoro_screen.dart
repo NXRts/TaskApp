@@ -3,7 +3,9 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/task_provider.dart';
 import '../providers/settings_provider.dart';
+import '../services/ambient_sound_service.dart';
 import '../services/pomodoro_alert_service.dart';
+import '../services/storage_service.dart';
 import '../utils/app_theme.dart';
 
 /// Zen Minimalist Focus (Pomodoro) Screen
@@ -24,22 +26,44 @@ class _PomodoroScreenState extends State<PomodoroScreen> {
   Timer? _timer;
 
   String? _selectedTaskId;
+  final AmbientSoundService _ambientService = AmbientSoundService.instance;
+
+  void _onAmbientChanged() {
+    if (mounted) {
+      setState(() {});
+    }
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _ambientService.addListener(_onAmbientChanged);
+    try {
+      _ambientService.loadPreferences(StorageService.instance);
+    } catch (_) {}
+  }
 
   @override
   void dispose() {
     _timer?.cancel();
+    _ambientService.removeListener(_onAmbientChanged);
+    _ambientService.onFocusTimerStopped();
     super.dispose();
   }
 
   void _startTimer() {
     if (_isRunning) return;
     setState(() => _isRunning = true);
+    if (!_isBreak) {
+      _ambientService.onFocusTimerStarted();
+    }
 
     _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
       if (_remainingSeconds > 0) {
         setState(() => _remainingSeconds--);
       } else {
         _timer?.cancel();
+        _ambientService.onFocusTimerStopped();
         final wasBreak = _isBreak;
         final taskProvider = Provider.of<TaskProvider>(context, listen: false);
         final task = _selectedTaskId != null ? taskProvider.getTaskById(_selectedTaskId) : null;
@@ -77,11 +101,13 @@ class _PomodoroScreenState extends State<PomodoroScreen> {
 
   void _pauseTimer() {
     _timer?.cancel();
+    _ambientService.onFocusTimerStopped();
     setState(() => _isRunning = false);
   }
 
   void _resetTimer() {
     _timer?.cancel();
+    _ambientService.onFocusTimerStopped();
     setState(() {
       _isRunning = false;
       _remainingSeconds = _isBreak ? breakDuration : focusDuration;
@@ -90,6 +116,7 @@ class _PomodoroScreenState extends State<PomodoroScreen> {
 
   void _switchMode(bool isBreakMode) {
     _timer?.cancel();
+    _ambientService.onFocusTimerStopped();
     setState(() {
       _isRunning = false;
       _isBreak = isBreakMode;
@@ -443,7 +470,18 @@ class _PomodoroScreenState extends State<PomodoroScreen> {
               ],
             ),
 
-            const SizedBox(height: 32),
+            const SizedBox(height: 28),
+
+            // Ambient Zen Soundscapes Card (Offline Looping)
+            _buildAmbientZenCard(
+              context,
+              isDark: isDark,
+              textPrimary: textPrimary,
+              textSecondary: textSecondary,
+              borderCol: borderCol,
+            ),
+
+            const SizedBox(height: 18),
 
             // Completed Sessions tracker
             Container(
@@ -462,14 +500,294 @@ class _PomodoroScreenState extends State<PomodoroScreen> {
                     decoration: const BoxDecoration(color: AppTheme.successSage, shape: BoxShape.circle),
                   ),
                   const SizedBox(width: 8),
-                  Text(
-                    '$completedSessions sesi fokus terselesaikan (${settingsProvider.totalFocusMinutes} menit)',
-                    style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w500, color: textPrimary),
+                  Flexible(
+                    child: Text(
+                      '$completedSessions sesi fokus terselesaikan (${settingsProvider.totalFocusMinutes} menit)',
+                      style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w500, color: textPrimary),
+                    ),
                   ),
                 ],
               ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildAmbientZenCard(
+    BuildContext context, {
+    required bool isDark,
+    required Color textPrimary,
+    required Color textSecondary,
+    required Color borderCol,
+  }) {
+    final selectedTrack = _ambientService.selectedTrack;
+    final isPlaying = _ambientService.isPlaying;
+    final accentCol = isDark ? AppTheme.darkAccent : AppTheme.brandCobalt;
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
+      decoration: BoxDecoration(
+        color: Theme.of(context).cardTheme.color,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: borderCol, width: 0.8),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(
+                Icons.graphic_eq_rounded,
+                size: 16,
+                color: isPlaying ? AppTheme.successSage : accentCol,
+              ),
+              const SizedBox(width: 6),
+              Expanded(
+                child: Text(
+                  'SUARA LATAR ZEN (OFFLINE)',
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: 1.0,
+                    color: textSecondary,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+              if (selectedTrack != AmbientSoundType.off)
+                InkWell(
+                  borderRadius: BorderRadius.circular(6),
+                  onTap: () => _ambientService.togglePlay(),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                    decoration: BoxDecoration(
+                      color: isPlaying
+                          ? AppTheme.successSage.withValues(alpha: 0.14)
+                          : (isDark ? AppTheme.darkSurfaceElevated : AppTheme.lightBorderSubtle),
+                      borderRadius: BorderRadius.circular(6),
+                      border: Border.all(
+                        color: isPlaying
+                            ? AppTheme.successSage.withValues(alpha: 0.4)
+                            : borderCol,
+                        width: 0.8,
+                      ),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          isPlaying ? Icons.pause_rounded : Icons.play_arrow_rounded,
+                          size: 13,
+                          color: isPlaying ? AppTheme.successSage : textPrimary,
+                        ),
+                        const SizedBox(width: 3),
+                        Text(
+                          isPlaying ? 'Aktif' : 'Putar',
+                          style: TextStyle(
+                            fontSize: 10.5,
+                            fontWeight: FontWeight.w600,
+                            color: isPlaying ? AppTheme.successSage : textPrimary,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          // 2x2 Grid of Soundscape Options
+          Row(
+            children: [
+              Expanded(
+                child: _buildSoundscapeOption(
+                  track: AmbientSoundType.off,
+                  isDark: isDark,
+                  textPrimary: textPrimary,
+                  textSecondary: textSecondary,
+                  borderCol: borderCol,
+                  accentCol: accentCol,
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: _buildSoundscapeOption(
+                  track: AmbientSoundType.gentleRain,
+                  isDark: isDark,
+                  textPrimary: textPrimary,
+                  textSecondary: textSecondary,
+                  borderCol: borderCol,
+                  accentCol: accentCol,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              Expanded(
+                child: _buildSoundscapeOption(
+                  track: AmbientSoundType.quietStudy,
+                  isDark: isDark,
+                  textPrimary: textPrimary,
+                  textSecondary: textSecondary,
+                  borderCol: borderCol,
+                  accentCol: accentCol,
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: _buildSoundscapeOption(
+                  track: AmbientSoundType.whiteNoise,
+                  isDark: isDark,
+                  textPrimary: textPrimary,
+                  textSecondary: textSecondary,
+                  borderCol: borderCol,
+                  accentCol: accentCol,
+                ),
+              ),
+            ],
+          ),
+          if (selectedTrack != AmbientSoundType.off) ...[
+            const SizedBox(height: 10),
+            Divider(color: borderCol.withValues(alpha: 0.6), height: 1),
+            const SizedBox(height: 8),
+            Text(
+              selectedTrack.subtitle,
+              style: TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.w500,
+                color: textSecondary,
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+            const SizedBox(height: 4),
+            Row(
+              children: [
+                Icon(
+                  _ambientService.volume <= 0.01
+                      ? Icons.volume_mute_outlined
+                      : Icons.volume_down_outlined,
+                  size: 16,
+                  color: textSecondary,
+                ),
+                Expanded(
+                  child: SliderTheme(
+                    data: SliderTheme.of(context).copyWith(
+                      trackHeight: 3.0,
+                      thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 6.5),
+                      overlayShape: const RoundSliderOverlayShape(overlayRadius: 14.0),
+                      activeTrackColor: accentCol,
+                      inactiveTrackColor: borderCol,
+                      thumbColor: accentCol,
+                    ),
+                    child: Slider(
+                      value: _ambientService.volume,
+                      min: 0.0,
+                      max: 1.0,
+                      onChanged: (val) {
+                        StorageService? storage;
+                        try {
+                          storage = StorageService.instance;
+                        } catch (_) {}
+                        _ambientService.setVolume(val, storage: storage);
+                      },
+                    ),
+                  ),
+                ),
+                SizedBox(
+                  width: 34,
+                  child: Text(
+                    '${(_ambientService.volume * 100).round()}%',
+                    textAlign: TextAlign.right,
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                      color: textSecondary,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSoundscapeOption({
+    required AmbientSoundType track,
+    required bool isDark,
+    required Color textPrimary,
+    required Color textSecondary,
+    required Color borderCol,
+    required Color accentCol,
+  }) {
+    final isSelected = _ambientService.selectedTrack == track;
+    final isPlayingThis = isSelected && _ambientService.isPlaying && track != AmbientSoundType.off;
+
+    return Material(
+      color: isSelected
+          ? (isDark ? accentCol.withValues(alpha: 0.16) : accentCol.withValues(alpha: 0.08))
+          : (isDark ? AppTheme.darkSurfaceElevated : AppTheme.lightBorderSubtle),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(8),
+        side: BorderSide(
+          color: isSelected ? accentCol : borderCol.withValues(alpha: 0.7),
+          width: isSelected ? 1.1 : 0.8,
+        ),
+      ),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(8),
+        onTap: () {
+          StorageService? storage;
+          try {
+            storage = StorageService.instance;
+          } catch (_) {}
+          _ambientService.selectTrack(
+            track,
+            storage: storage,
+            autoPlay: track != AmbientSoundType.off,
+          );
+        },
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 9),
+          child: Row(
+            children: [
+              Icon(
+                track.icon,
+                size: 15,
+                color: isSelected ? accentCol : textSecondary,
+              ),
+              const SizedBox(width: 7),
+              Expanded(
+                child: Text(
+                  track.label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                    color: isSelected ? textPrimary : textSecondary,
+                  ),
+                ),
+              ),
+              if (isPlayingThis)
+                Container(
+                  width: 6,
+                  height: 6,
+                  decoration: const BoxDecoration(
+                    color: AppTheme.successSage,
+                    shape: BoxShape.circle,
+                  ),
+                ),
+            ],
+          ),
         ),
       ),
     );
