@@ -195,6 +195,27 @@ class StorageService {
     await _settingsBox.put('completed_pomodoro_sessions', current + 1);
   }
 
+  // --- AMBIENT ZEN SOUNDSCAPES PREFERENCES ---
+  String getAmbientSoundTrack() {
+    return _settingsBox.get('ambient_sound_track', defaultValue: 'off') as String;
+  }
+
+  Future<void> setAmbientSoundTrack(String trackId) async {
+    await _settingsBox.put('ambient_sound_track', trackId);
+  }
+
+  double getAmbientSoundVolume() {
+    final val = _settingsBox.get('ambient_sound_volume', defaultValue: 0.65);
+    if (val is num) {
+      return val.toDouble().clamp(0.0, 1.0);
+    }
+    return 0.65;
+  }
+
+  Future<void> setAmbientSoundVolume(double volume) async {
+    await _settingsBox.put('ambient_sound_volume', volume.clamp(0.0, 1.0));
+  }
+
   // --- TASK DEADLINE REMINDERS PREFERENCES ---
   bool getTaskRemindersEnabled() {
     return _settingsBox.get('task_reminders_enabled', defaultValue: true) as bool;
