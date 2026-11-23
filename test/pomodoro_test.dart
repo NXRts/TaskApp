@@ -4,8 +4,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hive/hive.dart';
 import 'package:provider/provider.dart';
+import 'package:taskapp/models/pomodoro_session_record.dart';
+import 'package:taskapp/models/subject.dart';
 import 'package:taskapp/models/task.dart';
 import 'package:taskapp/providers/settings_provider.dart';
+import 'package:taskapp/providers/subject_provider.dart';
 import 'package:taskapp/providers/task_provider.dart';
 import 'package:taskapp/screens/pomodoro_screen.dart';
 import 'package:taskapp/services/ambient_sound_service.dart';
@@ -185,11 +188,12 @@ void main() {
       await tester.pumpAndSettle();
 
       // Verify top section tabs exist inside Fokus screen
-      expect(find.text('Timer Pomodoro'), findsOneWidget);
-      expect(find.text('Ambient Sounds'), findsWidgets);
+      expect(find.text('Pomodoro'), findsOneWidget);
+      expect(find.text('Ambient'), findsOneWidget);
+      expect(find.text('Statistik'), findsOneWidget);
 
-      // Switch to Ambient Sounds tab
-      await tester.tap(find.text('Ambient Sounds').first);
+      // Switch to Ambient tab
+      await tester.tap(find.text('Ambient'));
       await tester.pumpAndSettle();
 
       // Verify FocEase controls and tracks are rendered
@@ -215,6 +219,152 @@ void main() {
       await tester.tap(find.text('Pause All'));
       await tester.pumpAndSettle();
       expect(ambient.activePlayingCount, 0);
+
+      await tester.runAsync(() async {
+        await Hive.close();
+        if (await tempDir.exists()) {
+          await tempDir.delete(recursive: true);
+        }
+      });
+    });
+
+    test('PomodoroAnalyticsHelper computes daily bar chart, streaks, heatmap, and subject breakdown', () {
+      // Reference: Thursday, Nov 26, 2026
+      final refDate = DateTime(2026, 11, 26, 15, 0);
+      final subjects = [
+        Subject(id: 'sub-calc', name: 'Kalkulus II', colorValue: 0xFF3B82F6),
+        Subject(id: 'sub-algo', name: 'Struktur Data', colorValue: 0xFF10B981),
+      ];
+
+      final records = [
+        // Mon Nov 23 (25m Kalkulus) -> gap on Tue Nov 24
+        PomodoroSessionRecord(
+          id: 'r1',
+          completedAt: DateTime(2026, 11, 23, 9, 0),
+          durationMinutes: 25,
+          subjectId: 'sub-calc',
+        ),
+        // Wed Nov 25 (50m Struktur Data)
+        PomodoroSessionRecord(
+          id: 'r2',
+          completedAt: DateTime(2026, 11, 25, 14, 0),
+          durationMinutes: 50,
+          subjectId: 'sub-algo',
+        ),
+        // Thu Nov 26 (25m Kalkulus + 25m General = 50m)
+        PomodoroSessionRecord(
+          id: 'r3',
+          completedAt: DateTime(2026, 11, 26, 10, 0),
+          durationMinutes: 25,
+          subjectId: 'sub-calc',
+        ),
+        PomodoroSessionRecord(
+          id: 'r4',
+          completedAt: DateTime(2026, 11, 26, 13, 0),
+          durationMinutes: 25,
+          subjectId: null,
+        ),
+      ];
+
+      // 1. Weekly daily minutes (Mon..Sun)
+      final daily = PomodoroAnalyticsHelper.weeklyDailyMinutes(records, refDate);
+      expect(daily, [25, 0, 50, 50, 0, 0, 0]);
+      expect(PomodoroAnalyticsHelper.currentWeekTotalMinutes(records, refDate), 125);
+      expect(PomodoroAnalyticsHelper.todayFocusMinutes(records, refDate), 50);
+
+      // 2. Streak calculations: studied Wed Nov 25 & Thu Nov 26 -> current streak = 2, longest = 2
+      expect(PomodoroAnalyticsHelper.currentStreakDays(records, refDate), 2);
+      expect(PomodoroAnalyticsHelper.longestStreakDays(records), 2);
+
+      // 3. 4-Week Heatmap Grid
+      final grid = PomodoroAnalyticsHelper.buildWeeklyHeatmapGrid(records, refDate, weeksCount: 4);
+      expect(grid.length, 4);
+      expect(grid.last.length, 7);
+      expect(grid.last[0].value, 25); // Monday
+      expect(grid.last[2].value, 50); // Wednesday
+      expect(grid.last[3].value, 50); // Thursday
+      expect(PomodoroAnalyticsHelper.heatmapIntensityLevel(0), 0);
+      expect(PomodoroAnalyticsHelper.heatmapIntensityLevel(25), 1);
+      expect(PomodoroAnalyticsHelper.heatmapIntensityLevel(50), 2);
+      expect(PomodoroAnalyticsHelper.heatmapIntensityLevel(75), 3);
+      expect(PomodoroAnalyticsHelper.heatmapIntensityLevel(125), 4);
+
+      // 4. Subject Breakdown: Kalkulus II (50m, 40%), Struktur Data (50m, 40%), Fokus Umum (25m, 20%)
+      final breakdowns = PomodoroAnalyticsHelper.buildSubjectBreakdown(records, subjects);
+      expect(breakdowns.length, 3);
+      expect(breakdowns[0].totalMinutes, 50);
+      expect(breakdowns[1].totalMinutes, 50);
+      expect(breakdowns[2].name, 'Fokus Umum & Mandiri');
+      expect(breakdowns[2].totalMinutes, 25);
+      expect(breakdowns[2].percentage, closeTo(20.0, 0.1));
+    });
+
+    testWidgets('PomodoroScreen Statistik tab displays streak, daily bar chart, heatmap, and subject breakdown',
+        (tester) async {
+      late Directory tempDir;
+      late StorageService storage;
+      late SettingsProvider settingsProvider;
+      late SubjectProvider subjectProvider;
+      late TaskProvider taskProvider;
+
+      await tester.runAsync(() async {
+        tempDir = await Directory.systemTemp.createTemp('pomodoro_stats_test_');
+        Hive.init(tempDir.path);
+        for (final boxName in [
+          StorageService.tasksBoxName,
+          StorageService.subjectsBoxName,
+          StorageService.settingsBoxName,
+          StorageService.financeBoxName,
+          StorageService.financeTransactionsBoxName,
+          StorageService.financeLoansBoxName,
+        ]) {
+          await Hive.openBox(boxName, bytes: Uint8List(0));
+        }
+        storage = StorageService();
+        await storage.init(customPath: tempDir.path);
+        await storage.setTaskRemindersEnabled(false);
+        await storage.saveSubject(
+          Subject(id: 'sub-jarkom', name: 'Jaringan Komputer', colorValue: 0xFF2563EB),
+        );
+        settingsProvider = SettingsProvider(storage);
+        subjectProvider = SubjectProvider(storage);
+        taskProvider = TaskProvider(storage);
+      });
+
+      await settingsProvider.recordCompletedSession(
+        durationMinutes: 25,
+        taskId: 't-1',
+        taskTitle: 'Laporan Wireshark',
+        subjectId: 'sub-jarkom',
+      );
+
+      await tester.pumpWidget(
+        MultiProvider(
+          providers: [
+            ChangeNotifierProvider<TaskProvider>.value(value: taskProvider),
+            ChangeNotifierProvider<SubjectProvider>.value(value: subjectProvider),
+            ChangeNotifierProvider<SettingsProvider>.value(value: settingsProvider),
+          ],
+          child: MaterialApp(
+            theme: AppTheme.darkTheme,
+            home: const PomodoroScreen(),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // Switch to Statistik tab
+      expect(find.text('Statistik'), findsOneWidget);
+      await tester.tap(find.text('Statistik'));
+      await tester.pumpAndSettle();
+
+      // Verify Streak, Bar Chart, Heatmap, and Subject Breakdown render
+      expect(find.text('Streak Belajar'), findsOneWidget);
+      expect(find.text('hari beruntun'), findsOneWidget);
+      expect(find.text('Menit Fokus Harian (Senin–Minggu)'), findsOneWidget);
+      expect(find.text('Heatmap Konsistensi Belajar (4 Minggu)'), findsOneWidget);
+      expect(find.text('Alokasi Jam Belajar per Mata Kuliah'), findsOneWidget);
+      expect(find.text('Jaringan Komputer'), findsOneWidget);
 
       await tester.runAsync(() async {
         await Hive.close();

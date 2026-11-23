@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../models/pomodoro_session_record.dart';
 import '../models/user_profile.dart';
 import '../services/storage_service.dart';
 
@@ -21,7 +22,16 @@ class SettingsProvider with ChangeNotifier {
   bool get isDarkMode => _isDarkMode;
   UserProfile get profile => _profile;
   int get completedPomodoroSessions => _storageService.getCompletedPomodoroSessions();
-  int get totalFocusMinutes => completedPomodoroSessions * 25;
+  List<PomodoroSessionRecord> get pomodoroSessionRecords =>
+      _storageService.getPomodoroSessionRecords();
+
+  int get totalFocusMinutes {
+    final records = pomodoroSessionRecords;
+    final loggedMinutes =
+        records.fold<int>(0, (sum, r) => sum + r.durationMinutes);
+    final counterMinutes = completedPomodoroSessions * 25;
+    return loggedMinutes >= counterMinutes ? loggedMinutes : counterMinutes;
+  }
 
   bool get taskRemindersEnabled => _storageService.getTaskRemindersEnabled();
   bool get reminderH1Enabled => _storageService.getReminderH1Enabled();
@@ -48,8 +58,25 @@ class SettingsProvider with ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> recordCompletedSession() async {
+  Future<void> recordCompletedSession({
+    int durationMinutes = 25,
+    String? taskId,
+    String? taskTitle,
+    String? subjectId,
+    DateTime? completedAt,
+  }) async {
+    final now = completedAt ?? DateTime.now();
     await _storageService.incrementPomodoroSession();
+    await _storageService.addPomodoroSessionRecord(
+      PomodoroSessionRecord(
+        id: 'pomo-${now.microsecondsSinceEpoch}',
+        completedAt: now,
+        durationMinutes: durationMinutes,
+        taskId: taskId,
+        taskTitle: taskTitle,
+        subjectId: subjectId,
+      ),
+    );
     notifyListeners();
   }
 

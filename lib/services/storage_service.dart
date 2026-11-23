@@ -9,6 +9,7 @@ import '../models/finance_transaction.dart';
 import '../models/finance_envelope.dart';
 import '../models/finance_loan.dart';
 import '../models/finance_settings.dart';
+import '../models/pomodoro_session_record.dart';
 
 class StorageService {
   static final StorageService _instance = StorageService._internal();
@@ -193,6 +194,42 @@ class StorageService {
   Future<void> incrementPomodoroSession() async {
     final current = getCompletedPomodoroSessions();
     await _settingsBox.put('completed_pomodoro_sessions', current + 1);
+  }
+
+  // --- POMODORO ACADEMIC ANALYTICS RECORDS ---
+  List<PomodoroSessionRecord> getPomodoroSessionRecords() {
+    try {
+      final raw = _settingsBox.get('pomodoro_session_records');
+      if (raw is List) {
+        final list = <PomodoroSessionRecord>[];
+        for (final item in raw) {
+          if (item is Map) {
+            list.add(PomodoroSessionRecord.fromMap(item));
+          }
+        }
+        list.sort((a, b) => b.completedAt.compareTo(a.completedAt));
+        return list;
+      }
+      return [];
+    } catch (e) {
+      debugPrint('Error getting pomodoro session records: $e');
+      return [];
+    }
+  }
+
+  Future<void> savePomodoroSessionRecords(
+    List<PomodoroSessionRecord> records,
+  ) async {
+    await _settingsBox.put(
+      'pomodoro_session_records',
+      records.map((r) => r.toMap()).toList(),
+    );
+  }
+
+  Future<void> addPomodoroSessionRecord(PomodoroSessionRecord record) async {
+    final current = getPomodoroSessionRecords();
+    current.insert(0, record);
+    await savePomodoroSessionRecords(current);
   }
 
   // --- AMBIENT ZEN SOUNDSCAPES PREFERENCES ---
