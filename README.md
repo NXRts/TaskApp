@@ -26,14 +26,19 @@
   * Ambil foto catatan papan tulis langsung dari **Kamera**, pilih multi-foto dari **Galeri**, lampirkan berkas **PDF Soal/Materi**, atau simpan tautan URL (Google Drive, LMS/Spada, Zoom).
   * Dilengkapi **Penampil Gambar Interaktif** (*pinch-to-zoom* & *pan*) serta **Pembaca PDF Tersemat** langsung di dalam aplikasi tanpa internet.
 
-### 2. Fokus Belajar: Timer Pomodoro & Multi-Track Ambient Sounds Mixer
+### 2. Fokus Belajar: Timer Pomodoro, Multi-Track Ambient Sounds & Statistik Akademik
 
 * **Timer Pomodoro (25m Fokus / 5m Rehat)**:
   * Hubungkan sesi fokus langsung ke tugas spesifik yang sedang dikerjakan, lengkap dengan bunyi lonceng zen, getaran haptik, notifikasi penyelesaian sesi, dan pencatat total sesi/menit fokus.
-* **Tab Ambient Sounds Terpisah (Multi-Track Audio Mixer)**:
+* **Tab Ambient Terpisah (Multi-Track Audio Mixer)**:
   * Menyediakan **9 lanskap suara alam & suasana offline** (*Rain, Fireplace, River, Wind, Cafe Ambience, Morning Birds, Thunderstorm, Nature Night, Ocean Waves*).
   * **Pemutaran Simultan**: Seluruh 9 suara dapat dinyalakan bersamaan dan dicampur bebas dengan slider volume masing-masing tanpa mengulang posisi audio dari awal saat volume diubah.
   * Dilengkapi **Master Volume Slider**, **Sleep Timer** (`No Timer`, `15 Minutes`, `30 Minutes`, `45 Minutes`, `1 Hour`), tombol **`Play All` / `Pause All`**, dan **`Reset`**.
+* **Tab Statistik & Heatmap Belajar Akademik (*Pomodoro Academic Analytics*)**:
+  * **Streak Belajar & Total Jam Fokus**: Lacak jumlah hari belajar berturut-turut (*Current Streak* & *Longest Streak*) serta total akumulasi jam fokus semester & minggu berjalan.
+  * **Grafik Batang Menit Fokus Harian (Senin–Minggu)**: Visualisasi durasi menit belajar setiap hari pada minggu aktif.
+  * **Heatmap Konsistensi Belajar 4 Minggu (28 Hari)**: Kisi kalender konsistensi 28 hari dengan 5 tingkat intensitas warna (`0m` s.d. `100m+`).
+  * **Alokasi Jam Belajar per Mata Kuliah**: Breakdown durasi fokus, jumlah sesi, dan persentase waktu belajar per mata kuliah secara privat 100% offline.
 
 ### 3. Manajemen Mata Kuliah, Matriks Jadwal & Attendance Sentinel
 
