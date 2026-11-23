@@ -1,10 +1,18 @@
+import 'dart:io';
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:hive/hive.dart';
+import 'package:provider/provider.dart';
 import 'package:taskapp/models/task.dart';
 import 'package:taskapp/models/subtask.dart';
 import 'package:taskapp/models/subject.dart';
 import 'package:taskapp/models/user_profile.dart';
 import 'package:taskapp/models/attendance_record.dart';
+import 'package:taskapp/providers/subject_provider.dart';
+import 'package:taskapp/providers/task_provider.dart';
+import 'package:taskapp/services/storage_service.dart';
+import 'package:taskapp/widgets/task_card.dart';
 import 'package:taskapp/widgets/timetable_matrix_view.dart';
 import 'package:taskapp/screens/calendar_screen.dart';
 import 'package:taskapp/services/schedule_export_service.dart';
@@ -593,5 +601,145 @@ void main() {
     // Both first and last classes are rendered
     expect(find.text('Logika Informatika'), findsOneWidget);
     expect(find.text('English for Academic'), findsOneWidget);
+  });
+
+  group('TaskRescheduleHelper & TaskCard Swipe Gestures', () {
+    test('TaskRescheduleHelper preserves deadline hour/minute and computes target dates', () {
+      // Wednesday, Nov 25, 2026 at 10:15
+      final now = DateTime(2026, 11, 25, 10, 15);
+      final dueDate = DateTime(2026, 11, 25, 21, 45);
+
+      final tomorrow = TaskRescheduleHelper.tomorrow(now, dueDate);
+      expect(tomorrow, DateTime(2026, 11, 26, 21, 45));
+
+      // Next Saturday from Wednesday Nov 25 is Nov 28 (+3 days)
+      final weekend = TaskRescheduleHelper.upcomingWeekend(now, dueDate);
+      expect(weekend, DateTime(2026, 11, 28, 21, 45));
+      expect(weekend.weekday, DateTime.saturday);
+
+      // If now is already Saturday (Nov 28), upcomingWeekend jumps to next Saturday (Dec 5)
+      final fromSaturday = TaskRescheduleHelper.upcomingWeekend(
+        DateTime(2026, 11, 28, 9, 0),
+        dueDate,
+      );
+      expect(fromSaturday, DateTime(2026, 12, 5, 21, 45));
+      expect(fromSaturday.weekday, DateTime.saturday);
+
+      final nextWeek = TaskRescheduleHelper.nextWeek(now, dueDate);
+      expect(nextWeek, DateTime(2026, 12, 2, 21, 45));
+    });
+
+    testWidgets('TaskCard swipe right toggles completion & swipe left opens reschedule/delete sheet', (tester) async {
+      late Directory tempDir;
+      late StorageService storage;
+      late TaskProvider taskProvider;
+      late SubjectProvider subjectProvider;
+
+      await tester.runAsync(() async {
+        tempDir = await Directory.systemTemp.createTemp('swipe_task_test_');
+        Hive.init(tempDir.path);
+        for (final boxName in [
+          'tasks_box_v1',
+          'subjects_box_v1',
+          'settings_box_v1',
+          'finance_box_v1',
+          'finance_transactions_box_v1',
+          'finance_loans_box_v1',
+        ]) {
+          await Hive.openBox(boxName, bytes: Uint8List(0));
+        }
+        storage = StorageService();
+        await storage.init(customPath: tempDir.path);
+        await storage.setTaskRemindersEnabled(false);
+        taskProvider = TaskProvider(storage);
+        subjectProvider = SubjectProvider(storage);
+      });
+
+      final initialDue = DateTime.now().add(const Duration(hours: 5));
+      await taskProvider.addTask(
+        TaskItem(
+          id: 'swipe-task-1',
+          title: 'Laporan Praktikum Jarkom',
+          dueDate: initialDue,
+          priority: TaskPriority.high,
+        ),
+      );
+
+      await tester.pumpWidget(
+        MultiProvider(
+          providers: [
+            ChangeNotifierProvider<TaskProvider>.value(value: taskProvider),
+            ChangeNotifierProvider<SubjectProvider>.value(value: subjectProvider),
+          ],
+          child: MaterialApp(
+            home: Scaffold(
+              body: Consumer<TaskProvider>(
+                builder: (context, provider, _) {
+                  final tasks = provider.allTasks;
+                  if (tasks.isEmpty) {
+                    return const Center(child: Text('Tidak ada tugas'));
+                  }
+                  return ListView(
+                    children: [
+                      TaskCard(task: tasks.first),
+                    ],
+                  );
+                },
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('Laporan Praktikum Jarkom'), findsOneWidget);
+      expect(taskProvider.allTasks.first.isCompleted, isFalse);
+
+      // 1. Swipe Right (startToEnd) -> Instant Complete
+      await tester.drag(find.byType(TaskCard), const Offset(300, 0));
+      await tester.pumpAndSettle();
+
+      expect(taskProvider.allTasks.first.isCompleted, isTrue);
+      expect(find.textContaining('selesai!'), findsOneWidget);
+      expect(find.text('Urungkan'), findsOneWidget);
+
+      // 2. Swipe Left (endToStart) -> Open Quick Reschedule / Delete bottom sheet
+      await tester.drag(find.byType(TaskCard), const Offset(-300, 0));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Tunda Deadline atau Hapus'), findsOneWidget);
+      expect(find.text('Besok'), findsOneWidget);
+      expect(find.text('Akhir Pekan'), findsOneWidget);
+      expect(find.text('Minggu Depan (+7 Hari)'), findsOneWidget);
+      expect(find.text('Hapus Tugas'), findsOneWidget);
+
+      // Tap 'Besok' to reschedule task to tomorrow
+      final expectedTomorrow = TaskRescheduleHelper.tomorrow(DateTime.now(), initialDue);
+      await tester.tap(find.text('Besok'));
+      await tester.pumpAndSettle();
+
+      final rescheduledDue = taskProvider.allTasks.first.dueDate;
+      expect(rescheduledDue.year, expectedTomorrow.year);
+      expect(rescheduledDue.month, expectedTomorrow.month);
+      expect(rescheduledDue.day, expectedTomorrow.day);
+      expect(rescheduledDue.hour, initialDue.hour);
+      expect(rescheduledDue.minute, initialDue.minute);
+
+      // 3. Swipe Left again and tap 'Hapus Tugas'
+      await tester.drag(find.byType(TaskCard), const Offset(-300, 0));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Hapus Tugas'));
+      await tester.pumpAndSettle();
+
+      expect(taskProvider.allTasks, isEmpty);
+      expect(find.text('Tidak ada tugas'), findsOneWidget);
+
+      await tester.runAsync(() async {
+        await Hive.close();
+        if (await tempDir.exists()) {
+          await tempDir.delete(recursive: true);
+        }
+      });
+    });
   });
 }

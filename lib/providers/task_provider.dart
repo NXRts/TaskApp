@@ -203,6 +203,13 @@ class TaskProvider with ChangeNotifier {
     }
   }
 
+  /// Reschedules a task's deadline to [newDueDate] and refreshes its deadline alarms.
+  Future<void> rescheduleTask(String id, DateTime newDueDate) async {
+    final task = getTaskById(id);
+    if (task == null) return;
+    await updateTask(task.copyWith(dueDate: newDueDate));
+  }
+
   Future<void> deleteTask(String id) async {
     final task = getTaskById(id);
     if (task != null) {
