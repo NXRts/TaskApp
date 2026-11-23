@@ -7,6 +7,7 @@ import '../services/ambient_sound_service.dart';
 import '../services/pomodoro_alert_service.dart';
 import '../services/storage_service.dart';
 import '../widgets/ambient_sounds_view.dart';
+import '../widgets/pomodoro_analytics_view.dart';
 import '../utils/app_theme.dart';
 
 /// Zen Minimalist Focus (Pomodoro & Separated Ambient Sounds Mixer) Screen
@@ -70,7 +71,12 @@ class _PomodoroScreenState extends State<PomodoroScreen> {
 
         if (!wasBreak && mounted) {
           Provider.of<SettingsProvider>(context, listen: false)
-              .recordCompletedSession();
+              .recordCompletedSession(
+            durationMinutes: focusDuration ~/ 60,
+            taskId: task?.id,
+            taskTitle: task?.title,
+            subjectId: task?.subjectId,
+          );
         }
 
         // Mainkan bunyi lonceng & notifikasi sistem
@@ -324,7 +330,7 @@ class _PomodoroScreenState extends State<PomodoroScreen> {
       ),
       body: Column(
         children: [
-          // Top Section Switcher inside Fokus menu: Pomodoro Timer vs Ambient Sounds
+          // Top Section Switcher inside Fokus menu: Pomodoro vs Ambient vs Statistik
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
             child: Container(
@@ -340,14 +346,20 @@ class _PomodoroScreenState extends State<PomodoroScreen> {
                   _buildSectionTab(
                     index: 0,
                     icon: Icons.timer_outlined,
-                    title: 'Timer Pomodoro',
+                    title: 'Pomodoro',
                     isDark: isDark,
                   ),
                   _buildSectionTab(
                     index: 1,
                     icon: Icons.graphic_eq_rounded,
-                    title: 'Ambient Sounds',
+                    title: 'Ambient',
                     badgeCount: activeSoundsCount,
+                    isDark: isDark,
+                  ),
+                  _buildSectionTab(
+                    index: 2,
+                    icon: Icons.insights_rounded,
+                    title: 'Statistik',
                     isDark: isDark,
                   ),
                 ],
@@ -539,6 +551,9 @@ class _PomodoroScreenState extends State<PomodoroScreen> {
 
                 // Tab 1: Dedicated Separated Ambient Sounds Mixer View (FocEase)
                 const AmbientSoundsView(),
+
+                // Tab 2: Pomodoro Academic Analytics (Bar Chart, Streak, Heatmap, Per-Subject Breakdown)
+                const PomodoroAnalyticsView(),
               ],
             ),
           ),
@@ -560,7 +575,9 @@ class _PomodoroScreenState extends State<PomodoroScreen> {
     final inactiveText = isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary;
     final accentCol = index == 1
         ? const Color(0xFFA855F7)
-        : (isDark ? AppTheme.darkAccent : AppTheme.brandCobalt);
+        : (index == 2
+            ? AppTheme.successSage
+            : (isDark ? AppTheme.darkAccent : AppTheme.brandCobalt));
 
     return Expanded(
       child: GestureDetector(
@@ -571,46 +588,50 @@ class _PomodoroScreenState extends State<PomodoroScreen> {
             borderRadius: BorderRadius.circular(8),
           ),
           child: Center(
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(
-                  icon,
-                  size: 15,
-                  color: isSelected ? accentCol : inactiveText,
-                ),
-                const SizedBox(width: 6),
-                Flexible(
-                  child: Text(
-                    title,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      fontSize: 12.5,
-                      fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
-                      color: isSelected ? activeText : inactiveText,
-                    ),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 6),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    icon,
+                    size: 14.5,
+                    color: isSelected ? accentCol : inactiveText,
                   ),
-                ),
-                if (badgeCount > 0) ...[
-                  const SizedBox(width: 6),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1.5),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFA855F7).withValues(alpha: 0.2),
-                      borderRadius: BorderRadius.circular(10),
-                    ),
+                  const SizedBox(width: 5),
+                  Flexible(
                     child: Text(
-                      '$badgeCount',
-                      style: const TextStyle(
-                        fontSize: 10.5,
-                        fontWeight: FontWeight.w700,
-                        color: Color(0xFFA855F7),
+                      title,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                        letterSpacing: -0.1,
+                        color: isSelected ? activeText : inactiveText,
                       ),
                     ),
                   ),
+                  if (badgeCount > 0) ...[
+                    const SizedBox(width: 5),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFA855F7).withValues(alpha: 0.2),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Text(
+                        '$badgeCount',
+                        style: const TextStyle(
+                          fontSize: 10,
+                          fontWeight: FontWeight.w700,
+                          color: Color(0xFFA855F7),
+                        ),
+                      ),
+                    ),
+                  ],
                 ],
-              ],
+              ),
             ),
           ),
         ),
