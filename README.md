@@ -14,11 +14,14 @@
 
 ## ✨ Fitur Utama
 
-### 1. Dual-Mode Task Management & Lampiran Berkas Offline
+### 1. Dual-Mode Task Management, Quick Swipe Gestures & Lampiran Berkas Offline
 
 * **Mode Akademik & Personal**:
   * Kelompokkan tugas berdasarkan **Mata Kuliah** aktif (*Tugas Individu, Tugas Kelompok, Kuis, UTS/UAS, Laporan Praktikum*) maupun aktivitas personal harian.
   * Pecah tugas besar menjadi **Sub-tugas** dengan indikator progres persentase dinamis dan penanda warna urgensi deadline.
+* **Interaksi Cepat Tugas di Beranda (*Swipe Gestures: Quick Done & Reschedule*)**:
+  * **Geser ke Kanan (*Swipe Right*)**: Langsung menandai tugas selesai (*instant complete*) atau mengaktifkan kembali tugas dengan animasi *action pill* progresif, getaran haptik di titik ambang, dan `SnackBar` tombol **Urungkan** (*Undo*).
+  * **Geser ke Kiri (*Swipe Left*)**: Membuka menu cepat **Tunda Deadline atau Hapus** dengan *1-Tap Presets* (**Besok**, **Akhir Pekan**, **Minggu Depan (+7 Hari)**, atau **Pilih Tanggal & Jam Lainnya...**) yang mempertahankan jam tenggat asli tugas, serta tombol cepat **Hapus Tugas**.
 * **Lampiran Kamera, Galeri, PDF & Tautan (100% Offline)**:
   * Ambil foto catatan papan tulis langsung dari **Kamera**, pilih multi-foto dari **Galeri**, lampirkan berkas **PDF Soal/Materi**, atau simpan tautan URL (Google Drive, LMS/Spada, Zoom).
   * Dilengkapi **Penampil Gambar Interaktif** (*pinch-to-zoom* & *pan*) serta **Pembaca PDF Tersemat** langsung di dalam aplikasi tanpa internet.
