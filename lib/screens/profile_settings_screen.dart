@@ -781,7 +781,7 @@ class _ProfileSettingsScreenState extends State<ProfileSettingsScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('TaskApp v2.5.2 • Academic & Financial Student Hub', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: textPrimary)),
+                  Text('TaskApp v2.6.0 • Academic & Financial Student Hub', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: textPrimary)),
                   const SizedBox(height: 3),
                   Text(
                     'Platform terintegrasi produktivitas akademik, presensi kuliah, jadwal wallpaper, deadline alarm, dan buku kas finansial mahasiswa. 100% Offline-First & Zero-Ad.',
