@@ -252,7 +252,11 @@ class _PomodoroScreenState extends State<PomodoroScreen> {
     final settingsProvider = Provider.of<SettingsProvider>(context);
     final completedSessions = settingsProvider.completedPomodoroSessions;
     final pendingTasks = taskProvider.allTasks.where((t) => !t.isCompleted).toList();
-    if (_selectedTaskId != null && !pendingTasks.any((t) => t.id == _selectedTaskId)) {
+    final requestedTaskId = taskProvider.consumePendingFocusTaskId();
+    if (requestedTaskId != null && pendingTasks.any((t) => t.id == requestedTaskId)) {
+      _selectedTaskId = requestedTaskId;
+      _selectedSection = 0;
+    } else if (_selectedTaskId != null && !pendingTasks.any((t) => t.id == _selectedTaskId)) {
       _selectedTaskId = null;
     }
 

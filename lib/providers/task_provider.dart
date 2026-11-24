@@ -19,6 +19,7 @@ class TaskProvider with ChangeNotifier {
   TaskCategory? _filterCategory; // null = all
   String? _selectedSubjectId;
   String _searchQuery = '';
+  String? _pendingFocusTaskId;
 
   TaskProvider(this._storageService) {
     loadTasks();
@@ -31,6 +32,20 @@ class TaskProvider with ChangeNotifier {
   TaskCategory? get filterCategory => _filterCategory;
   String? get selectedSubjectId => _selectedSubjectId;
   String get searchQuery => _searchQuery;
+  String? get pendingFocusTaskId => _pendingFocusTaskId;
+
+  /// Sets a task ID to be preselected in the Pomodoro Focus tab and notifies listeners.
+  void requestFocusOnTask(String taskId) {
+    _pendingFocusTaskId = taskId;
+    notifyListeners();
+  }
+
+  /// Consumes and clears any pending focus task ID.
+  String? consumePendingFocusTaskId() {
+    final id = _pendingFocusTaskId;
+    _pendingFocusTaskId = null;
+    return id;
+  }
 
   void loadTasks() {
     _tasks = _storageService.getTasks();
