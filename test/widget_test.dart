@@ -12,6 +12,7 @@ import 'package:taskapp/models/attendance_record.dart';
 import 'package:taskapp/providers/subject_provider.dart';
 import 'package:taskapp/providers/task_provider.dart';
 import 'package:taskapp/services/storage_service.dart';
+import 'package:taskapp/widgets/summary_card.dart';
 import 'package:taskapp/widgets/task_card.dart';
 import 'package:taskapp/widgets/timetable_matrix_view.dart';
 import 'package:taskapp/screens/calendar_screen.dart';
@@ -733,6 +734,163 @@ void main() {
 
       expect(taskProvider.allTasks, isEmpty);
       expect(find.text('Tidak ada tugas'), findsOneWidget);
+
+      await tester.runAsync(() async {
+        await Hive.close();
+        if (await tempDir.exists()) {
+          await tempDir.delete(recursive: true);
+        }
+      });
+    });
+  });
+
+  group('DailyCampusBriefingHelper & SummaryCard Smart Briefing', () {
+    test('DailyCampusBriefingHelper evaluates upcomingToday, ongoing, completedToday, and next meeting number', () {
+      // Tuesday (weekday == 2), Nov 24, 2026
+      final subjects = [
+        Subject(
+          id: 'sub-calc',
+          name: 'Kalkulus II',
+          dayOfWeek: DateTime.tuesday,
+          timeRange: '09:30-11:10',
+          room: 'L.03.11',
+          lecturer: 'Pak Budi',
+          absences: [
+            AttendanceRecord(
+              id: 'a1',
+              meetingNumber: 1,
+              date: DateTime(2026, 11, 17),
+              type: 'hadir',
+            ),
+          ],
+        ),
+        Subject(
+          id: 'sub-so',
+          name: 'Sistem Operasi',
+          dayOfWeek: DateTime.tuesday,
+          timeRange: '13:20-15:00',
+          room: 'Lab Kom',
+        ),
+      ];
+
+      final tasks = [
+        TaskItem(
+          id: 't-urgent',
+          title: 'Kuis Kalkulus Bab 4',
+          dueDate: DateTime(2026, 11, 24, 21, 0),
+          priority: TaskPriority.high,
+        ),
+      ];
+
+      // 1. Before first class (08:55 -> 35 minutes before 09:30 Kalkulus II)
+      final snapMorning = DailyCampusBriefingHelper.evaluate(
+        subjects: subjects,
+        tasks: tasks,
+        now: DateTime(2026, 11, 24, 8, 55),
+      );
+      expect(snapMorning.todayClasses.length, 2);
+      expect(snapMorning.highlightedSubject?.id, 'sub-calc');
+      expect(snapMorning.timingState, DailyClassTimingState.upcomingToday);
+      expect(snapMorning.minutesUntilStart, 35);
+      expect(snapMorning.nextMeetingNumber, 2); // P1 recorded -> suggests P2
+      expect(snapMorning.mostUrgentTask?.id, 't-urgent');
+      expect(snapMorning.dueTodayTasksCount, 1);
+
+      // 2. During first class (10:00 -> ongoing with 70 minutes remaining until 11:10)
+      final snapOngoing = DailyCampusBriefingHelper.evaluate(
+        subjects: subjects,
+        tasks: tasks,
+        now: DateTime(2026, 11, 24, 10, 0),
+      );
+      expect(snapOngoing.highlightedSubject?.id, 'sub-calc');
+      expect(snapOngoing.timingState, DailyClassTimingState.ongoing);
+      expect(snapOngoing.minutesRemainingInClass, 70);
+
+      // 3. After all classes today (16:00 -> completedToday on Sistem Operasi)
+      final snapAfternoon = DailyCampusBriefingHelper.evaluate(
+        subjects: subjects,
+        tasks: tasks,
+        now: DateTime(2026, 11, 24, 16, 0),
+      );
+      expect(snapAfternoon.highlightedSubject?.id, 'sub-so');
+      expect(snapAfternoon.timingState, DailyClassTimingState.completedToday);
+      expect(snapAfternoon.hasRecordedAttendanceToday, isFalse);
+    });
+
+    testWidgets('SummaryCard renders Smart Daily Campus Briefing and opens RecordAbsenceDialog on 1-tap',
+        (tester) async {
+      late Directory tempDir;
+      late StorageService storage;
+      late TaskProvider taskProvider;
+      late SubjectProvider subjectProvider;
+
+      await tester.runAsync(() async {
+        tempDir = await Directory.systemTemp.createTemp('briefing_card_test_');
+        Hive.init(tempDir.path);
+        for (final boxName in [
+          StorageService.tasksBoxName,
+          StorageService.subjectsBoxName,
+          StorageService.settingsBoxName,
+          StorageService.financeBoxName,
+          StorageService.financeTransactionsBoxName,
+          StorageService.financeLoansBoxName,
+        ]) {
+          await Hive.openBox(boxName, bytes: Uint8List(0));
+        }
+        storage = StorageService();
+        await storage.init(customPath: tempDir.path);
+        await storage.setTaskRemindersEnabled(false);
+        taskProvider = TaskProvider(storage);
+        subjectProvider = SubjectProvider(storage);
+      });
+
+      final refNow = DateTime(2026, 11, 24, 8, 55); // Tuesday 08:55
+      await subjectProvider.addSubject(
+        Subject(
+          id: 'sub-briefing-1',
+          name: 'Struktur Data',
+          dayOfWeek: DateTime.tuesday,
+          timeRange: '09:30-11:10',
+          room: 'L.03.11',
+          lecturer: 'Pak Budi',
+        ),
+      );
+      await taskProvider.addTask(
+        TaskItem(
+          id: 'task-briefing-1',
+          title: 'Implementasi Binary Tree',
+          dueDate: DateTime(2026, 11, 24, 22, 0),
+        ),
+      );
+
+      await tester.pumpWidget(
+        MultiProvider(
+          providers: [
+            ChangeNotifierProvider<TaskProvider>.value(value: taskProvider),
+            ChangeNotifierProvider<SubjectProvider>.value(value: subjectProvider),
+          ],
+          child: MaterialApp(
+            home: Scaffold(
+              body: SummaryCard(referenceNow: refNow),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('1 Kuliah Hari Ini'), findsOneWidget);
+      expect(find.text('Struktur Data'), findsOneWidget);
+      expect(find.text('Mulai dalam 35 mnt'), findsOneWidget);
+      expect(find.textContaining('R. L.03.11'), findsOneWidget);
+      expect(find.textContaining('Fokus Prioritas: Implementasi Binary Tree'), findsOneWidget);
+      expect(find.text('Isi Presensi (P1)'), findsOneWidget);
+      expect(find.text('Fokus Tugas Ini'), findsOneWidget);
+
+      // Tap 'Isi Presensi (P1)' -> opens RecordAbsenceDialog prefilled at P1
+      await tester.tap(find.text('Isi Presensi (P1)'));
+      await tester.pumpAndSettle();
+      expect(find.text('Catat Presensi Perkuliahan'), findsOneWidget);
+      expect(find.text('Ke-1'), findsOneWidget);
 
       await tester.runAsync(() async {
         await Hive.close();

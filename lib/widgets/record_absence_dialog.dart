@@ -122,6 +122,7 @@ class _RecordAbsenceDialogState extends State<RecordAbsenceDialog> {
                   Expanded(
                     flex: 1,
                     child: DropdownButtonFormField<int>(
+                      isExpanded: true,
                       value: _meetingNumber,
                       decoration: InputDecoration(
                         labelText: 'Pertemuan',

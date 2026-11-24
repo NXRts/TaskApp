@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import '../providers/task_provider.dart';
 import 'home_screen.dart';
 import 'subjects_screen.dart';
 import 'calendar_screen.dart';
@@ -24,6 +26,14 @@ class MainScreen extends StatefulWidget {
     if (state == null) return false;
     state._switchToTab(index);
     return true;
+  }
+
+  /// Switches to the Pomodoro Focus tab and preselects [taskId] as the focus target.
+  static bool focusTaskInPomodoro(BuildContext context, String taskId) {
+    try {
+      Provider.of<TaskProvider>(context, listen: false).requestFocusOnTask(taskId);
+    } catch (_) {}
+    return switchTab(context, focusTabIndex);
   }
 
   @override
