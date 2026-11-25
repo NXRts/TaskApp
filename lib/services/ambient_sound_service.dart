@@ -288,9 +288,6 @@ class AmbientSoundService extends ChangeNotifier {
   int _streamToken = 0;
   Process? _linuxProcess;
   Timer? _linuxFeedTimer;
-  Timer? _androidFeedTimer;
-  bool _androidTrackActive = false;
-  bool _androidWriteInFlight = false;
   bool _useAndroidPlayerFallback = false;
   AppLifecycleListener? _lifecycleListener;
   bool _cleanedOrphansOnStartup = false;
@@ -394,7 +391,11 @@ class AmbientSoundService extends ChangeNotifier {
     // On Linux and Android native PCM mixer, the mixer loop interpolates
     // _currentGains[track] toward _volumes[track] * _masterVolume at the
     // current cursor without restarting.
-    if (!kIsWeb && !Platform.isLinux && (!Platform.isAndroid || _useAndroidPlayerFallback)) {
+    if (!kIsWeb && Platform.isAndroid && !_useAndroidPlayerFallback) {
+      unawaited(_syncAndroidNativeMixer());
+      return;
+    }
+    if (!kIsWeb && !Platform.isLinux) {
       try {
         await _players[track]?.setVolume(clamped * _masterVolume);
       } catch (_) {}
@@ -416,7 +417,11 @@ class AmbientSoundService extends ChangeNotifier {
 
     if (testMode || !isAnyPlaying) return;
 
-    if (!kIsWeb && !Platform.isLinux && (!Platform.isAndroid || _useAndroidPlayerFallback)) {
+    if (!kIsWeb && Platform.isAndroid && !_useAndroidPlayerFallback) {
+      unawaited(_syncAndroidNativeMixer());
+      return;
+    }
+    if (!kIsWeb && !Platform.isLinux) {
       for (final track in activeTracks) {
         try {
           await _players[track]?.setVolume(getTrackVolume(track) * _masterVolume);
@@ -576,17 +581,9 @@ class AmbientSoundService extends ChangeNotifier {
     }
 
     if (!kIsWeb && Platform.isAndroid && !_useAndroidPlayerFallback) {
-      for (final track in activeTracks) {
-        await _getRawWavBytes(track);
-      }
-      if (!_androidTrackActive || _androidFeedTimer == null) {
-        final token = ++_streamToken;
-        final started = await _startAndroidMultiTrackMixer(token);
-        if (started) return;
-        _useAndroidPlayerFallback = true;
-      } else {
-        return;
-      }
+      final ok = await _syncAndroidNativeMixer();
+      if (ok) return;
+      _useAndroidPlayerFallback = true;
     }
 
     if (!kIsWeb) {
@@ -651,17 +648,21 @@ class AmbientSoundService extends ChangeNotifier {
   }
 
   /// Mixes [sampleCount] 16-bit PCM mono samples across all currently active tracks,
-  /// advancing each track's read cursor and smoothly interpolating its gain.
+  /// advancing each track's read cursor with a 2.5-second dual-head equal-power
+  /// circular crossfade at the loop boundary so transitions are 100% seamless.
   @visibleForTesting
   Uint8List mixActivePcmSamples(int sampleCount) {
     final outBytes = Uint8List(sampleCount * 2);
     final outBd = ByteData.sublistView(outBytes);
     final playingTracks = activeTracks;
+    const int crossfadeWindowSamples = 16000 * 5 ~/ 2; // 2.5s @ 16000Hz
 
     final activeViews = <({
       AmbientSoundTrack track,
       ByteData bd,
       int totalSamples,
+      int fadeLen,
+      int effectiveLoopLen,
       double targetGain,
     })>[];
 
@@ -670,10 +671,14 @@ class AmbientSoundService extends ChangeNotifier {
       if (wav != null && wav.length > 44) {
         final total = (wav.length - 44) ~/ 2;
         if (total > 0) {
+          final fadeLen = math.min(crossfadeWindowSamples, total ~/ 4);
+          final effectiveLoopLen = math.max(1, total - fadeLen);
           activeViews.add((
             track: track,
             bd: ByteData.sublistView(wav),
             totalSamples: total,
+            fadeLen: fadeLen,
+            effectiveLoopLen: effectiveLoopLen,
             targetGain: getTrackVolume(track) * _masterVolume,
           ));
         }
@@ -687,13 +692,31 @@ class AmbientSoundService extends ChangeNotifier {
         final curGain = prevGain + 0.003 * (item.targetGain - prevGain);
         _currentGains[item.track] = curGain;
 
-        int cursor = (_trackCursors[item.track] ?? 0) % item.totalSamples;
-        final sample = item.bd.getInt16(44 + cursor * 2, Endian.little);
+        int cursor = (_trackCursors[item.track] ?? 0) % item.effectiveLoopLen;
+        double sampleVal;
+        if (item.fadeLen > 0 && cursor >= item.effectiveLoopLen - item.fadeLen) {
+          // Dual-head equal-power circular crossfade between loop tail and loop head
+          final fadePos = cursor - (item.effectiveLoopLen - item.fadeLen);
+          final phase = (fadePos / item.fadeLen) * (math.pi * 0.5);
+          final tailWeight = math.cos(phase);
+          final headWeight = math.sin(phase);
+          final tailIdx = item.fadeLen + cursor;
+          final tailSample =
+              item.bd.getInt16(44 + tailIdx * 2, Endian.little).toDouble();
+          final headSample =
+              item.bd.getInt16(44 + fadePos * 2, Endian.little).toDouble();
+          sampleVal = tailSample * tailWeight + headSample * headWeight;
+        } else {
+          final sampleIdx = item.fadeLen + cursor;
+          sampleVal =
+              item.bd.getInt16(44 + sampleIdx * 2, Endian.little).toDouble();
+        }
+
         cursor++;
-        if (cursor >= item.totalSamples) cursor = 0;
+        if (cursor >= item.effectiveLoopLen) cursor = 0;
         _trackCursors[item.track] = cursor;
 
-        mixed += sample * curGain;
+        mixed += sampleVal * curGain;
       }
       final clamped = mixed.round().clamp(-32767, 32767);
       outBd.setInt16(i * 2, clamped, Endian.little);
@@ -702,82 +725,33 @@ class AmbientSoundService extends ChangeNotifier {
     return outBytes;
   }
 
-  /// Mixes all currently active tracks on Android into a single native `AudioTrack`
-  /// PCM stream so all 9 sounds play simultaneously without stealing Android AudioFocus.
-  Future<bool> _startAndroidMultiTrackMixer(int token) async {
+  /// Synchronizes play/pause states and volumes with the dedicated native Android
+  /// `TaskAppAmbientMixerThread` (`AudioTrack.WRITE_BLOCKING` + 2.5s circular crossfade).
+  Future<bool> _syncAndroidNativeMixer() async {
     try {
-      const int sampleRate = 16000;
-      await _androidPcmChannel.invokeMethod('start', {
-        'sampleRate': sampleRate,
+      final tracksPayload = AmbientSoundTrack.values
+          .map(
+            (t) => <String, dynamic>{
+              'id': t.id,
+              'assetPath': 'assets/${t.assetPath}',
+              'playing': isTrackPlaying(t),
+              'volume': getTrackVolume(t),
+            },
+          )
+          .toList();
+      await _androidPcmChannel.invokeMethod('syncState', {
+        'tracks': tracksPayload,
+        'masterVolume': _masterVolume,
       });
-      if (!isAnyPlaying || _streamToken != token) {
-        await _stopAndroidPcmStream();
-        return true;
-      }
-
-      _androidTrackActive = true;
-      _androidWriteInFlight = false;
-      final sw = Stopwatch()..start();
-      int samplesSent = 0;
-      final int prebufferSamples = (sampleRate * 0.16).round();
-      final int maxChunkSamples = (sampleRate * 0.28).round();
-
-      Future<void> feedAndroidSlices() async {
-        if (!isAnyPlaying ||
-            _streamToken != token ||
-            !_androidTrackActive ||
-            _androidWriteInFlight) {
-          return;
-        }
-        final elapsedSamples = (sw.elapsedMicroseconds * sampleRate) ~/ 1000000;
-        final targetSamples = elapsedSamples + prebufferSamples;
-        int count = targetSamples - samplesSent;
-        if (count <= 0) return;
-        if (count > maxChunkSamples) {
-          samplesSent = targetSamples - prebufferSamples;
-          count = prebufferSamples;
-        }
-
-        final outBytes = mixActivePcmSamples(count);
-        _androidWriteInFlight = true;
-        try {
-          final writtenBytes = await _androidPcmChannel.invokeMethod<int>(
-                'write',
-                {
-                  'pcm': outBytes,
-                  'sampleRate': sampleRate,
-                },
-              ) ??
-              outBytes.length;
-          if (writtenBytes > 0) {
-            samplesSent += writtenBytes ~/ 2;
-          }
-        } catch (_) {
-        } finally {
-          _androidWriteInFlight = false;
-        }
-      }
-
-      unawaited(feedAndroidSlices());
-      _androidFeedTimer = Timer.periodic(
-        const Duration(milliseconds: 40),
-        (_) => unawaited(feedAndroidSlices()),
-      );
       return true;
     } catch (e) {
-      debugPrint('AmbientSoundService Android AudioTrack mixer fallback: $e');
-      await _stopAndroidPcmStream();
+      debugPrint('AmbientSoundService Android native mixer sync error: $e');
       return false;
     }
   }
 
   Future<void> _stopAndroidPcmStream() async {
-    _androidFeedTimer?.cancel();
-    _androidFeedTimer = null;
-    final wasActive = _androidTrackActive;
-    _androidTrackActive = false;
-    _androidWriteInFlight = false;
-    if (wasActive && !kIsWeb && Platform.isAndroid && !testMode) {
+    if (!kIsWeb && Platform.isAndroid && !testMode) {
       try {
         await _androidPcmChannel.invokeMethod('stop');
       } catch (_) {}

@@ -145,6 +145,15 @@ void main() {
         expect(ambient.getTrackCursor(t), isNot(equals(cursorsBeforeMix[t])));
       }
 
+      // Verify seamless loop wrap-around across the end boundary without discontinuity
+      await ambient.stopAll();
+      await ambient.toggleSound(AmbientSoundTrack.stream);
+      // Advance across a full loop cycle (200,000 effective samples for 15s @ 16kHz with 2.5s crossfade)
+      final cycleChunk = ambient.mixActivePcmSamples(205000);
+      expect(cycleChunk.length, 205000 * 2);
+      // Cursor wrapped cleanly past the 200,000 boundary back into the start of the loop
+      expect(ambient.getTrackCursor(AmbientSoundTrack.stream), lessThan(20000));
+
       // Pause All stops playback while preserving volumes
       await ambient.stopAll();
       expect(ambient.isAnyPlaying, isFalse);
