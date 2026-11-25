@@ -1,39 +1,39 @@
-# TaskApp v2.8.0 — Statistik & Heatmap Belajar Akademik (Pomodoro Academic Analytics)
+# TaskApp v2.9.0 — Smart Daily Campus Briefing & Gapless Native Multi-Track Ambient Audio Engine
 
-> **TaskApp v2.8.0** menghadirkan fitur **Statistik & Heatmap Belajar Akademik (*Pomodoro Academic Analytics*)** pada tab **`Statistik`** di menu **Fokus Belajar**: memungkinkan mahasiswa mengevaluasi konsistensi belajar harian, *streak* hari beruntun, grafik batang menit fokus Senin–Minggu, *heatmap* 4 minggu (28 hari), serta *breakdown* alokasi jam belajar per mata kuliah secara privat **100% offline**.
+> **TaskApp v2.9.0** menghadirkan fitur **Kartu Briefing Kampus Harian & Hitung Mundur Kelas Berikutnya (*Smart Daily Campus Briefing*)** langsung di Beranda, serta meningkatkan mesin audio **Ambient Sounds** di ponsel Android dengan **Dedicated Native Kotlin `AudioTrack` PCM Mixer Thread** dan **2.5-Second Dual-Head Circular Crossfade** sehingga ke-9 suara alam dapat berbunyi secara simultan dengan perpindahan *loop* yang 100% mulus tanpa jeda.
 >
 > Pembaruan ini ditandatangani dengan **Keystore Resmi Permanen** (`taskapp-release.jks`), sehingga Anda dapat **langsung mengunduh berkas APK dan menekan "Update" tanpa perlu mencopot aplikasi sebelumnya. Seluruh data perkuliahan, tugas, lampiran, presensi, setelan Ambient Sounds, statistik belajar, dan buku kas FinTrack Anda tetap aman 100%**.
 
 ---
 
-## ✨ Apa yang Baru di Versi 2.8.0 (Changelog)
+## ✨ Apa yang Baru di Versi 2.9.0 (Changelog)
 
-### 1. 📊 Tab `Statistik` & Pencatatan Sesi Fokus Kontekstual (`PomodoroSessionRecord`)
+### 1. 🌅 Kartu Briefing Kampus Harian & Hitung Mundur Kelas Terdekat (`SummaryCard` & `DailyCampusBriefingHelper`)
 
-- **Navigasi 3 Tab Ringkas di Menu Fokus (`Pomodoro` | `Ambient` | `Statistik`)**:
-  - Menambahkan tab **`Statistik`** khusus di samping tab **`Pomodoro`** dan **`Ambient`** dengan tata letak proporsional bebas terpotong di layar ponsel.
-- **Pencatatan Riwayat Sesi Fokus Kontekstual 100% Offline**:
-  - Setiap sesi fokus 25 menit yang selesai kini mencatat riwayat lengkap (`completedAt`, `durationMinutes`, `taskId`, `taskTitle`, dan `subjectId` mata kuliah terkait) ke dalam penyimpanan Hive lokal dan otomatis disertakan dalam *Full-State JSON Backup & Restore*.
+- **Hitung Mundur & Status Perkuliahan Real-Time di Beranda**:
+  - Memaksimalkan `SummaryCard` di Beranda untuk mengevaluasi jadwal kuliah hari ini terhadap waktu saat ini secara otomatis:
+    - 🟢 **Sedang Berlangsung (`sisa X mnt`)**: Menampilkan sisa waktu kuliah yang sedang berjalan beserta ruangan dan dosen pengampu.
+    - 🟡 **Mulai dalam `X mnt / jam`**: Menampilkan hitung mundur menuju kelas terdekat hari ini.
+    - 🟠 **Kuliah Selesai • Belum Isi Presensi** (atau **Presensi Tercatat**): Mengingatkan pengisian presensi setelah jam kuliah hari ini berakhir.
+    - 🔵 **Jadwal Berikutnya**: Menampilkan jadwal kuliah hari terdekat berikutnya jika hari ini bebas perkuliahan.
+  - Menampilkan badge **`N Kuliah Hari Ini`** berdampingan dengan **`X SKS Aktif`**.
+- **Sorotan Tugas Prioritas & Tombol Pintasan 1-Ketuk**:
+  - Menampilkan baris **`Fokus Prioritas`** untuk tugas aktif dengan tenggat paling dekat.
+  - **`[ ✓ Isi Presensi (P-n) ]`**: Membuka dialog pencatatan presensi `RecordAbsenceDialog` langsung dari Beranda dengan nomor pertemuan berikutnya (`P1..P16`) yang otomatis terpilih.
+  - **`[ 🎯 Fokus Tugas Ini ]`**: Langsung berpindah ke tab **Fokus Belajar (Pomodoro)** dengan tugas prioritas tersebut otomatis terpilih sebagai target fokus.
 
-### 2. 🔥 Penghitung Streak Belajar & Grafik Batang Harian (`PomodoroAnalyticsView`)
+### 2. 🎧 Mesin Audio Native Multi-Track Android & Gapless Circular Crossfade (`MainActivity.kt` & `AmbientSoundService`)
 
-- **Kartu Streak Belajar & Total Jam Fokus**:
-  - Menampilkan jumlah hari belajar fokus berturut-turut (*Current Streak*) beserta rekor terbaik (*Longest Streak*).
-  - Menampilkan total akumulasi jam & menit fokus keseluruhan beserta jumlah sesi dan ringkasan waktu fokus minggu ini.
-- **Grafik Batang Menit Fokus Harian (Senin–Minggu)**:
-  - Visualisasi batang vertikal proporsional untuk menit fokus setiap hari dari `Sen` hingga `Min` pada minggu berjalan, dengan penanda warna hijau (`AppTheme.successSage`) untuk hari ini.
-
-### 3. 🟩 Heatmap Konsistensi 4 Minggu & Breakdown Jam Belajar per Mata Kuliah (`PomodoroAnalyticsHelper`)
-
-- **Heatmap Konsistensi Belajar (4 Minggu / 28 Hari)**:
-  - Matriks kalender 4 baris minggu × 7 hari (Senin–Minggu) dengan 5 tingkatan intensitas warna (`0m`, `1–25m`, `26–50m`, `51–100m`, `100m+`), indikator jumlah hari aktif (`X/28 hari aktif`), serta *tooltip* detail tanggal dan menit belajar.
-- **Alokasi Jam Belajar per Mata Kuliah**:
-  - Mengelompokkan dan mengurutkan total durasi belajar, jumlah sesi, serta persentase porsi waktu belajar untuk setiap mata kuliah (dan kategori *Fokus Umum & Mandiri*), dilengkapi *progress bar* berwarna sesuai warna mata kuliah masing-masing.
+- **Pemutaran Simultan 9 Suara di HP Android Tanpa Konflik *AudioFocus***:
+  - Menggantikan pemutar multi-instance `MediaPlayer` dengan **Dedicated Native Kotlin `AudioTrack` (`MODE_STREAM`) Mixer Thread (`TaskAppAmbientMixerThread`)** berprioritas tinggi (`Thread.MAX_PRIORITY`).
+  - Seluruh 9 suara alam dicampur secara *real-time* pada tingkat sampel 16-bit PCM (`16000 Hz`) ke dalam satu saluran output perangkat keras, sehingga menekan **`Play All`** atau menyalakan beberapa suara sekaligus di HP Android memutar seluruh suara secara bersamaan dengan kontrol volume individual dan *Master Volume* yang responsif.
+- **Perpindahan *Infinite Loop* Mulus Tanpa Terputus (*2.5s Dual-Head Equal-Power Circular Crossfade*)**:
+  - Saat *cursor* audio memasuki 2.5 detik terakhir sebelum ujung berkas, mesin memadukan ekor audio dan awal audio secara simultan menggunakan kurva daya konstan ($\cos/\sin$), menghasilkan perputaran tanpa hentakan, tanpa klik, dan tanpa jeda sedikit pun.
 
 ---
 
 ## 📲 Panduan Instalasi & Pembaruan
 
-1. Unduh berkas **`TaskApp-v2.8.0.apk`** dari daftar **Assets** di bawah.
+1. Unduh berkas **`TaskApp-v2.9.0.apk`** dari daftar **Assets** di bawah.
 2. Buka berkas APK di ponsel Android Anda dan pilih tombol **"Update"**.
-3. Aplikasi akan langsung terbarukan ke **v2.8.0**. Seluruh data tugas, lampiran berkas, catatan akademik, statistik belajar, dan keuangan Anda tetap utuh 100%.
+3. Aplikasi akan langsung terbarukan ke **v2.9.0**. Seluruh data tugas, lampiran berkas, catatan akademik, statistik belajar, dan keuangan Anda tetap utuh 100%.
