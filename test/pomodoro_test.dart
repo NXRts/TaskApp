@@ -133,6 +133,18 @@ void main() {
       await ambient.playAll();
       expect(ambient.activePlayingCount, AmbientSoundTrack.values.length);
 
+      // Verify real-time PCM multi-track mixer sums all 9 active tracks simultaneously
+      // and advances every track's sample cursor together
+      await ambient.preloadAllTracks();
+      final cursorsBeforeMix = <AmbientSoundTrack, int>{
+        for (final t in AmbientSoundTrack.values) t: ambient.getTrackCursor(t),
+      };
+      final mixedPcm = ambient.mixActivePcmSamples(400);
+      expect(mixedPcm.length, 400 * 2);
+      for (final t in AmbientSoundTrack.values) {
+        expect(ambient.getTrackCursor(t), isNot(equals(cursorsBeforeMix[t])));
+      }
+
       // Pause All stops playback while preserving volumes
       await ambient.stopAll();
       expect(ambient.isAnyPlaying, isFalse);
