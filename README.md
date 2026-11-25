@@ -14,8 +14,11 @@
 
 ## ✨ Fitur Utama
 
-### 1. Dual-Mode Task Management, Quick Swipe Gestures & Lampiran Berkas Offline
+### 1. Dual-Mode Task Management, Smart Daily Campus Briefing, Quick Swipe & Lampiran Offline
 
+* **Kartu Briefing Kampus Harian & Hitung Mundur Kelas Terdekat (*Smart Daily Campus Briefing*)**:
+  * Menampilkan hitung mundur kelas kuliah terdekat hari ini (`Mulai dalam X mnt`) atau status kelas yang sedang berlangsung (`Sedang Berlangsung • sisa X mnt`) langsung di Beranda lengkap dengan ruangan, jam, dan dosen pengampu.
+  * Dilengkapi pengingat pengisian presensi pasca-kuliah, sorotan tugas prioritas terdekat, serta 2 tombol pintasan 1-ketuk: **`[ ✓ Isi Presensi (P-n) ]`** dan **`[ 🎯 Fokus Tugas Ini ]`**.
 * **Mode Akademik & Personal**:
   * Kelompokkan tugas berdasarkan **Mata Kuliah** aktif (*Tugas Individu, Tugas Kelompok, Kuis, UTS/UAS, Laporan Praktikum*) maupun aktivitas personal harian.
   * Pecah tugas besar menjadi **Sub-tugas** dengan indikator progres persentase dinamis dan penanda warna urgensi deadline.
@@ -30,9 +33,9 @@
 
 * **Timer Pomodoro (25m Fokus / 5m Rehat)**:
   * Hubungkan sesi fokus langsung ke tugas spesifik yang sedang dikerjakan, lengkap dengan bunyi lonceng zen, getaran haptik, notifikasi penyelesaian sesi, dan pencatat total sesi/menit fokus.
-* **Tab Ambient Terpisah (Multi-Track Audio Mixer)**:
+* **Tab Ambient Terpisah (Native Multi-Track Audio Mixer & Gapless Loop)**:
   * Menyediakan **9 lanskap suara alam & suasana offline** (*Rain, Fireplace, River, Wind, Cafe Ambience, Morning Birds, Thunderstorm, Nature Night, Ocean Waves*).
-  * **Pemutaran Simultan**: Seluruh 9 suara dapat dinyalakan bersamaan dan dicampur bebas dengan slider volume masing-masing tanpa mengulang posisi audio dari awal saat volume diubah.
+  * **Pemutaran Simultan di Android & Desktop**: Didukung mesin pencampur PCM 16-bit *real-time* (`AudioTrack` native thread di Android & `pacat`/`aplay` di Linux) sehingga seluruh 9 suara dapat berbunyi bersamaan tanpa konflik *AudioFocus* dan disertai *2.5s dual-head equal-power circular crossfade* untuk perputaran tanpa jeda (*gapless infinite loop*).
   * Dilengkapi **Master Volume Slider**, **Sleep Timer** (`No Timer`, `15 Minutes`, `30 Minutes`, `45 Minutes`, `1 Hour`), tombol **`Play All` / `Pause All`**, dan **`Reset`**.
 * **Tab Statistik & Heatmap Belajar Akademik (*Pomodoro Academic Analytics*)**:
   * **Streak Belajar & Total Jam Fokus**: Lacak jumlah hari belajar berturut-turut (*Current Streak* & *Longest Streak*) serta total akumulasi jam fokus semester & minggu berjalan.
