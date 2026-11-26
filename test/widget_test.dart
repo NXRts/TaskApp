@@ -11,6 +11,9 @@ import 'package:taskapp/models/user_profile.dart';
 import 'package:taskapp/models/attendance_record.dart';
 import 'package:taskapp/providers/subject_provider.dart';
 import 'package:taskapp/providers/task_provider.dart';
+import 'package:taskapp/providers/finance_provider.dart';
+import 'package:taskapp/providers/settings_provider.dart';
+import 'package:taskapp/screens/home_screen.dart';
 import 'package:taskapp/services/storage_service.dart';
 import 'package:taskapp/widgets/summary_card.dart';
 import 'package:taskapp/widgets/task_card.dart';
@@ -891,6 +894,139 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.text('Catat Presensi Perkuliahan'), findsOneWidget);
       expect(find.text('Ke-1'), findsOneWidget);
+
+      await tester.runAsync(() async {
+        await Hive.close();
+        if (await tempDir.exists()) {
+          await tempDir.delete(recursive: true);
+        }
+      });
+    });
+  });
+
+  group('Smart Subject & TaskType Filter Bar in HomeScreen & TaskProvider', () {
+    testWidgets('HomeScreen filters tasks by Subject chip, TaskType chip, and resets via Reset Filter',
+        (tester) async {
+      late Directory tempDir;
+      late StorageService storage;
+      late TaskProvider taskProvider;
+      late SubjectProvider subjectProvider;
+      late SettingsProvider settingsProvider;
+      late FinanceProvider financeProvider;
+
+      await tester.runAsync(() async {
+        tempDir = await Directory.systemTemp.createTemp('smart_filter_test_');
+        Hive.init(tempDir.path);
+        for (final boxName in [
+          StorageService.tasksBoxName,
+          StorageService.subjectsBoxName,
+          StorageService.settingsBoxName,
+          StorageService.financeBoxName,
+          StorageService.financeTransactionsBoxName,
+          StorageService.financeLoansBoxName,
+        ]) {
+          await Hive.openBox(boxName, bytes: Uint8List(0));
+        }
+        storage = StorageService();
+        await storage.init(customPath: tempDir.path);
+        await storage.setTaskRemindersEnabled(false);
+        taskProvider = TaskProvider(storage);
+        subjectProvider = SubjectProvider(storage);
+        settingsProvider = SettingsProvider(storage);
+        financeProvider = FinanceProvider(storage);
+      });
+
+      final futureDue = DateTime.now().add(const Duration(days: 2));
+      await subjectProvider.addSubject(
+        Subject(id: 'sub-os', name: 'Sistem Operasi', colorValue: 0xFF3B82F6),
+      );
+      await subjectProvider.addSubject(
+        Subject(id: 'sub-db', name: 'Basis Data', colorValue: 0xFF10B981),
+      );
+
+      await taskProvider.addTask(
+        TaskItem(
+          id: 't-os-prac',
+          title: 'Modul Linux Kernel',
+          subjectId: 'sub-os',
+          dueDate: futureDue,
+          category: TaskCategory.academic,
+          taskType: TaskType.practice,
+        ),
+      );
+      await taskProvider.addTask(
+        TaskItem(
+          id: 't-os-quiz',
+          title: 'Kuis Scheduling CPU',
+          subjectId: 'sub-os',
+          dueDate: futureDue,
+          category: TaskCategory.academic,
+          taskType: TaskType.quiz,
+        ),
+      );
+      await taskProvider.addTask(
+        TaskItem(
+          id: 't-db-prac',
+          title: 'Praktikum SQL Join',
+          subjectId: 'sub-db',
+          dueDate: futureDue,
+          category: TaskCategory.academic,
+          taskType: TaskType.practice,
+        ),
+      );
+
+      await tester.binding.setSurfaceSize(const Size(800, 1200));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+
+      await tester.pumpWidget(
+        MultiProvider(
+          providers: [
+            ChangeNotifierProvider<TaskProvider>.value(value: taskProvider),
+            ChangeNotifierProvider<SubjectProvider>.value(value: subjectProvider),
+            ChangeNotifierProvider<SettingsProvider>.value(value: settingsProvider),
+            ChangeNotifierProvider<FinanceProvider>.value(value: financeProvider),
+          ],
+          child: const MaterialApp(
+            home: HomeScreen(),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // Initially all 3 tasks are visible
+      expect(find.text('Modul Linux Kernel'), findsOneWidget);
+      expect(find.text('Kuis Scheduling CPU'), findsOneWidget);
+      expect(find.text('Praktikum SQL Join'), findsOneWidget);
+      expect(find.text('Reset Filter'), findsNothing);
+
+      // 1. Tap 'Sistem Operasi' subject filter chip -> hides 'Praktikum SQL Join'
+      await tester.tap(find.text('Sistem Operasi').first);
+      await tester.pumpAndSettle();
+
+      expect(taskProvider.selectedSubjectId, 'sub-os');
+      expect(find.text('Modul Linux Kernel'), findsOneWidget);
+      expect(find.text('Kuis Scheduling CPU'), findsOneWidget);
+      expect(find.text('Praktikum SQL Join'), findsNothing);
+      expect(find.text('Reset Filter'), findsOneWidget);
+
+      // 2. Also tap 'Praktikum' TaskType chip -> combines Subject + TaskType filter
+      await tester.tap(find.text('Praktikum'));
+      await tester.pumpAndSettle();
+
+      expect(taskProvider.filterTaskType, TaskType.practice);
+      expect(find.text('Modul Linux Kernel'), findsOneWidget);
+      expect(find.text('Kuis Scheduling CPU'), findsNothing);
+      expect(find.text('Praktikum SQL Join'), findsNothing);
+
+      // 3. Tap 'Reset Filter' -> clears both Subject and TaskType filters
+      await tester.tap(find.text('Reset Filter'));
+      await tester.pumpAndSettle();
+
+      expect(taskProvider.selectedSubjectId, isNull);
+      expect(taskProvider.filterTaskType, isNull);
+      expect(find.text('Modul Linux Kernel'), findsOneWidget);
+      expect(find.text('Kuis Scheduling CPU'), findsOneWidget);
+      expect(find.text('Praktikum SQL Join'), findsOneWidget);
 
       await tester.runAsync(() async {
         await Hive.close();

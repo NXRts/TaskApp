@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
+import '../models/subject.dart';
 import '../models/task.dart';
+import '../providers/subject_provider.dart';
 import '../providers/task_provider.dart';
 import '../providers/settings_provider.dart';
 import '../widgets/summary_card.dart';
@@ -35,8 +37,10 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     final taskProvider = Provider.of<TaskProvider>(context);
+    final subjectProvider = Provider.of<SubjectProvider>(context);
     final settingsProvider = Provider.of<SettingsProvider>(context);
     final profile = settingsProvider.profile;
+    final subjects = subjectProvider.subjects;
 
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final textPrimary = isDark ? AppTheme.darkTextPrimary : AppTheme.lightTextPrimary;
@@ -278,6 +282,19 @@ class _HomeScreenState extends State<HomeScreen> {
                         ],
                       ),
                     ),
+
+                    // Smart Subject & TaskType Filter Bar (shown for Semua & Kuliah modes)
+                    if (taskProvider.filterCategory != TaskCategory.personal) ...[
+                      const SizedBox(height: 8),
+                      _buildSmartSubjectAndTaskTypeBar(
+                        taskProvider: taskProvider,
+                        subjects: subjects,
+                        isDark: isDark,
+                        borderCol: borderCol,
+                        textPrimary: textPrimary,
+                        textSecondary: textSecondary,
+                      ),
+                    ],
                   ],
                 ),
               ),
@@ -454,6 +471,199 @@ class _HomeScreenState extends State<HomeScreen> {
         children: [
           Text(title, style: const TextStyle(fontSize: 13)),
           if (isSelected) const Icon(Icons.check, size: 16, color: AppTheme.brandCobalt),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSmartSubjectAndTaskTypeBar({
+    required TaskProvider taskProvider,
+    required List<Subject> subjects,
+    required bool isDark,
+    required Color borderCol,
+    required Color textPrimary,
+    required Color textSecondary,
+  }) {
+    final accentCol = isDark ? AppTheme.darkAccent : AppTheme.brandCobalt;
+    final selectedSubjectId = taskProvider.selectedSubjectId;
+    final selectedTaskType = taskProvider.filterTaskType;
+
+    const taskTypePresets = <({TaskType type, String label, IconData icon})>[
+      (
+        type: TaskType.practice,
+        label: 'Praktikum',
+        icon: Icons.science_outlined,
+      ),
+      (
+        type: TaskType.quiz,
+        label: 'Kuis',
+        icon: Icons.quiz_outlined,
+      ),
+      (
+        type: TaskType.group,
+        label: 'Kelompok',
+        icon: Icons.groups_outlined,
+      ),
+      (
+        type: TaskType.exam,
+        label: 'UTS / UAS',
+        icon: Icons.school_outlined,
+      ),
+      (
+        type: TaskType.individual,
+        label: 'Individu',
+        icon: Icons.person_outline,
+      ),
+    ];
+
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      physics: const BouncingScrollPhysics(
+        parent: AlwaysScrollableScrollPhysics(),
+      ),
+      child: Row(
+        children: [
+          // Reset button when any subject or taskType filter is active
+          if (taskProvider.hasActiveContextualFilters) ...[
+            GestureDetector(
+              onTap: () => taskProvider.clearContextualFilters(),
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+                decoration: BoxDecoration(
+                  color: AppTheme.urgentRose.withValues(alpha: isDark ? 0.16 : 0.10),
+                  borderRadius: BorderRadius.circular(6),
+                  border: Border.all(
+                    color: AppTheme.urgentRose.withValues(alpha: 0.35),
+                    width: 0.8,
+                  ),
+                ),
+                child: const Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.filter_alt_off_outlined, size: 13, color: AppTheme.urgentRose),
+                    SizedBox(width: 4),
+                    Text(
+                      'Reset Filter',
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                        color: AppTheme.urgentRose,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(width: 6),
+          ],
+
+          // Subject filter chips (with subject color dot)
+          if (subjects.isNotEmpty) ...[
+            ...subjects.map((subject) {
+              final isSelected = selectedSubjectId == subject.id;
+              final subColor = subject.color;
+              return Padding(
+                padding: const EdgeInsets.only(right: 6),
+                child: GestureDetector(
+                  onTap: () {
+                    taskProvider.setSelectedSubjectId(
+                      isSelected ? null : subject.id,
+                    );
+                  },
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
+                    decoration: BoxDecoration(
+                      color: isSelected
+                          ? subColor.withValues(alpha: isDark ? 0.22 : 0.14)
+                          : Colors.transparent,
+                      borderRadius: BorderRadius.circular(6),
+                      border: Border.all(
+                        color: isSelected ? subColor : borderCol,
+                        width: 0.8,
+                      ),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Container(
+                          width: 6.5,
+                          height: 6.5,
+                          decoration: BoxDecoration(
+                            color: subColor,
+                            shape: BoxShape.circle,
+                          ),
+                        ),
+                        const SizedBox(width: 5),
+                        Text(
+                          subject.name,
+                          style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                            color: isSelected ? textPrimary : textSecondary,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              );
+            }),
+
+            // Subtle divider between Subjects and TaskTypes
+            Container(
+              width: 1,
+              height: 16,
+              margin: const EdgeInsets.only(right: 6),
+              color: borderCol,
+            ),
+          ],
+
+          // TaskType filter chips (Praktikum, Kuis, Kelompok, UTS/UAS, Individu)
+          ...taskTypePresets.map((preset) {
+            final isSelected = selectedTaskType == preset.type;
+            return Padding(
+              padding: const EdgeInsets.only(right: 6),
+              child: GestureDetector(
+                onTap: () {
+                  taskProvider.setFilterTaskType(
+                    isSelected ? null : preset.type,
+                  );
+                },
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
+                  decoration: BoxDecoration(
+                    color: isSelected
+                        ? accentCol.withValues(alpha: isDark ? 0.20 : 0.12)
+                        : Colors.transparent,
+                    borderRadius: BorderRadius.circular(6),
+                    border: Border.all(
+                      color: isSelected ? accentCol : borderCol,
+                      width: 0.8,
+                    ),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        preset.icon,
+                        size: 12.5,
+                        color: isSelected ? accentCol : textSecondary,
+                      ),
+                      const SizedBox(width: 4.5),
+                      Text(
+                        preset.label,
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                          color: isSelected ? accentCol : textSecondary,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            );
+          }),
         ],
       ),
     );
