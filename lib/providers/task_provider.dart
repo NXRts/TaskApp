@@ -18,6 +18,7 @@ class TaskProvider with ChangeNotifier {
   TaskSortOption _sortOption = TaskSortOption.deadlineAsc;
   TaskCategory? _filterCategory; // null = all
   String? _selectedSubjectId;
+  TaskType? _filterTaskType; // null = all
   String _searchQuery = '';
   String? _pendingFocusTaskId;
 
@@ -31,8 +32,12 @@ class TaskProvider with ChangeNotifier {
   TaskSortOption get sortOption => _sortOption;
   TaskCategory? get filterCategory => _filterCategory;
   String? get selectedSubjectId => _selectedSubjectId;
+  TaskType? get filterTaskType => _filterTaskType;
   String get searchQuery => _searchQuery;
   String? get pendingFocusTaskId => _pendingFocusTaskId;
+
+  bool get hasActiveContextualFilters =>
+      _selectedSubjectId != null || _filterTaskType != null;
 
   /// Sets a task ID to be preselected in the Pomodoro Focus tab and notifies listeners.
   void requestFocusOnTask(String taskId) {
@@ -74,11 +79,27 @@ class TaskProvider with ChangeNotifier {
 
   void setFilterCategory(TaskCategory? category) {
     _filterCategory = category;
+    if (category == TaskCategory.personal) {
+      _selectedSubjectId = null;
+      _filterTaskType = null;
+    }
     notifyListeners();
   }
 
   void setSelectedSubjectId(String? subjectId) {
     _selectedSubjectId = subjectId;
+    notifyListeners();
+  }
+
+  void setFilterTaskType(TaskType? taskType) {
+    _filterTaskType = taskType;
+    notifyListeners();
+  }
+
+  void clearContextualFilters() {
+    if (_selectedSubjectId == null && _filterTaskType == null) return;
+    _selectedSubjectId = null;
+    _filterTaskType = null;
     notifyListeners();
   }
 
@@ -100,6 +121,11 @@ class TaskProvider with ChangeNotifier {
 
       // Subject filter
       if (_selectedSubjectId != null && task.subjectId != _selectedSubjectId) {
+        return false;
+      }
+
+      // TaskType filter
+      if (_filterTaskType != null && task.taskType != _filterTaskType) {
         return false;
       }
 
