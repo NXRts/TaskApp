@@ -6,6 +6,30 @@ import '../models/finance_loan.dart';
 import '../models/finance_settings.dart';
 import '../services/storage_service.dart';
 
+/// Immutable template representing a frequent or recent expense chip for 1-tap logging.
+class FrequentExpenseChipTemplate {
+  final String title;
+  final double amount;
+  final String category;
+  final String walletId;
+  final String? envelopeId;
+  final int frequencyCount;
+  final DateTime lastUsed;
+
+  const FrequentExpenseChipTemplate({
+    required this.title,
+    required this.amount,
+    required this.category,
+    required this.walletId,
+    this.envelopeId,
+    required this.frequencyCount,
+    required this.lastUsed,
+  });
+
+  FinanceCategory get categoryMeta =>
+      FinanceCategory.getByKey(category, defaultType: 'expense');
+}
+
 class FinanceProvider with ChangeNotifier {
   final StorageService _storageService;
 
@@ -194,6 +218,161 @@ class FinanceProvider with ChangeNotifier {
       }
     }
     return map;
+  }
+
+  // --- 1-TAP FREQUENT EXPENSE CHIPS ---
+  /// Builds up to [maxCount] 1-tap quick expense chips derived from existing
+  /// `FinanceTransaction` expense records in Hive (sorted by frequency desc, then recency desc),
+  /// falling back to student-friendly defaults if fewer than [maxCount] unique patterns exist.
+  List<FrequentExpenseChipTemplate> getFrequentExpenseTemplates({
+    int maxCount = 4,
+  }) {
+    final defaultWalletId =
+        _wallets.isNotEmpty ? _wallets.first.id : 'cash';
+
+    final grouped = <String, ({
+      String title,
+      double amount,
+      String category,
+      String walletId,
+      String? envelopeId,
+      int count,
+      DateTime lastUsed,
+    })>{};
+
+    for (final tx in _transactions) {
+      if (!tx.isExpense || tx.amount <= 0) continue;
+      final cleanTitle = tx.title.trim().isNotEmpty
+          ? tx.title.trim()
+          : tx.categoryMeta.shortName;
+      final key =
+          '${tx.category}|${tx.amount.round()}|${cleanTitle.toLowerCase()}';
+      final existing = grouped[key];
+      if (existing == null) {
+        grouped[key] = (
+          title: cleanTitle,
+          amount: tx.amount,
+          category: tx.category,
+          walletId: tx.walletId,
+          envelopeId: tx.envelopeId ?? tx.categoryMeta.defaultEnvelopeId,
+          count: 1,
+          lastUsed: tx.date,
+        );
+      } else {
+        final isNewer = tx.date.isAfter(existing.lastUsed);
+        grouped[key] = (
+          title: isNewer ? cleanTitle : existing.title,
+          amount: existing.amount,
+          category: existing.category,
+          walletId: isNewer ? tx.walletId : existing.walletId,
+          envelopeId: isNewer
+              ? (tx.envelopeId ?? tx.categoryMeta.defaultEnvelopeId)
+              : existing.envelopeId,
+          count: existing.count + 1,
+          lastUsed: isNewer ? tx.date : existing.lastUsed,
+        );
+      }
+    }
+
+    final sortedEntries = grouped.values.toList()
+      ..sort((a, b) {
+        final cmpCount = b.count.compareTo(a.count);
+        if (cmpCount != 0) return cmpCount;
+        return b.lastUsed.compareTo(a.lastUsed);
+      });
+
+    final results = <FrequentExpenseChipTemplate>[
+      for (final item in sortedEntries.take(maxCount))
+        FrequentExpenseChipTemplate(
+          title: item.title,
+          amount: item.amount,
+          category: item.category,
+          walletId: item.walletId,
+          envelopeId: item.envelopeId,
+          frequencyCount: item.count,
+          lastUsed: item.lastUsed,
+        ),
+    ];
+
+    if (results.length < maxCount) {
+      final fallbackPresets = <({
+        String title,
+        double amount,
+        String category,
+        String? envelopeId,
+      })>[
+        (
+          title: 'Makan Harian',
+          amount: 15000.0,
+          category: 'food_daily',
+          envelopeId: 'env_food',
+        ),
+        (
+          title: 'Ngopi',
+          amount: 12000.0,
+          category: 'coffee_social',
+          envelopeId: 'env_reward',
+        ),
+        (
+          title: 'Galon / Laundry',
+          amount: 20000.0,
+          category: 'laundry_water',
+          envelopeId: 'env_kos',
+        ),
+        (
+          title: 'Bensin / Parkir',
+          amount: 10000.0,
+          category: 'transport',
+          envelopeId: null,
+        ),
+      ];
+
+      final epoch = DateTime.fromMillisecondsSinceEpoch(0);
+      for (final preset in fallbackPresets) {
+        if (results.length >= maxCount) break;
+        final alreadyPresent = results.any(
+          (r) =>
+              r.category == preset.category &&
+              r.amount.round() == preset.amount.round(),
+        );
+        if (!alreadyPresent) {
+          results.add(
+            FrequentExpenseChipTemplate(
+              title: preset.title,
+              amount: preset.amount,
+              category: preset.category,
+              walletId: defaultWalletId,
+              envelopeId: preset.envelopeId,
+              frequencyCount: 0,
+              lastUsed: epoch,
+            ),
+          );
+        }
+      }
+    }
+
+    return results;
+  }
+
+  /// Immediately records a 1-tap expense transaction from [template] and returns
+  /// the created [FinanceTransaction] so the caller can offer an Undo action.
+  Future<FinanceTransaction> recordQuickExpenseFromTemplate(
+    FrequentExpenseChipTemplate template, {
+    DateTime? timestamp,
+  }) async {
+    final now = timestamp ?? DateTime.now();
+    final tx = FinanceTransaction(
+      id: 'tx-quick-${now.microsecondsSinceEpoch}',
+      title: template.title,
+      amount: template.amount,
+      type: 'expense',
+      category: template.category,
+      walletId: template.walletId,
+      date: now,
+      envelopeId: template.envelopeId ?? template.categoryMeta.defaultEnvelopeId,
+    );
+    await addTransaction(tx);
+    return tx;
   }
 
   // --- ACTIONS: TRANSAKSI ---

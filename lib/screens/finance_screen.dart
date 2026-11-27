@@ -792,6 +792,16 @@ class _FinanceScreenState extends State<FinanceScreen> {
 
         const SliverToBoxAdapter(child: SizedBox(height: 12)),
 
+        // 1-Tap Frequent Expense Chips Row
+        SliverToBoxAdapter(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: _buildQuickExpenseChipsSection(context, finance, isDark),
+          ),
+        ),
+
+        const SliverToBoxAdapter(child: SizedBox(height: 12)),
+
         // Filter Chip Bar (Semua, Pengeluaran, Pemasukan)
         SliverToBoxAdapter(
           child: Padding(
@@ -1593,6 +1603,125 @@ class _FinanceScreenState extends State<FinanceScreen> {
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildQuickExpenseChipsSection(
+    BuildContext context,
+    FinanceProvider finance,
+    bool isDark,
+  ) {
+    final templates = finance.getFrequentExpenseTemplates(maxCount: 4);
+    if (templates.isEmpty) return const SizedBox.shrink();
+
+    final textPrim =
+        isDark ? AppTheme.darkTextPrimary : AppTheme.lightTextPrimary;
+    final textMuted =
+        isDark ? AppTheme.darkTextMuted : AppTheme.lightTextMuted;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            const Icon(
+              Icons.bolt_rounded,
+              size: 14,
+              color: AppTheme.warningOchre,
+            ),
+            const SizedBox(width: 4),
+            Text(
+              'CATAT CEPAT 1-KETUK',
+              style: TextStyle(
+                fontSize: 10.5,
+                fontWeight: FontWeight.w700,
+                letterSpacing: 0.8,
+                color: textMuted,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 7),
+        SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          physics: const BouncingScrollPhysics(
+            parent: AlwaysScrollableScrollPhysics(),
+          ),
+          child: Row(
+            children: templates.map((tpl) {
+              final cat = tpl.categoryMeta;
+              final catColor = Color(cat.colorValue);
+              final amountLabel = _currencyFormat.format(tpl.amount);
+
+              return Padding(
+                padding: const EdgeInsets.only(right: 8),
+                child: Material(
+                  color: isDark
+                      ? AppTheme.darkSurfaceElevated
+                      : AppTheme.lightSurface,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
+                    side: BorderSide(
+                      color: catColor.withValues(alpha: isDark ? 0.38 : 0.28),
+                      width: 0.8,
+                    ),
+                  ),
+                  child: InkWell(
+                    borderRadius: BorderRadius.circular(10),
+                    onTap: () async {
+                      final created =
+                          await finance.recordQuickExpenseFromTemplate(tpl);
+                      if (!context.mounted) return;
+                      final messenger = ScaffoldMessenger.of(context);
+                      messenger.hideCurrentSnackBar();
+                      messenger.showSnackBar(
+                        SnackBar(
+                          content: Text(
+                            '⚡ Tercatat: ${tpl.title} ($amountLabel)',
+                          ),
+                          behavior: SnackBarBehavior.floating,
+                          duration: const Duration(seconds: 3),
+                          action: SnackBarAction(
+                            label: 'Urungkan',
+                            onPressed: () {
+                              finance.deleteTransaction(created.id);
+                            },
+                          ),
+                        ),
+                      );
+                    },
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 7,
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            Icons.bolt_rounded,
+                            size: 13.5,
+                            color: catColor,
+                          ),
+                          const SizedBox(width: 3),
+                          Text(
+                            '+ ${tpl.title} $amountLabel',
+                            style: TextStyle(
+                              fontSize: 11.5,
+                              fontWeight: FontWeight.w700,
+                              color: textPrim,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              );
+            }).toList(),
+          ),
+        ),
+      ],
     );
   }
 
