@@ -13,6 +13,7 @@ import 'package:taskapp/providers/finance_provider.dart';
 import 'package:taskapp/providers/settings_provider.dart';
 import 'package:taskapp/providers/subject_provider.dart';
 import 'package:taskapp/providers/task_provider.dart';
+import 'package:taskapp/screens/finance_screen.dart';
 import 'package:taskapp/screens/main_screen.dart';
 import 'package:taskapp/services/storage_service.dart';
 import 'package:taskapp/utils/app_theme.dart';
@@ -281,5 +282,123 @@ void main() {
     await tester.tap(find.text('Tugas'));
     await tester.pumpAndSettle();
     expect(find.text('Safe-to-Spend Hari Ini'), findsOneWidget);
+  });
+
+  test('FinanceProvider getFrequentExpenseTemplates ranks most frequent and recent expenses and logs 1-tap quick expense',
+      () async {
+    final storage = StorageService();
+    await storage.init(customPath: tempDir.path);
+    final provider = FinanceProvider(storage);
+
+    // When no transactions exist yet, returns 4 student-friendly default templates
+    final defaultChips = provider.getFrequentExpenseTemplates(maxCount: 4);
+    expect(defaultChips.length, 4);
+    expect(defaultChips.first.title, 'Makan Harian');
+    expect(defaultChips.first.amount, 15000.0);
+
+    // Add repeated transactions for 'Kopi Susu Kampus' (2x) and 'Ayam Penyet' (1x, newer)
+    await provider.addTransaction(
+      FinanceTransaction(
+        id: 'freq-1',
+        title: 'Kopi Susu Kampus',
+        amount: 14000.0,
+        type: 'expense',
+        category: 'coffee_social',
+        walletId: 'cash',
+        date: DateTime(2026, 11, 20, 10, 0),
+      ),
+    );
+    await provider.addTransaction(
+      FinanceTransaction(
+        id: 'freq-2',
+        title: 'Kopi Susu Kampus',
+        amount: 14000.0,
+        type: 'expense',
+        category: 'coffee_social',
+        walletId: 'cash',
+        date: DateTime(2026, 11, 21, 10, 0),
+      ),
+    );
+    await provider.addTransaction(
+      FinanceTransaction(
+        id: 'freq-3',
+        title: 'Ayam Penyet',
+        amount: 18000.0,
+        type: 'expense',
+        category: 'food_daily',
+        walletId: 'cash',
+        date: DateTime(2026, 11, 22, 12, 0),
+      ),
+    );
+
+    final ranked = provider.getFrequentExpenseTemplates(maxCount: 4);
+    expect(ranked.first.title, 'Kopi Susu Kampus');
+    expect(ranked.first.amount, 14000.0);
+    expect(ranked.first.frequencyCount, 2);
+    expect(ranked[1].title, 'Ayam Penyet');
+    expect(ranked[1].amount, 18000.0);
+    expect(ranked[1].frequencyCount, 1);
+
+    // Record 1-tap quick expense from top template
+    final created = await provider.recordQuickExpenseFromTemplate(ranked.first);
+    expect(provider.transactions.any((t) => t.id == created.id), isTrue);
+    expect(created.title, 'Kopi Susu Kampus');
+    expect(created.amount, 14000.0);
+  });
+
+  testWidgets('FinanceScreen renders 1-Tap Frequent Expense Chips and supports Undo via SnackBar',
+      (tester) async {
+    await tester.binding.setSurfaceSize(const Size(800, 1200));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    for (final boxName in [
+      StorageService.tasksBoxName,
+      StorageService.subjectsBoxName,
+      StorageService.settingsBoxName,
+      StorageService.financeBoxName,
+      StorageService.financeTransactionsBoxName,
+      StorageService.financeLoansBoxName,
+    ]) {
+      await Hive.openBox(boxName, bytes: Uint8List(0));
+    }
+    final storage = StorageService();
+    await storage.init(customPath: tempDir.path);
+    await storage.setTaskRemindersEnabled(false);
+
+    final financeProvider = FinanceProvider(storage);
+    await financeProvider.updateWalletBalance('cash', 100000.0);
+
+    await tester.pumpWidget(
+      MultiProvider(
+        providers: [
+          ChangeNotifierProvider<FinanceProvider>.value(value: financeProvider),
+        ],
+        child: MaterialApp(
+          theme: AppTheme.darkTheme,
+          home: const FinanceScreen(),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('CATAT CEPAT 1-KETUK'), findsOneWidget);
+    expect(find.textContaining('+ Makan Harian'), findsOneWidget);
+    expect(financeProvider.transactions, isEmpty);
+
+    // Tap '+ Makan Harian Rp 15.000' chip -> immediately logs expense and shows Undo SnackBar
+    await tester.tap(find.textContaining('+ Makan Harian'));
+    await tester.pumpAndSettle();
+
+    expect(financeProvider.transactions.length, 1);
+    expect(financeProvider.transactions.first.title, 'Makan Harian');
+    expect(financeProvider.transactions.first.amount, 15000.0);
+    expect(find.textContaining('Tercatat: Makan Harian'), findsOneWidget);
+    expect(find.text('Urungkan'), findsOneWidget);
+
+    // Tap 'Urungkan' -> reverts the 1-tap transaction
+    await tester.tap(find.text('Urungkan'));
+    await tester.pumpAndSettle();
+
+    expect(financeProvider.transactions, isEmpty);
   });
 }
